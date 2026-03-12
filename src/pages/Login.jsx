@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Stethoscope, Mail, Lock, LogIn } from 'lucide-react';
+import { Stethoscope, Mail, Lock, LogIn, AlertCircle } from 'lucide-react';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -29,30 +29,37 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        {/* Header */}
+    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute top-0 left-0 w-96 h-96 bg-white rounded-full opacity-5 -translate-x-1/2 -translate-y-1/2"></div>
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-white rounded-full opacity-5 translate-x-1/2 translate-y-1/2"></div>
+
+      <div className="max-w-md w-full space-y-8 relative z-10">
+        {/* Header with animation */}
         <div className="text-center">
-          <div className="mx-auto h-16 w-16 bg-blue-600 rounded-full flex items-center justify-center">
-            <Stethoscope className="h-8 w-8 text-white" />
+          <div className="inline-flex items-center justify-center">
+            <div className="relative h-20 w-20 bg-white rounded-full flex items-center justify-center shadow-2xl transform hover:scale-105 transition-transform duration-300">
+              <Stethoscope className="h-10 w-10 text-blue-600" />
+            </div>
           </div>
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
+          <h2 className="mt-8 text-4xl font-bold text-white">
             Dental Clinic
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Sign in to your account to continue
+          <p className="mt-3 text-lg text-blue-100">
+            Professional dental management system
           </p>
         </div>
 
         {/* Login Form */}
-        <div className="bg-white py-8 px-6 shadow-xl rounded-lg">
+        <div className="bg-white py-10 px-8 shadow-2xl rounded-2xl backdrop-blur-sm border border-white border-opacity-20">
           <form className="space-y-6" onSubmit={handleSubmit}>
             {/* Email Field */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
                 Email address
               </label>
-              <div className="mt-1 relative">
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
                 <input
                   id="email"
                   name="email"
@@ -61,19 +68,19 @@ const Login = () => {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 pl-10 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="Enter your email"
+                  className="appearance-none block w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-lg placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 sm:text-sm"
+                  placeholder="doctor@clinic.com"
                 />
-                <Mail className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
               </div>
             </div>
 
             {/* Password Field */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
                 Password
               </label>
-              <div className="mt-1 relative">
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
                 <input
                   id="password"
                   name="password"
@@ -82,50 +89,50 @@ const Login = () => {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 pl-10 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="appearance-none block w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-lg placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 sm:text-sm"
                   placeholder="Enter your password"
                 />
-                <Lock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
               </div>
             </div>
 
             {/* Error Message */}
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
-                {error}
+              <div className="flex items-start gap-3 bg-red-50 border-l-4 border-red-500 p-4 rounded-lg animate-in fade-in slide-in-from-top-2">
+                <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-red-700">{error}</p>
               </div>
             )}
 
             {/* Submit Button */}
-            <div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? (
-                  <div className="flex items-center">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Signing in...
-                  </div>
-                ) : (
-                  <div className="flex items-center">
-                    <LogIn className="h-4 w-4 mr-2" />
-                    Sign in
-                  </div>
-                )}
-              </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full flex justify-center items-center py-3 px-4 border-0 text-base font-semibold rounded-lg text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg"
+            >
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
+                  Signing in...
+                </>
+              ) : (
+                <>
+                  <LogIn className="h-5 w-5 mr-2" />
+                  Sign In
+                </>
+              )}
+            </button>
+
+            {/* Demo Credentials */}
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <div className="text-sm text-gray-600 text-center">
+                <p className="font-semibold text-gray-700 mb-2">Demo Credentials:</p>
+                <div className="bg-gray-50 rounded-lg p-3 space-y-1 font-mono text-xs">
+                  <p><span className="text-gray-600">Email:</span> <span className="text-gray-900">admin@example.com</span></p>
+                  <p><span className="text-gray-600">Password:</span> <span className="text-gray-900">admin123</span></p>
+                </div>
+              </div>
             </div>
           </form>
-
-          {/* Demo Credentials */}
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <div className="text-sm text-gray-600 text-center">
-              <p className="font-medium mb-2">Demo Credentials:</p>
-              <p>Email: admin@example.com</p>
-              <p>Password: admin123</p>
-            </div>
-          </div>
         </div>
       </div>
     </div>
