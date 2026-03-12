@@ -242,13 +242,35 @@ const TreatmentDetail = () => {
                 </span>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 uppercase">Duration</label>
-                <p className="text-gray-900">{treatment.estimated_duration_months ? `${treatment.estimated_duration_months} months` : 'N/A'}</p>
+                <label className="text-xs font-medium text-gray-600 uppercase">
+                  {treatment.type_of_treatment_name?.toLowerCase().includes('root canal')
+                    ? 'Estimated Visits'
+                    : 'Duration'}
+                </label>
+                <p className="text-gray-900">
+                  {treatment.estimated_duration_months ? (
+                    treatment.type_of_treatment_name?.toLowerCase().includes('root canal')
+                      ? `${treatment.estimated_duration_months} visits`
+                      : `${treatment.estimated_duration_months} months`
+                  ) : 'N/A'}
+                </p>
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-600 uppercase">Planned Amount</label>
                 <p className="text-gray-900">{formatAmount(treatment.planned_amount)}</p>
               </div>
+              {treatment.braces !== undefined && (
+                <div>
+                  <label className="text-xs font-medium text-gray-600 uppercase">Braces</label>
+                  <p className="text-gray-900">{treatment.braces ? 'Yes' : 'No'}</p>
+                </div>
+              )}
+              {treatment.cap !== undefined && (
+                <div>
+                  <label className="text-xs font-medium text-gray-600 uppercase">Cap</label>
+                  <p className="text-gray-900">{treatment.cap ? 'Yes' : 'No'}</p>
+                </div>
+              )}
             </div>
           </div>
 

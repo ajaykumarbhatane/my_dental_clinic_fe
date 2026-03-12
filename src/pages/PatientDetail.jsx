@@ -119,7 +119,7 @@ const PatientDetail = () => {
                     Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estimated Duration
+                    Estimated Duration / Visits
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Planned Amount
@@ -150,7 +150,11 @@ const PatientDetail = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {treatment.estimated_duration_months ? `${treatment.estimated_duration_months} months` : 'N/A'}
+                      {treatment.estimated_duration_months ? (
+                        treatment.type_of_treatment_name?.toLowerCase().includes('root canal')
+                          ? `${treatment.estimated_duration_months} visits`
+                          : `${treatment.estimated_duration_months} months`
+                      ) : 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {treatment.planned_amount ? formatAmount(treatment.planned_amount) : 'N/A'}

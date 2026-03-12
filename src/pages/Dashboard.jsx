@@ -210,14 +210,16 @@ const Dashboard = () => {
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                     Next Visit
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Amount
-                  </th>
+
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {upcomingVisits.map((visit, idx) => (
-                  <tr key={visit.id} className="hover:bg-gray-50 transition-colors">
+                  <tr
+                    key={visit.id}
+                    className="hover:bg-gray-50 transition-colors cursor-pointer"
+                    onClick={() => navigate(visit.treatment || visit.treatment_id ? `/treatments/${visit.treatment || visit.treatment_id}` : '#')}
+                  >
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
                       {visit.patient_name || 'N/A'}
                     </td>
@@ -227,14 +229,9 @@ const Dashboard = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
-                      {new Date(visit.next_visit_date).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric'
-                      })}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">
-                      {formatAmount(visit.patient_payment_amount)}
+                      {visit.next_visit_date
+                        ? new Date(visit.next_visit_date).toLocaleDateString('en-GB')
+                        : 'N/A'}
                     </td>
                   </tr>
                 ))}

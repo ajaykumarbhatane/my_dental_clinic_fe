@@ -34,7 +34,9 @@ const Treatments = () => {
     planned_amount: '',
     initial_findings: '',
     treatment_plan: '',
-    treatment_notes: ''
+    treatment_notes: '',
+    braces: false,    // for ortho
+    cap: false        // for root canal
   });
   const [submitting, setSubmitting] = useState(false);
   const [submittingVisit, setSubmittingVisit] = useState(false);
@@ -44,6 +46,9 @@ const Treatments = () => {
     fetchTreatmentTypes();
     fetchPatients();
   }, []);
+
+  const selectedType = treatmentTypes.find(t => t.id === formData.type_of_treatment);
+  const selectedTypeName = selectedType?.name || '';
 
   const fetchTreatments = async () => {
     try {
@@ -111,7 +116,9 @@ const Treatments = () => {
         planned_amount: formData.planned_amount ? parseFloat(formData.planned_amount) : null,
         initial_findings: formData.initial_findings || null,
         treatment_plan: formData.treatment_plan || null,
-        treatment_notes: formData.treatment_notes || null
+        treatment_notes: formData.treatment_notes || null,
+        braces: formData.braces,
+        cap: formData.cap
       };
 
       await treatmentApi.create(payload);
@@ -280,7 +287,7 @@ const Treatments = () => {
                   Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Estimated Duration
+                  Estimated Duration / Visits
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Planned Amount
@@ -315,7 +322,11 @@ const Treatments = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {treatment.estimated_duration_months ? `${treatment.estimated_duration_months} months` : 'N/A'}
+                    {treatment.estimated_duration_months ? (
+                      treatment.type_of_treatment_name?.toLowerCase().includes('root canal')
+                        ? `${treatment.estimated_duration_months} visits`
+                        : `${treatment.estimated_duration_months} months`
+                    ) : 'N/A'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {formatAmount(treatment.planned_amount)}
@@ -391,7 +402,35 @@ const Treatments = () => {
                         {type.name}
                       </option>
                     ))}
-                  </select>
+              </select>
+
+              {/* conditional options based on selected type */}
+              {(selectedTypeName.toLowerCase().includes('ortho') || selectedTypeName.toLowerCase().includes('braces')) && (
+                <div className="mt-3">
+                  <label className="inline-flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={formData.braces}
+                      onChange={(e) => setFormData({...formData, braces: e.target.checked})}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">Braces</span>
+                  </label>
+                </div>
+              )}
+              {selectedTypeName.toLowerCase().includes('root canal') && (
+                <div className="mt-3">
+                  <label className="inline-flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={formData.cap}
+                      onChange={(e) => setFormData({...formData, cap: e.target.checked})}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">Cap</span>
+                  </label>
+                </div>
+              )}
                 </div>
               </div>
 
@@ -412,13 +451,21 @@ const Treatments = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Estimated Duration (Months)</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    {selectedTypeName.toLowerCase().includes('root canal')
+                      ? 'Estimated Visits'
+                      : 'Estimated Duration (Months)'}
+                  </label>
                   <input
                     type="number"
                     value={formData.estimated_duration_months}
                     onChange={(e) => setFormData({...formData, estimated_duration_months: e.target.value})}
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="e.g., 3"
+                    placeholder={
+                      selectedTypeName.toLowerCase().includes('root canal')
+                        ? 'e.g., 5'
+                        : 'e.g., 3'
+                    }
                   />
                 </div>
               </div>
