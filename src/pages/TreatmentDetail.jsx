@@ -259,16 +259,16 @@ const TreatmentDetail = () => {
                 <label className="text-xs font-medium text-gray-600 uppercase">Planned Amount</label>
                 <p className="text-gray-900">{formatAmount(treatment.planned_amount)}</p>
               </div>
-              {treatment.braces !== undefined && (
+              {treatment.braces_type && (
                 <div>
-                  <label className="text-xs font-medium text-gray-600 uppercase">Braces</label>
-                  <p className="text-gray-900">{treatment.braces ? 'Yes' : 'No'}</p>
+                  <label className="text-xs font-medium text-gray-600 uppercase">Braces Type</label>
+                  <p className="text-gray-900">{treatment.braces_type}</p>
                 </div>
               )}
-              {treatment.cap !== undefined && (
+              {treatment.cap_type && (
                 <div>
-                  <label className="text-xs font-medium text-gray-600 uppercase">Cap</label>
-                  <p className="text-gray-900">{treatment.cap ? 'Yes' : 'No'}</p>
+                  <label className="text-xs font-medium text-gray-600 uppercase">Cap Type</label>
+                  <p className="text-gray-900">{treatment.cap_type}</p>
                 </div>
               )}
             </div>

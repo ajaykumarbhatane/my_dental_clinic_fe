@@ -35,8 +35,8 @@ const Treatments = () => {
     initial_findings: '',
     treatment_plan: '',
     treatment_notes: '',
-    braces: false,    // for ortho
-    cap: false        // for root canal
+    braces_type: '',
+    cap_type: ''
   });
   const [submitting, setSubmitting] = useState(false);
   const [submittingVisit, setSubmittingVisit] = useState(false);
@@ -117,8 +117,8 @@ const Treatments = () => {
         initial_findings: formData.initial_findings || null,
         treatment_plan: formData.treatment_plan || null,
         treatment_notes: formData.treatment_notes || null,
-        braces: formData.braces,
-        cap: formData.cap
+        braces_type: formData.braces_type || null,
+        cap_type: formData.cap_type || null
       };
 
       await treatmentApi.create(payload);
@@ -131,7 +131,9 @@ const Treatments = () => {
         planned_amount: '',
         initial_findings: '',
         treatment_plan: '',
-        treatment_notes: ''
+        treatment_notes: '',
+        braces_type: '',
+        cap_type: ''
       });
       fetchTreatments();
     } catch (error) {
@@ -287,6 +289,9 @@ const Treatments = () => {
                   Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Option
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Estimated Duration / Visits
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -320,6 +325,9 @@ const Treatments = () => {
                     }`}>
                       {treatment.status}
                     </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {treatment.braces_type || treatment.cap_type || 'N/A'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {treatment.estimated_duration_months ? (
@@ -407,28 +415,33 @@ const Treatments = () => {
               {/* conditional options based on selected type */}
               {(selectedTypeName.toLowerCase().includes('ortho') || selectedTypeName.toLowerCase().includes('braces')) && (
                 <div className="mt-3">
-                  <label className="inline-flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={formData.braces}
-                      onChange={(e) => setFormData({...formData, braces: e.target.checked})}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">Braces</span>
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700">Braces Type</label>
+                  <select
+                    value={formData.braces_type}
+                    onChange={(e) => setFormData({...formData, braces_type: e.target.value})}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Select Type</option>
+                    <option value="metal">Metal</option>
+                    <option value="ceramic">Ceramic</option>
+                  </select>
                 </div>
               )}
               {selectedTypeName.toLowerCase().includes('root canal') && (
                 <div className="mt-3">
-                  <label className="inline-flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={formData.cap}
-                      onChange={(e) => setFormData({...formData, cap: e.target.checked})}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">Cap</span>
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700">Cap Type</label>
+                  <select
+                    value={formData.cap_type}
+                    onChange={(e) => setFormData({...formData, cap_type: e.target.value})}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Select Type</option>
+                    <option value="metal">Metal</option>
+                    <option value="ceramic">Ceramic</option>
+                    <option value="cadcam">CAD/CAM</option>
+                    <option value="zirconia">Zirconia</option>
+                    <option value="other">Other</option>
+                  </select>
                 </div>
               )}
                 </div>
