@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Edit, ArrowLeft } from 'lucide-react';
 import { patientApi } from '../api/patientApi';
 import { treatmentApi } from '../api/treatmentApi';
@@ -7,6 +7,7 @@ import { treatmentApi } from '../api/treatmentApi';
 const PatientDetail = () => {
   const { id } = useParams();
   const [patient, setPatient] = useState(null);
+  const navigate = useNavigate();
   const [treatments, setTreatments] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -130,7 +131,11 @@ const PatientDetail = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {treatments.map((treatment) => (
-                  <tr key={treatment.id} className="hover:bg-gray-50">
+                  <tr
+                    key={treatment.id}
+                    onClick={() => navigate(`/treatments/${treatment.id}`)}
+                    className="hover:bg-gray-50 cursor-pointer"
+                  >
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {treatment.type_of_treatment_name}
                     </td>
@@ -150,7 +155,10 @@ const PatientDetail = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {treatment.planned_amount ? formatAmount(treatment.planned_amount) : 'N/A'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <td
+                      className="px-6 py-4 whitespace-nowrap text-sm font-medium"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <Link
                         to={`/treatments/${treatment.id}`}
                         className="text-blue-600 hover:text-blue-900"

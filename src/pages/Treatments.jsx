@@ -292,7 +292,11 @@ const Treatments = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredTreatments.map((treatment) => (
-                <tr key={treatment.id} className="hover:bg-gray-50">
+                <tr
+                  key={treatment.id}
+                  onClick={() => handleViewTreatment(treatment)}
+                  className="hover:bg-gray-50 cursor-pointer"
+                >
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     {treatment.patient_name}
                   </td>
@@ -316,7 +320,10 @@ const Treatments = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {formatAmount(treatment.planned_amount)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <td
+                    className="px-6 py-4 whitespace-nowrap text-sm font-medium"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={() => handleViewTreatment(treatment)}

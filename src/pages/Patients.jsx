@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Search, Filter, Plus, Eye, Edit, Trash2, X } from 'lucide-react';
 import { patientApi } from '../api/patientApi';
 import { userApi } from '../api/userApi';
@@ -11,6 +11,7 @@ const Patients = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
+  const navigate = useNavigate();
   const [doctors, setDoctors] = useState([]);
   const [formData, setFormData] = useState({
     first_name: '',
@@ -190,7 +191,11 @@ const Patients = () => {
                 </tr>
               ) : (
                 filteredPatients.map((patient) => (
-                  <tr key={patient.id} className="hover:bg-blue-50 transition-colors">
+                  <tr
+                  key={patient.id}
+                  onClick={() => navigate(`/patients/${patient.id}`)}
+                  className="hover:bg-blue-50 transition-colors cursor-pointer"
+                >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold text-sm">
@@ -219,7 +224,10 @@ const Patients = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
                       {new Date(patient.created_at).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <td
+                      className="px-6 py-4 whitespace-nowrap text-sm font-medium"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <div className="flex gap-2">
                         <Link
                           to={`/patients/${patient.id}`}
