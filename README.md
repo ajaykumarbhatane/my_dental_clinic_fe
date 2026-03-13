@@ -5,6 +5,22 @@ A modern React frontend for managing dental clinic operations, built with Vite, 
 ## Features
 
 - **Dashboard**: Overview with statistics, charts, and upcoming visits
+
+### Charts
+
+The dashboard now includes two charts:
+
+1. **Patients per Clinic** – bar chart showing number of patients associated with each clinic.
+2. **Treatment Distribution** – doughnut chart showing count of treatments by type.
+
+These are implemented using [Chart.js](https://www.chartjs.org/) and [react-chartjs-2](https://github.com/reactchartjs/react-chartjs-2).
+
+After pulling the latest changes, install the new dependencies with:
+
+```bash
+cd dental_fe
+npm install
+```
 - **Patient Management**: View, search, and manage patient records
 - **Treatment Management**: Track treatments, visits, and medical history
 - **Settings**: User profile management and system preferences

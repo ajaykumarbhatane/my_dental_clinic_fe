@@ -61,6 +61,7 @@ const AppRoutes = () => {
 };
 
 function App() {
+  console.log('App rendering');
   return (
     <AuthProvider>
       <AppRoutes />

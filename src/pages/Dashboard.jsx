@@ -3,6 +3,35 @@ import { Users, UserCheck, Calendar, TrendingUp } from 'lucide-react';
 import { patientApi } from '../api/patientApi';
 import { treatmentApi } from '../api/treatmentApi';
 import { visitsApi } from '../api/visitsApi';
+import { clinicApi } from '../api/clinicApi';
+
+// chart.js imports
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+} from 'chart.js';
+import { Bar, Doughnut } from 'react-chartjs-2';
+
+// register required chart components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement
+);
 
 const Dashboard = () => {
   const [stats, setStats] = useState([
@@ -36,6 +65,67 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // chart data states
+  const [patientChartData, setPatientChartData] = useState(null); // bar chart data (patients per clinic)
+  const [treatmentChartData, setTreatmentChartData] = useState(null);
+
+  // helper utilities
+  // helper that groups patients by clinic name
+  const buildPatientChart = (patients, clinics = []) => {
+    // create quick id→name map from clinics list
+    const clinicNameMap = clinics.reduce((map, c) => {
+      if (c.id) map[c.id] = c.name || `Clinic ${c.id}`;
+      return map;
+    }, {});
+
+    const counts = {};
+    patients.forEach((p) => {
+      const clinicId = p.clinic || (p.clinic_id ? p.clinic_id : null);
+      const name =
+        (clinicId && clinicNameMap[clinicId]) ||
+        p.clinic?.name ||
+        'Unknown';
+      counts[name] = (counts[name] || 0) + 1;
+    });
+    return {
+      labels: Object.keys(counts),
+      datasets: [
+        {
+          label: 'Patients',
+          data: Object.values(counts),
+          backgroundColor: 'rgba(59, 130, 246, 0.6)',
+          borderColor: 'rgba(59, 130, 246, 1)',
+        },
+      ],
+    };
+  };
+
+  const buildTreatmentChart = (treatments) => {
+    const counts = {};
+    treatments.forEach((t) => {
+      // serializer provides type_of_treatment_name for convenience,
+      // fall back to nested object if present
+      const name = t.type_of_treatment_name || t.type_of_treatment?.name || 'Unknown';
+      counts[name] = (counts[name] || 0) + 1;
+    });
+
+    return {
+      labels: Object.keys(counts),
+      datasets: [
+        {
+          data: Object.values(counts),
+          backgroundColor: [
+            '#3b82f6',
+            '#10b981',
+            '#f59e0b',
+            '#ef4444',
+            '#8b5cf6',
+          ],
+        },
+      ],
+    };
+  };
+
   useEffect(() => {
     fetchDashboardData();
   }, []);
@@ -45,16 +135,18 @@ const Dashboard = () => {
       setLoading(true);
       setError(null);
 
-      // Fetch all data
-      const [patientsRes, treatmentsRes, visitsRes] = await Promise.all([
+      // Fetch all data (add clinics for patient chart labels)
+      const [patientsRes, treatmentsRes, visitsRes, clinicsRes] = await Promise.all([
         patientApi.getAll(),
         treatmentApi.getAll(),
         visitsApi.getAll(),
+        clinicApi.getAll(),
       ]);
 
       const patients = patientsRes.data || [];
       const treatments = treatmentsRes.data || [];
       const visits = visitsRes.data || [];
+      const clinics = (clinicsRes && clinicsRes.data) || [];
 
       // Calculate statistics
       const activeTreatments = treatments.filter(t => 
@@ -95,6 +187,10 @@ const Dashboard = () => {
       ]);
 
       setUpcomingVisits(upcomingVisitsData);
+
+      // build charts
+      setPatientChartData(buildPatientChart(patients, clinics));
+      setTreatmentChartData(buildTreatmentChart(treatments));
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
       setError('Failed to load dashboard data');
@@ -142,15 +238,31 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold text-gray-900">Patients Month-wise</h3>
-            <div className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-medium">Monthly</div>
+            <h3 className="text-lg font-bold text-gray-900">Patients per Clinic</h3>
+            <div className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-medium">Current</div>
           </div>
-          <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg border border-gray-200">
-            <div className="text-center">
-              <div className="text-4xl font-bold text-gray-300 mb-2">📊</div>
-              <p className="text-gray-500 font-medium">Chart Placeholder</p>
-              <p className="text-sm text-gray-400">Patients over time</p>
-            </div>
+          <div className="h-64">
+            {patientChartData ? (
+              <Bar
+                data={patientChartData}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: { display: false },
+                    title: { display: false },
+                  },
+                  scales: {
+                    x: { grid: { display: false } },
+                    y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                  },
+                }}
+              />
+            ) : (
+              <div className="h-full flex items-center justify-center text-gray-500">
+                Loading chart...
+              </div>
+            )}
           </div>
         </div>
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-lg transition-shadow">
@@ -158,12 +270,21 @@ const Dashboard = () => {
             <h3 className="text-lg font-bold text-gray-900">Treatment Distribution</h3>
             <div className="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-medium">Analytics</div>
           </div>
-          <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg border border-gray-200">
-            <div className="text-center">
-              <div className="text-4xl font-bold text-gray-300 mb-2">📈</div>
-              <p className="text-gray-500 font-medium">Chart Placeholder</p>
-              <p className="text-sm text-gray-400">Treatment types distribution</p>
-            </div>
+          <div className="h-64">
+            {treatmentChartData ? (
+              <Doughnut
+                data={treatmentChartData}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: { legend: { position: 'right' } },
+                }}
+              />
+            ) : (
+              <div className="h-full flex items-center justify-center text-gray-500">
+                Loading chart...
+              </div>
+            )}
           </div>
         </div>
       </div>
