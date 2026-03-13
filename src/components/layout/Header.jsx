@@ -68,7 +68,7 @@ const Header = () => {
         {/* Left section */}
         <div className="flex-1">
           <h2 className="text-2xl font-bold text-gray-900">
-            Welcome back, {getUserDisplayName()}
+            Welcome back, Dr. {getUserDisplayName()}
           </h2>
           <div className="flex items-center gap-4 mt-1">
             <p className="text-sm text-gray-500">

@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, Stethoscope, Settings, Stethoscope as StethoscopeIcon } from 'lucide-react';
+import { LayoutDashboard, Users, Stethoscope, Settings, Film, Stethoscope as StethoscopeIcon } from 'lucide-react';
 
 const Sidebar = () => {
   const location = useLocation();
@@ -8,6 +8,7 @@ const Sidebar = () => {
     { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/patients', icon: Users, label: 'Patients' },
     { path: '/treatments', icon: Stethoscope, label: 'Treatments' },
+    { path: '/treatment-videos', icon: Film, label: 'Treatment Videos' },
     { path: '/settings', icon: Settings, label: 'Settings' },
   ];
 
@@ -21,7 +22,7 @@ const Sidebar = () => {
           </div>
           <div>
             <h1 className="text-xl font-bold text-white">DentalPro</h1>
-            <p className="text-xs text-blue-200">Clinic Management</p>
+            <p className="text-xs text-blue-200">Clinic Patient Management</p>
           </div>
         </div>
       </div>
@@ -58,6 +59,9 @@ const Sidebar = () => {
       <div className="px-6 py-4 border-t border-blue-700">
         <p className="text-xs text-blue-200 text-center">
           Dental Clinic Management System
+          @2026 Developed by Ajaykumar Bhatane. All rights reserved. <br />
+          contact: +91-9970609951
+          email: ajaykumarbhatane@gmail.com
         </p>
       </div>
     </div>
