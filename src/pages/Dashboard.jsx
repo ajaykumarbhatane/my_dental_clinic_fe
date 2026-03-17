@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Users, UserCheck, Calendar, TrendingUp } from 'lucide-react';
 import { patientApi } from '../api/patientApi';
 import { treatmentApi } from '../api/treatmentApi';
@@ -64,6 +65,8 @@ const Dashboard = () => {
   const [upcomingVisits, setUpcomingVisits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const navigate = useNavigate();
 
   // chart data states
   const [patientChartData, setPatientChartData] = useState(null); // bar chart data (patients per clinic)
