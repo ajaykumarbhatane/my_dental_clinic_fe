@@ -244,10 +244,10 @@ const Treatments = () => {
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 min-w-0">
           <Filter className="w-5 h-5 text-gray-400" />
           <select
-            className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="flex-1 min-w-0 form-select"
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
           >
@@ -257,9 +257,9 @@ const Treatments = () => {
             ))}
           </select>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 min-w-0">
           <select
-            className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="flex-1 min-w-0 form-select"
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
           >

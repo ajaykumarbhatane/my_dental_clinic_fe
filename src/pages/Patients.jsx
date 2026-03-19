@@ -138,10 +138,10 @@ const Patients = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="flex items-center gap-2 px-4 py-2.5 border-2 border-gray-200 rounded-lg bg-white">
+        <div className="flex items-center gap-2 px-4 py-2.5 border-2 border-gray-200 rounded-lg bg-white min-w-0">
           <Filter className="w-5 h-5 text-gray-400" />
           <select
-            className="flex-1 border-0 focus:ring-0 focus:outline-none text-sm font-medium"
+            className="flex-1 min-w-0 form-select text-sm font-medium"
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
           >

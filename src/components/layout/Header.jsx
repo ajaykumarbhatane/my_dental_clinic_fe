@@ -1,9 +1,9 @@
-import { User, LogOut, ChevronDown, Clock } from 'lucide-react';
+import { Menu, User, LogOut, ChevronDown, Clock } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 
-const Header = () => {
+const Header = ({ onMenuClick }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [showDropdown, setShowDropdown] = useState(false);
@@ -63,8 +63,17 @@ const Header = () => {
   };
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-100 px-8 py-5">
-      <div className="flex justify-between items-center">
+    <header className="bg-white shadow-sm border-b border-gray-100 px-4 md:px-8 py-5">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        {/* Mobile menu button */}
+        <button
+          onClick={onMenuClick}
+          className="md:hidden p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors"
+          aria-label="Open menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+
         {/* Left section */}
         <div className="flex-1">
           <h2 className="text-2xl font-bold text-gray-900">
@@ -82,7 +91,7 @@ const Header = () => {
         </div>
 
         {/* Right section - User menu */}
-        <div className="flex items-center ml-6">
+        <div className="flex items-center md:ml-6">
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setShowDropdown(!showDropdown)}
