@@ -10,7 +10,7 @@ const Header = ({ onMenuClick }) => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const dropdownRef = useRef(null);
 
-  // Update current time
+  // Update time
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
@@ -18,7 +18,7 @@ const Header = ({ onMenuClick }) => {
     return () => clearInterval(timer);
   }, []);
 
-  // Close dropdown when clicking outside
+  // Close dropdown outside click
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -54,94 +54,122 @@ const Header = ({ onMenuClick }) => {
     return 'Doctor';
   };
 
-  const formatTime = (date) => {
-    return date.toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
+  const formatDateAndTime = (date) => {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = date.toLocaleString('en-US', { month: 'short' });
+    const year = date.getFullYear();
+    const time = date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
       minute: '2-digit',
-      second: '2-digit'
+      hour12: true
     });
+    return `${day} ${month} ${year}, ${time}`;
   };
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-100 px-4 md:px-8 py-5">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        {/* Mobile menu button */}
-        <button
-          onClick={onMenuClick}
-          className="md:hidden p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors"
-          aria-label="Open menu"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
+    <header className="relative bg-white border-b border-gray-100 shadow-sm px-4 md:px-6 py-2">
+      
+      {/* Mobile Menu Button (Fixed Top-Left) */}
+      <button
+        onClick={onMenuClick}
+        className="md:hidden absolute top-2 left-2 p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition"
+      >
+        <Menu className="w-5 h-5" />
+      </button>
 
-        {/* Left section */}
-        <div className="flex-1">
-          <h2 className="text-2xl font-bold text-gray-900">
+      <div className="w-full flex flex-col md:flex-row justify-between items-start md:items-center gap-1">
+
+        {/* Left Section */}
+        <div className="flex-1 pl-10 md:pl-0">
+          <h2 className="text-xl md:text-2xl font-semibold text-gray-900 leading-tight">
             Welcome back, Dr. {getUserDisplayName()}
           </h2>
-          <div className="flex items-center gap-4 mt-1">
+
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-0.5">
             <p className="text-sm text-gray-500">
               Manage your dental clinic efficiently
             </p>
-            <div className="flex items-center gap-1.5 text-sm text-gray-500 bg-gray-50 px-3 py-1 rounded-full">
+
+            <div className="flex items-center gap-1.5 text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded-full">
               <Clock className="w-4 h-4 text-blue-600" />
-              {formatTime(currentTime)}
+              {formatDateAndTime(currentTime)}
             </div>
           </div>
         </div>
 
-        {/* Right section - User menu */}
-        <div className="flex items-center md:ml-6">
+        {/* Right Section */}
+        <div className="flex items-center self-end md:self-auto">
           <div className="relative" ref={dropdownRef}>
+            
             <button
               onClick={() => setShowDropdown(!showDropdown)}
-              className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100 transition-all duration-200 group"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition"
             >
-              <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg text-white font-semibold group-hover:shadow-lg transition-shadow">
+              <div className="flex items-center justify-center w-9 h-9 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg text-white font-semibold">
                 {getUserDisplayName().charAt(0).toUpperCase()}
               </div>
+
               <div className="hidden sm:block text-left">
-                <p className="text-sm font-semibold text-gray-900">{getUserRole()}</p>
-                <p className="text-xs text-gray-500">{user?.email}</p>
+                <p className="text-sm font-semibold text-gray-900">
+                  {getUserRole()}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {user?.email}
+                </p>
               </div>
-              <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform duration-200 ${showDropdown ? 'rotate-180' : ''}`} />
+
+              <ChevronDown
+                className={`w-4 h-4 text-gray-600 transition ${
+                  showDropdown ? 'rotate-180' : ''
+                }`}
+              />
             </button>
 
-            {/* Dropdown Menu */}
+            {/* Dropdown */}
             {showDropdown && (
-              <div className="absolute right-0 mt-3 w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
-                  <p className="text-sm font-semibold text-gray-900">{getUserDisplayName()}</p>
-                  <p className="text-xs text-gray-500 mt-1">{user?.email}</p>
-                  <div className="mt-2 inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded">
+              <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50">
+
+                <div className="px-4 py-3 border-b bg-gray-50">
+                  <p className="text-sm font-semibold text-gray-900">
+                    {getUserDisplayName()}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {user?.email}
+                  </p>
+                  <div className="mt-2 inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
                     {getUserRole()}
                   </div>
                 </div>
+
                 <button
                   onClick={() => {
                     setShowDropdown(false);
                     navigate('/settings');
                   }}
-                  className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2 group"
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                 >
-                  <User className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
-                  <span>Profile Settings</span>
+                  <User className="w-4 h-4 text-gray-400" />
+                  Profile Settings
                 </button>
-                <hr className="my-1" />
+
+                <hr />
+
                 <button
                   onClick={() => {
                     setShowDropdown(false);
                     handleLogout();
                   }}
-                  className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2 group font-medium"
+                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 font-medium"
                 >
-                  <LogOut className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-                  <span>Logout</span>
+                  <LogOut className="w-4 h-4" />
+                  Logout
                 </button>
               </div>
             )}
+
           </div>
         </div>
+
       </div>
     </header>
   );

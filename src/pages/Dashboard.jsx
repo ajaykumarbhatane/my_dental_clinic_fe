@@ -211,25 +211,25 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           return (
-            <div key={index} className="group bg-white rounded-xl shadow-sm hover:shadow-lg p-6 transition-all duration-300 border border-gray-100 hover:border-blue-200 transform hover:-translate-y-1">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 group-hover:text-gray-700 transition-colors">{stat.title}</p>
-                  <div className="mt-3">
-                    <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
+            <div key={index} className="group bg-white rounded-lg sm:rounded-xl shadow-sm hover:shadow-lg p-4 sm:p-6 transition-all duration-300 border border-gray-100 hover:border-blue-200 transform hover:-translate-y-1">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-gray-600 group-hover:text-gray-700 transition-colors truncate">{stat.title}</p>
+                  <div className="mt-2 sm:mt-3">
+                    <p className="text-2xl sm:text-3xl font-bold text-gray-900">{stat.value}</p>
                   </div>
                 </div>
-                <div className={`${stat.color} rounded-xl p-3 shadow-md group-hover:shadow-lg transition-shadow`}>
-                  <Icon className="w-7 h-7 text-white" />
+                <div className={`${stat.color} rounded-lg sm:rounded-xl p-2 sm:p-3 shadow-md group-hover:shadow-lg transition-shadow flex-shrink-0`}>
+                  <Icon className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
                 </div>
               </div>
-              <div className="mt-4 pt-4 border-t border-gray-100">
+              <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-100">
                 <p className="text-xs text-gray-500">Last 30 days</p>
               </div>
             </div>

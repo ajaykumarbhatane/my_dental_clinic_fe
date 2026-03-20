@@ -1,15 +1,41 @@
 # Node modules
 node_modules/
+package-lock.json
+yarn.lock
 
 # Build output
 dist/
+build/
+.parcel-cache
 
-# Environment
+# Environment variables
 .env
+.env.local
+.env.*.local
 
-# IDEs
+# IDE & Editor
 .vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-*
 
-# OS
+# OS & System
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# Runtime
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# Testing
+coverage/
+.nyc_output/
+
+# Misc
+.cache/
+*.zip
+*.tar.gz

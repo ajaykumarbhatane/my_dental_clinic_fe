@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, Stethoscope, Settings, Film, X, Stethoscope as StethoscopeIcon } from 'lucide-react';
+import { LayoutDashboard, Users, Stethoscope, Settings, Film, X, Phone, Mail, MapPin } from 'lucide-react';
 
 const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
@@ -17,12 +17,12 @@ const Sidebar = ({ isOpen, onClose }) => {
       {/* Mobile Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-blue-700 md:hidden">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
-            <StethoscopeIcon className="w-6 h-6 text-blue-900" />
+          <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center flex-shrink-0 shadow-md">
+            <Stethoscope className="w-6 h-6 text-blue-900" />
           </div>
           <div>
             <h1 className="text-lg font-bold text-white">DentalPro</h1>
-            <p className="text-xs text-blue-200">Clinic Patient Management</p>
+            <p className="text-xs text-blue-200 leading-tight">Clinic Patient<br />Management</p>
           </div>
         </div>
         <button
@@ -37,12 +37,12 @@ const Sidebar = ({ isOpen, onClose }) => {
       {/* Desktop Logo/Brand Section */}
       <div className="hidden md:block px-6 py-8 border-b border-blue-700">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
-            <StethoscopeIcon className="w-6 h-6 text-blue-900" />
+          <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
+            <Stethoscope className="w-7 h-7 text-blue-900" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">DentalPro</h1>
-            <p className="text-xs text-blue-200">Clinic Patient Management</p>
+            <h1 className="text-2xl font-bold text-white leading-tight">DentalPro</h1>
+            <p className="text-xs text-blue-200 leading-tight">Clinic Patient<br />Management</p>
           </div>
         </div>
       </div>
@@ -77,12 +77,36 @@ const Sidebar = ({ isOpen, onClose }) => {
       </nav>
 
       {/* Footer */}
-      <div className="px-6 py-4 border-t border-blue-700">
-        <p className="text-xs text-blue-200 text-center">
-          Dental Clinic Management System
-          @2026 Developed by Ajaykumar Bhatane. All rights reserved. <br />
-          contact: +91-9970609951
-          email: ajaykumarbhatane@gmail.com
+      <div className="px-4 py-4 border-t border-blue-700 mt-auto">
+        {/* Customer Care Section */}
+        <div className="mb-5 pb-4 border-b border-blue-600">
+          <h3 className="text-xs font-bold text-blue-100 uppercase tracking-widest mb-3">Customer Care</h3>
+          <div className="space-y-2 text-xs text-blue-200">
+            <div className="flex items-center gap-2">
+              <Phone className="w-3.5 h-3.5 flex-shrink-0 text-blue-300" />
+              <span className="text-xs">+91-9970609951</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Mail className="w-3.5 h-3.5 flex-shrink-0 text-blue-300" />
+              <a href="mailto:support@clinic.com" className="hover:text-white transition-colors text-xs truncate">
+                support@clinic.com
+              </a>
+            </div>
+            <div className="flex items-start gap-2">
+              <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-blue-300 mt-0.5" />
+              <span className="text-xs">New Delhi, India</span>
+            </div>
+          </div>
+        </div>
+        
+        {/* Copyright */}
+        <p className="text-xs text-blue-200 text-center leading-snug">
+          <span className="block font-semibold mb-1">Dental Clinic Management System</span>
+          @2026 Developed by Ajaykumar<br />
+          Bhatane. All rights reserved.<br />
+          <span className="block text-xs text-blue-300 mt-1">
+            Contact: +91-9970609951
+          </span>
         </p>
       </div>
     </div>

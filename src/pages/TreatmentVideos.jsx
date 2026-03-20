@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Video, Film } from 'lucide-react';
 import { treatmentVideosApi } from '../api/treatmentVideosApi';
 
@@ -6,6 +6,8 @@ const TreatmentVideos = () => {
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [playingVideoId, setPlayingVideoId] = useState(null);
+  const videoRefs = useRef({});
 
   useEffect(() => {
     const fetchVideos = async () => {
@@ -22,6 +24,32 @@ const TreatmentVideos = () => {
 
     fetchVideos();
   }, []);
+
+  // Handle video play - pause all others when one plays
+  const handleVideoPlay = (videoId) => {
+    setPlayingVideoId(videoId);
+    
+    // Pause all other videos
+    videos.forEach((video) => {
+      if (video.id !== videoId && videoRefs.current[video.id]) {
+        videoRefs.current[video.id].pause();
+      }
+    });
+  };
+
+  // Handle video pause
+  const handleVideoPause = (videoId) => {
+    if (playingVideoId === videoId) {
+      setPlayingVideoId(null);
+    }
+  };
+
+  // Register video ref for tracking
+  const setVideoRef = (videoId, ref) => {
+    if (ref) {
+      videoRefs.current[videoId] = ref;
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -55,16 +83,29 @@ const TreatmentVideos = () => {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {videos.map((video) => (
-            <div key={video.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div key={video.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-shadow">
               <div className="p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-2">{video.treatment_name}</h2>
                 <p className="text-sm text-gray-500 mb-4">{video.description || 'Training video'}</p>
-                <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+                <div className={`relative aspect-video bg-black rounded-lg overflow-hidden transition-all ${
+                  playingVideoId === video.id ? 'ring-2 ring-blue-500 ring-offset-2' : ''
+                }`}>
                   <video
+                    ref={(ref) => setVideoRef(video.id, ref)}
                     controls
                     className="w-full h-full object-cover"
                     src={video.video_url}
+                    onPlay={() => handleVideoPlay(video.id)}
+                    onPause={() => handleVideoPause(video.id)}
                   />
+                </div>
+                <div className="mt-3 flex items-center justify-center">
+                  {playingVideoId === video.id && (
+                    <span className="text-xs text-blue-600 font-medium inline-flex items-center gap-1">
+                      <span className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></span>
+                      Now Playing
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
