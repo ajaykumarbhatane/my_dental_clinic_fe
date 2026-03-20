@@ -102,8 +102,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         {/* Copyright */}
         <p className="text-xs text-blue-200 text-center leading-snug">
           <span className="block font-semibold mb-1">Dental Clinic Management System</span>
-          @2026 Developed by Ajaykumar<br />
-          Bhatane. All rights reserved.<br />
+          @2026 Developed by Ajaykumar and Dr. Swati Bhatane. All rights reserved.<br />
           <span className="block text-xs text-blue-300 mt-1">
             Contact: +91-9970609951
           </span>
