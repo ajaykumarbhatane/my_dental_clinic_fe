@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Stethoscope, Mail, Lock, LogIn, AlertCircle } from 'lucide-react';
+import logo from '../assets/logo.png';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -36,18 +37,29 @@ const Login = () => {
 
       <div className="max-w-md w-full space-y-8 relative z-10">
         {/* Header with animation */}
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center">
-            <div className="relative h-20 w-20 bg-white rounded-full flex items-center justify-center shadow-2xl transform hover:scale-105 transition-transform duration-300">
-              <Stethoscope className="h-10 w-10 text-blue-600" />
+        <div className="text-center space-y-3">
+
+          {/* 🔷 Logo Circle */}
+          <div className="flex justify-center">
+            <div className="p-4 rounded-full bg-white/10 backdrop-blur-xl shadow-2xl border border-white/20">
+              <img
+                src={logo}
+                alt="Dental Logo"
+                className="h-12 w-12 object-contain brightness-0 invert"
+              />
             </div>
           </div>
-          <h2 className="mt-8 text-4xl font-bold text-white">
-            Dental Clinic
+
+          {/* 🔷 Title */}
+          <h2 className="text-3xl font-semibold text-white tracking-tight">
+            My Dental Clinic Pro
           </h2>
-          <p className="mt-3 text-lg text-blue-100">
+
+          {/* 🔷 Subtitle */}
+          <p className="text-sm text-blue-100">
             Professional dental management system
           </p>
+
         </div>
 
         {/* Login Form */}
@@ -69,7 +81,7 @@ const Login = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="appearance-none block w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-lg placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 sm:text-sm"
-                  placeholder="doctor@clinic.com"
+                  placeholder="Enter your email"
                 />
               </div>
             </div>

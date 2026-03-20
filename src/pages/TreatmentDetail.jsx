@@ -14,6 +14,13 @@ const TreatmentDetail = () => {
   const [expandedVisit, setExpandedVisit] = useState(null);
   const [showAddVisitModal, setShowAddVisitModal] = useState(false);
   const [submittingVisit, setSubmittingVisit] = useState(false);
+  const [showUploadImageModal, setShowUploadImageModal] = useState(false);
+  const [selectedVisitForUpload, setSelectedVisitForUpload] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imageUploadData, setImageUploadData] = useState({
+    image: null,
+    caption: ''
+  });
   const [visitFormData, setVisitFormData] = useState({
     next_visit_date: '',
     treatment_notes: '',
@@ -52,6 +59,59 @@ const TreatmentDetail = () => {
   const handleDeleteImage = async (imageId) => {
     await visitImagesApi.delete(imageId);
     fetchVisits();
+  };
+
+  const handleUploadImage = async (e) => {
+    e.preventDefault();
+    setUploadingImage(true);
+
+    try {
+      if (!imageUploadData.image) {
+        alert('Please select an image');
+        setUploadingImage(false);
+        return;
+      }
+
+      const payload = {
+        image: imageUploadData.image,
+        visit: selectedVisitForUpload.id,
+        caption: imageUploadData.caption || ''
+      };
+
+      await visitImagesApi.create(payload);
+      setShowUploadImageModal(false);
+      setImageUploadData({
+        image: null,
+        caption: ''
+      });
+      setSelectedVisitForUpload(null);
+      await fetchVisits();
+      alert('Image uploaded successfully!');
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert(error.response?.data?.detail || 'Error uploading image');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleImageFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageUploadData({
+        ...imageUploadData,
+        image: file
+      });
+    }
+  };
+
+  const openUploadModal = (visit) => {
+    setSelectedVisitForUpload(visit);
+    setImageUploadData({
+      image: null,
+      caption: ''
+    });
+    setShowUploadImageModal(true);
   };
 
   const handleAddVisit = async (e) => {
@@ -237,6 +297,14 @@ const TreatmentDetail = () => {
                   </div>
 
                   <button
+                    onClick={() => openUploadModal(visit)}
+                    className="mt-3 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm flex gap-2 items-center"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Upload Image
+                  </button>
+
+                  <button
                     onClick={() => handleDeleteVisit(visit.id)}
                     className="mt-3 text-red-600 text-sm"
                   >
@@ -351,6 +419,79 @@ const TreatmentDetail = () => {
                   className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
                 >
                   {submittingVisit ? 'Adding...' : 'Add Visit'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Image Modal */}
+      {showUploadImageModal && selectedVisitForUpload && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-[60]">
+          <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Upload Image</h3>
+              <button
+                onClick={() => {
+                  setShowUploadImageModal(false);
+                  setImageUploadData({ image: null, caption: '' });
+                  setSelectedVisitForUpload(null);
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUploadImage} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Select Image * <span className="text-xs text-red-600">{!imageUploadData.image ? '(Required)' : ''}</span></label>
+                <input
+                  type="file"
+                  required
+                  accept="image/*"
+                  onChange={handleImageFileSelect}
+                  className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                    !imageUploadData.image ? 'border-gray-300' : 'border-green-300'
+                  }`}
+                />
+                {imageUploadData.image && (
+                  <p className="text-sm text-green-600 mt-1">
+                    ✓ Selected: {imageUploadData.image.name}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Image Caption (Optional)</label>
+                <textarea
+                  value={imageUploadData.caption}
+                  onChange={(e) => setImageUploadData({...imageUploadData, caption: e.target.value})}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Add a caption for this image..."
+                  rows="3"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowUploadImageModal(false);
+                    setImageUploadData({ image: null, caption: '' });
+                    setSelectedVisitForUpload(null);
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={uploadingImage || !imageUploadData.image}
+                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                >
+                  {uploadingImage ? 'Uploading...' : 'Upload Image'}
                 </button>
               </div>
             </form>
