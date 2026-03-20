@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Calendar } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Calendar, X } from 'lucide-react';
 import { treatmentApi } from '../api/treatmentApi';
 import { visitsApi, visitImagesApi } from '../api/visitsApi';
 
@@ -13,6 +13,15 @@ const TreatmentDetail = () => {
   const [loading, setLoading] = useState(true);
   const [expandedVisit, setExpandedVisit] = useState(null);
   const [showAddVisitModal, setShowAddVisitModal] = useState(false);
+  const [submittingVisit, setSubmittingVisit] = useState(false);
+  const [visitFormData, setVisitFormData] = useState({
+    next_visit_date: '',
+    treatment_notes: '',
+    patient_complaints: '',
+    patient_payment_amount: '',
+    patient_payment_type: 'cash',
+    payment_note: ''
+  });
 
   useEffect(() => {
     fetchTreatmentDetail();
@@ -43,6 +52,47 @@ const TreatmentDetail = () => {
   const handleDeleteImage = async (imageId) => {
     await visitImagesApi.delete(imageId);
     fetchVisits();
+  };
+
+  const handleAddVisit = async (e) => {
+    e.preventDefault();
+    setSubmittingVisit(true);
+
+    try {
+      if (!visitFormData.next_visit_date) {
+        alert('Please select a visit date');
+        setSubmittingVisit(false);
+        return;
+      }
+
+      const payload = {
+        treatment: treatment.id,
+        next_visit_date: visitFormData.next_visit_date,
+        treatment_notes: visitFormData.treatment_notes || null,
+        patient_complaints: visitFormData.patient_complaints || null,
+        patient_payment_amount: visitFormData.patient_payment_amount ? parseInt(visitFormData.patient_payment_amount, 10) : null,
+        patient_payment_type: visitFormData.patient_payment_type || null,
+        payment_note: visitFormData.payment_note || null
+      };
+
+      await visitsApi.create(payload);
+      setShowAddVisitModal(false);
+      setVisitFormData({
+        next_visit_date: '',
+        treatment_notes: '',
+        patient_complaints: '',
+        patient_payment_amount: '',
+        patient_payment_type: 'cash',
+        payment_note: ''
+      });
+      await fetchVisits();
+      alert('Visit added successfully!');
+    } catch (error) {
+      console.error('Error creating visit:', error);
+      alert(error.response?.data?.detail || 'Error creating visit');
+    } finally {
+      setSubmittingVisit(false);
+    }
   };
 
   const formatAmount = (amount) => {
@@ -200,6 +250,113 @@ const TreatmentDetail = () => {
 
       </div>
 
+      {/* Add Visit Modal */}
+      {showAddVisitModal && treatment && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-[60]">
+          <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Add New Visit</h3>
+              <button
+                onClick={() => setShowAddVisitModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddVisit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Next Visit Date * <span className="text-xs text-red-600">{!visitFormData.next_visit_date ? '(Required)' : ''}</span></label>
+                <input
+                  type="date"
+                  required
+                  value={visitFormData.next_visit_date}
+                  onChange={(e) => setVisitFormData({...visitFormData, next_visit_date: e.target.value})}
+                  className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                    !visitFormData.next_visit_date ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                  }`}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Treatment Notes</label>
+                <textarea
+                  value={visitFormData.treatment_notes}
+                  onChange={(e) => setVisitFormData({...visitFormData, treatment_notes: e.target.value})}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Add treatment notes..."
+                  rows="3"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Patient Complaints</label>
+                <textarea
+                  value={visitFormData.patient_complaints}
+                  onChange={(e) => setVisitFormData({...visitFormData, patient_complaints: e.target.value})}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Document patient complaints..."
+                  rows="3"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Payment Amount (₹)</label>
+                  <input
+                    type="number"
+                    value={visitFormData.patient_payment_amount}
+                    onChange={(e) => setVisitFormData({...visitFormData, patient_payment_amount: e.target.value})}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="e.g., 1000"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Payment Type</label>
+                  <select
+                    value={visitFormData.patient_payment_type}
+                    onChange={(e) => setVisitFormData({...visitFormData, patient_payment_type: e.target.value})}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="cash">Cash</option>
+                    <option value="card">Card</option>
+                    <option value="online">Online</option>
+                    <option value="cheque">Cheque</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Payment Note</label>
+                <textarea
+                  value={visitFormData.payment_note}
+                  onChange={(e) => setVisitFormData({...visitFormData, payment_note: e.target.value})}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Add any payment notes..."
+                  rows="2"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowAddVisitModal(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingVisit || !visitFormData.next_visit_date}
+                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                >
+                  {submittingVisit ? 'Adding...' : 'Add Visit'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
