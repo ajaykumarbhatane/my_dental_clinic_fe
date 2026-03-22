@@ -14,10 +14,15 @@ const Sidebar = ({ isOpen, onClose }) => {
   ];
 
   return (
-    <aside className={`fixed top-14 left-0 z-50 h-screen w-64 bg-gradient-to-b from-blue-950 via-blue-900 to-blue-800 text-white shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
+    <aside className={`fixed top-14 md:top-16 left-0 z-50 
+      h-[calc(100vh-56px)] md:h-[calc(100vh-64px)] 
+      w-64 bg-gradient-to-b from-blue-950 via-blue-900 to-blue-800 
+      text-white shadow-2xl transform transition-transform duration-300 
+      ease-in-out flex flex-col 
+      ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
 
       {/* 🔷 BRAND SECTION */}
-      <div className="px-6 py-6 border-b border-blue-700">
+      <div className="px-4 py-5 border-t border-blue-700 mt-auto shrink-0 bg-blue-900/40 backdrop-blur-sm">
         <div className="flex items-center gap-3">
 
           {/* Logo */}
@@ -34,17 +39,16 @@ const Sidebar = ({ isOpen, onClose }) => {
       </div>
 
       {/* 📱 MOBILE CLOSE BUTTON */}
-      <div className="md:hidden px-4 pt-2">
-        <button
-          onClick={onClose}
-          className="p-2 rounded-lg hover:bg-blue-700 transition"
-        >
-          <X />
-        </button>
-      </div>
+      {/* 📱 MOBILE CLOSE BUTTON (FIXED TOP RIGHT) */}
+      <button
+        onClick={onClose}
+        className="md:hidden absolute top-3 right-3 p-2 rounded-lg bg-blue-800/70 hover:bg-blue-700 transition z-50"
+      >
+        <X className="w-5 h-5 text-white" />
+      </button>
 
       {/* 🧭 NAVIGATION */}
-      <nav className="flex-1 mt-4 px-3 overflow-y-auto">
+      <nav className="flex-1 mt-4 px-3 overflow-y-auto min-h-0">
         <ul className="space-y-2">
           {menuItems.map((item) => {
             const Icon = item.icon;
@@ -81,11 +85,12 @@ const Sidebar = ({ isOpen, onClose }) => {
       {/* 💎 FOOTER BRANDING */}
       <div className="px-4 py-5 border-t border-blue-700 mt-auto bg-blue-900/40 backdrop-blur-sm">
         <div className="text-center space-y-1">
-          <p className="text-xs text-blue-200">
-            © 2026 DentalPro
-          </p>
           <p className="text-[11px] text-blue-300">
-            Developed by Ajaykumar & Dr. Swati Lahane
+            Developed by Ajaykumar Bhatane & Dr. Swati Lahane
+          </p>
+          
+          <p className="text-xs text-blue-200">
+            ©2026 MyDentalClinicPro. All rights reserved.
           </p>
         </div>
       </div>
