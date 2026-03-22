@@ -30,7 +30,7 @@ const CustomerCare = () => {
       </div>
 
       {/* 🚀 SUPPORT CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 relative z-10">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-6 relative z-10">
 
         {/* CARD */}
         {[
@@ -69,7 +69,7 @@ const CustomerCare = () => {
         ].map((item, i) => (
           <div
             key={i}
-            className="group bg-white/80 backdrop-blur-md border border-gray-200 rounded-2xl p-6 shadow-md hover:shadow-xl hover:-translate-y-2 transition-all duration-300"
+            className="group bg-white/80 backdrop-blur-md border border-gray-200 rounded-2xl p-4 sm:p-6 shadow-md hover:shadow-xl hover:-translate-y-2 transition-all duration-300"
           >
             <div className={`w-12 h-12 flex items-center justify-center rounded-xl bg-gradient-to-br ${item.color} text-white mb-3 shadow-md group-hover:scale-110 transition`}>
               {item.icon}
@@ -91,7 +91,7 @@ const CustomerCare = () => {
       </div>
 
       {/* 🕒 SUPPORT TIMING */}
-      <div className="bg-white/80 backdrop-blur-md border border-gray-200 rounded-2xl p-6 text-center shadow-md relative z-10">
+      <div className="bg-white/80 backdrop-blur-md border border-gray-200 rounded-2xl p-4 sm:p-6 text-center shadow-md relative z-10">
         <h3 className="text-xl font-bold">Support Availability</h3>
         <p className="text-gray-600 mt-2">
           Monday – Saturday: 9:00 AM – 8:00 PM <br />
@@ -100,25 +100,29 @@ const CustomerCare = () => {
       </div>
 
       {/* 👨‍💻 TEAM */}
-      <div className="bg-white/80 backdrop-blur-md border border-gray-200 rounded-2xl p-6 shadow-md relative z-10">
+      <div className="bg-white/80 backdrop-blur-md border border-gray-200 rounded-2xl p-4 sm:p-6 shadow-md relative z-10">
         <div className="text-center mb-6">
           <h3 className="text-xl font-bold">Our Support Team</h3>
           <p className="text-gray-600">Helping clinics succeed every day.</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {[
             { name: 'Ajaykumar Bhatane', role: 'Technical Support' },
             { name: 'Dr. Swati Lahane', role: 'Clinical Advisor' },
             { name: 'Rahul', role: 'Customer Success' },
             { name: 'Priya', role: 'Product Support' },
           ].map((m, i) => (
-            <div key={i} className="text-center bg-white rounded-2xl p-4 shadow hover:shadow-lg transition">
-              <div className="mx-auto h-16 w-16 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 text-white flex items-center justify-center font-bold text-lg mb-3">
+            <div
+              key={i}
+              className="text-center flex flex-col items-center bg-white rounded-2xl p-3 sm:p-4 shadow hover:shadow-lg hover:-translate-y-1 transition"
+            >
+              <div className="mx-auto h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 text-white flex items-center justify-center font-bold text-lg mb-3">
                 {m.name.charAt(0)}
               </div>
-              <h4 className="font-semibold">{m.name}</h4>
-              <p className="text-sm text-gray-500">{m.role}</p>
+
+              <h4 className="font-semibold text-sm sm:text-base">{m.name}</h4>
+              <p className="text-xs sm:text-sm text-gray-500">{m.role}</p>
             </div>
           ))}
         </div>
