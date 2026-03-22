@@ -9,6 +9,7 @@ import Treatments from './pages/Treatments';
 import TreatmentDetail from './pages/TreatmentDetail';
 import TreatmentVideos from './pages/TreatmentVideos';
 import Settings from './pages/Settings';
+import CustomerCare from './pages/CustomerCare';
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
@@ -51,6 +52,7 @@ const AppRoutes = () => {
                   <Route path="/treatments" element={<Treatments />} />
                   <Route path="/treatments/:id" element={<TreatmentDetail />} />
                   <Route path="/treatment-videos" element={<TreatmentVideos />} />
+                  <Route path="/customer-care" element={<CustomerCare />} />
                   <Route path="/settings" element={<Settings />} />
                 </Routes>
               </DashboardLayout>

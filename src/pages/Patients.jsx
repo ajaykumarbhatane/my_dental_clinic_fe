@@ -171,6 +171,9 @@ const Patients = () => {
                   Date of Birth
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                  Assigned Doctor
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   Created Date
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
@@ -220,6 +223,9 @@ const Patients = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                       {patient.date_of_birth ? new Date(patient.date_of_birth).toLocaleDateString() : 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
+                      {patient.doctor_name || patient.user?.first_name ? `Dr. ${patient.user?.first_name || ''} ${patient.user?.last_name || ''}`.trim() : 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
                       {new Date(patient.created_at).toLocaleDateString()}

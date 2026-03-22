@@ -72,13 +72,54 @@ const TreatmentDetail = () => {
         return;
       }
 
+      // Additional validation before upload (max 50MB)
+      if (imageUploadData.image.size > 50 * 1024 * 1024) {
+        alert('Image file is too large. Please select an image smaller than 50MB.');
+        setUploadingImage(false);
+        return;
+      }
+
       const payload = {
         image: imageUploadData.image,
         visit: selectedVisitForUpload.id,
         caption: imageUploadData.caption || ''
       };
 
-      await visitImagesApi.create(payload);
+      // Add timeout and retry logic for mobile networks
+      let attempts = 0;
+      const maxAttempts = 3;
+      const uploadWithRetry = async () => {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+          const response = await visitImagesApi.create(payload);
+          clearTimeout(timeoutId);
+          return response;
+        } catch (error) {
+          if (error.name === 'AbortError') {
+            throw new Error('Upload timed out. Please check your internet connection and try again.');
+          }
+          throw error;
+        }
+      };
+
+      let result;
+      while (attempts < maxAttempts) {
+        try {
+          result = await uploadWithRetry();
+          break;
+        } catch (error) {
+          attempts++;
+          if (attempts >= maxAttempts) {
+            throw error;
+          }
+          // Wait before retry (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempts) * 1000));
+          console.log(`Upload attempt ${attempts} failed, retrying...`);
+        }
+      }
+
       setShowUploadImageModal(false);
       setImageUploadData({
         image: null,
@@ -89,7 +130,25 @@ const TreatmentDetail = () => {
       alert('Image uploaded successfully!');
     } catch (error) {
       console.error('Error uploading image:', error);
-      alert(error.response?.data?.detail || 'Error uploading image');
+
+      // Provide more specific error messages
+      let errorMessage = 'Error uploading image';
+
+      if (error.message?.includes('timed out') || error.message?.includes('timeout')) {
+        errorMessage = 'Upload timed out. Please check your internet connection and try again with a smaller image.';
+      } else if (error.response?.status === 413) {
+        errorMessage = 'Image file is too large. Please select a smaller image (max 10MB).';
+      } else if (error.response?.status === 415) {
+        errorMessage = 'Invalid image format. Please select a JPEG, PNG, or GIF image.';
+      } else if (error.response?.status >= 500) {
+        errorMessage = 'Server error. Please try again in a few moments.';
+      } else if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (!navigator.onLine) {
+        errorMessage = 'No internet connection. Please check your network and try again.';
+      }
+
+      alert(errorMessage);
     } finally {
       setUploadingImage(false);
     }
@@ -98,6 +157,28 @@ const TreatmentDetail = () => {
   const handleImageFileSelect = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select a valid image file (JPEG, PNG, GIF, etc.)');
+        e.target.value = '';
+        return;
+      }
+
+      // Validate file size (max 10MB for mobile compatibility)
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxSize) {
+        alert('Image file is too large. Please select an image smaller than 10MB.');
+        e.target.value = '';
+        return;
+      }
+
+      // Validate minimum file size (avoid corrupted files)
+      if (file.size < 100) {
+        alert('The selected file appears to be corrupted or too small. Please select a different image.');
+        e.target.value = '';
+        return;
+      }
+
       setImageUploadData({
         ...imageUploadData,
         image: file
@@ -446,20 +527,31 @@ const TreatmentDetail = () => {
 
             <form onSubmit={handleUploadImage} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Select Image * <span className="text-xs text-red-600">{!imageUploadData.image ? '(Required)' : ''}</span></label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Select Image * <span className="text-xs text-red-600">{!imageUploadData.image ? '(Required)' : ''}</span>
+                </label>
                 <input
                   type="file"
                   required
                   accept="image/*"
+                  capture="environment"
                   onChange={handleImageFileSelect}
                   className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
                     !imageUploadData.image ? 'border-gray-300' : 'border-green-300'
                   }`}
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Max file size: 50MB. Supported formats: JPEG, PNG, GIF, WebP
+                </p>
                 {imageUploadData.image && (
-                  <p className="text-sm text-green-600 mt-1">
-                    ✓ Selected: {imageUploadData.image.name}
-                  </p>
+                  <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded">
+                    <p className="text-sm text-green-700">
+                      ✓ Selected: {imageUploadData.image.name}
+                    </p>
+                    <p className="text-xs text-green-600">
+                      Size: {(imageUploadData.image.size / 1024 / 1024).toFixed(2)} MB
+                    </p>
+                  </div>
                 )}
               </div>
 

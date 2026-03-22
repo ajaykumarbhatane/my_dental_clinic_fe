@@ -332,7 +332,13 @@ const Dashboard = () => {
                     Treatment
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Next Visit
+                    Doctor
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    Visit Date
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    Next Visit Date
                   </th>
 
                 </tr>
@@ -345,12 +351,20 @@ const Dashboard = () => {
                     onClick={() => navigate(visit.treatment || visit.treatment_id ? `/treatments/${visit.treatment || visit.treatment_id}` : '#')}
                   >
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                      {visit.patient_name || 'N/A'}
+                      {visit.patient_full_name || `${visit.patient_name || ''} ${visit.patient_last_name || ''}`.trim() || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
                         {visit.treatment_name || 'N/A'}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
+                      {visit.doctor_name || visit.doctor?.name || 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
+                      {visit.created_at
+                        ? new Date(visit.created_at).toLocaleDateString('en-GB')
+                        : 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
                       {visit.next_visit_date

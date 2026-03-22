@@ -17,10 +17,10 @@ const DashboardLayout = ({ children }) => {
         />
       )}
 
-      <div className="flex-1 flex flex-col overflow-hidden pt-0">
+      <div className="flex-1 flex flex-col overflow-hidden pt-14 md:pt-16 md:pl-64">
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gradient-to-br from-gray-50 via-gray-50 to-blue-50 px-2 md:px-4 py-4">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gradient-to-br from-gray-50 via-gray-50 to-blue-50 p-3 sm:p-4 md:p-6">
           <div className="w-full">
             {children}
           </div>

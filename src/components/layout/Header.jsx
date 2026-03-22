@@ -1,22 +1,17 @@
-import { Menu, User, LogOut, ChevronDown, Clock } from 'lucide-react';
+import { Menu, User, LogOut, ChevronDown } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
+import { clinicApi } from '../../api/clinicApi';
 
 const Header = ({ onMenuClick }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [showDropdown, setShowDropdown] = useState(false);
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [clinicName, setClinicName] = useState('');
   const dropdownRef = useRef(null);
 
-  // Update time
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+
 
   // Close dropdown outside click
   useEffect(() => {
@@ -54,56 +49,78 @@ const Header = ({ onMenuClick }) => {
     return 'Doctor';
   };
 
-  const formatDateAndTime = (date) => {
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = date.toLocaleString('en-US', { month: 'short' });
-    const year = date.getFullYear();
-    const time = date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    });
-    return `${day} ${month} ${year}, ${time}`;
+  const getUserClinicName = () => {
+    if (clinicName) return clinicName;
+    if (user?.clinic?.name) return user.clinic.name;
+    if (user?.clinic_name) return user.clinic_name;
+    if (Array.isArray(user?.clinics) && user.clinics.length > 0) {
+      return user.clinics[0]?.name || '';
+    }
+    return 'No clinic assigned';
   };
 
-  return (
-    <header className="relative bg-white border-b border-gray-100 shadow-sm px-4 md:px-6 py-2">
-      
-      {/* Mobile Menu Button (Fixed Top-Left) */}
-      <button
-        onClick={onMenuClick}
-        className="md:hidden absolute top-2 left-2 p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition"
-      >
-        <Menu className="w-5 h-5" />
-      </button>
+  useEffect(() => {
+    const resolveClinicName = async () => {
+      if (!user) return;
 
-      <div className="w-full flex flex-col md:flex-row justify-between items-start md:items-center gap-1">
+      const fromUser =
+        user?.clinic?.name ||
+        user?.clinic_name ||
+        (Array.isArray(user?.clinics) && user.clinics.length > 0 ? user.clinics[0]?.name : null);
+      if (fromUser) {
+        setClinicName(fromUser);
+        return;
+      }
+
+      try {
+        const response = await clinicApi.getAll();
+        const clinics = response?.data || [];
+        if (Array.isArray(clinics) && clinics.length > 0) {
+          setClinicName(clinics[0]?.name || '');
+        }
+      } catch (error) {
+        console.warn('Could not resolve clinic name:', error);
+      }
+    };
+
+    resolveClinicName();
+  }, [user]);
+
+
+
+  return (
+    <header className="fixed top-0 left-0 right-0 h-14 md:h-16 z-50 bg-white border-b border-gray-200 shadow-sm">
+      <div className="max-w-[1800px] mx-auto h-full px-3 sm:px-4 md:px-6 flex items-center justify-between">
 
         {/* Left Section */}
-        <div className="flex-1 pl-10 md:pl-0">
-          <h2 className="text-xl md:text-2xl font-semibold text-gray-900 leading-tight">
-            Welcome back, Dr. {getUserDisplayName()}
-          </h2>
+        <div className="flex items-center gap-2 sm:gap-3">
 
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-0.5">
-            <p className="text-sm text-gray-500">
-              Manage your dental clinic efficiently
+          {/* Mobile Menu Button */}
+          <button
+            onClick={onMenuClick}
+            className="md:hidden p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            aria-label="Open sidebar"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+
+          {/* Clinic Info */}
+          <div className="min-w-[120px]">
+            <p className="text-xs text-gray-500">Clinic</p>
+            <p className="text-sm font-semibold text-gray-900 truncate max-w-[200px]">
+              {getUserClinicName()}
             </p>
-
-            <div className="flex items-center gap-1.5 text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded-full">
-              <Clock className="w-4 h-4 text-blue-600" />
-              {formatDateAndTime(currentTime)}
-            </div>
           </div>
+
         </div>
 
         {/* Right Section */}
-        <div className="flex items-center self-end md:self-auto">
+        <div className="flex items-center gap-2 sm:gap-3">
           <div className="relative" ref={dropdownRef}>
             
             <button
               onClick={() => setShowDropdown(!showDropdown)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition"
+              className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-gray-100 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               <div className="flex items-center justify-center w-9 h-9 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg text-white font-semibold">
                 {getUserDisplayName().charAt(0).toUpperCase()}
@@ -129,16 +146,12 @@ const Header = ({ onMenuClick }) => {
             {showDropdown && (
               <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50">
 
-                <div className="px-4 py-3 border-b bg-gray-50">
-                  <p className="text-sm font-semibold text-gray-900">
-                    {getUserDisplayName()}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {user?.email}
-                  </p>
-                  <div className="mt-2 inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
+                <div className="px-4 py-3 border-b border-gray-100">
+                  <p className="text-sm font-semibold text-gray-900">{getUserDisplayName()}</p>
+                  <p className="text-xs text-gray-500">{user?.email}</p>
+                  <span className="mt-2 inline-block px-2 py-1 text-xs font-semibold rounded bg-blue-100 text-blue-700">
                     {getUserRole()}
-                  </div>
+                  </span>
                 </div>
 
                 <button
@@ -152,7 +165,7 @@ const Header = ({ onMenuClick }) => {
                   Profile Settings
                 </button>
 
-                <hr />
+                <hr className="my-1" />
 
                 <button
                   onClick={() => {
