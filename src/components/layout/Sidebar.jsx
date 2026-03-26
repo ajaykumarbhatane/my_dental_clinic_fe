@@ -5,12 +5,12 @@ const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
 
   const menuItems = [
-    { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/patients', icon: Users, label: 'Patients' },
-    { path: '/treatments', icon: Stethoscope, label: 'Treatments' },
-    { path: '/treatment-videos', icon: Film, label: 'Treatment Videos' },
-    { path: '/customer-care', icon: Phone, label: 'Customer Care' },
-    { path: '/settings', icon: Settings, label: 'Settings' },
+    { path: '/app', icon: LayoutDashboard, label: 'Dashboard' },
+    { path: '/app/patients', icon: Users, label: 'Patients' },
+    { path: '/app/treatments', icon: Stethoscope, label: 'Treatments' },
+    { path: '/app/treatment-videos', icon: Film, label: 'Treatment Videos' },
+    { path: '/app/customer-care', icon: Phone, label: 'Customer Care' },
+    { path: '/app/settings', icon: Settings, label: 'Settings' },
   ];
 
   return (

@@ -145,7 +145,7 @@ const Treatments = () => {
   };
 
   const handleViewTreatment = (treatment) => {
-    navigate(`/treatments/${treatment.id}`);
+    navigate(`/app/treatments/${treatment.id}`);
   };
 
   const handleViewVisits = async (treatment) => {

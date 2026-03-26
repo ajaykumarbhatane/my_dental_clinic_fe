@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, Calendar, X } from 'lucide-react';
 import { treatmentApi } from '../api/treatmentApi';
 import { visitsApi, visitImagesApi } from '../api/visitsApi';
 
 const TreatmentDetail = () => {
+  const galleryInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -137,7 +139,7 @@ const TreatmentDetail = () => {
       if (error.message?.includes('timed out') || error.message?.includes('timeout')) {
         errorMessage = 'Upload timed out. Please check your internet connection and try again with a smaller image.';
       } else if (error.response?.status === 413) {
-        errorMessage = 'Image file is too large. Please select a smaller image (max 10MB).';
+        errorMessage = 'Image file is too large. Please select a smaller image (max 50MB).';
       } else if (error.response?.status === 415) {
         errorMessage = 'Invalid image format. Please select a JPEG, PNG, or GIF image.';
       } else if (error.response?.status >= 500) {
@@ -159,15 +161,15 @@ const TreatmentDetail = () => {
     if (file) {
       // Validate file type
       if (!file.type.startsWith('image/')) {
-        alert('Please select a valid image file (JPEG, PNG, GIF, etc.)');
+        alert('Please select a valid image file (JPEG, PNG, GIF, WebP, etc.)');
         e.target.value = '';
         return;
       }
 
-      // Validate file size (max 10MB for mobile compatibility)
-      const maxSize = 10 * 1024 * 1024; // 10MB
+      // Validate file size (max 50MB on backend)
+      const maxSize = 50 * 1024 * 1024; // 50MB
       if (file.size > maxSize) {
-        alert('Image file is too large. Please select an image smaller than 10MB.');
+        alert('Image file is too large. Please select an image smaller than 50MB.');
         e.target.value = '';
         return;
       }
@@ -258,7 +260,7 @@ const TreatmentDetail = () => {
 
       {/* 🔷 Back */}
       <button
-        onClick={() => navigate('/treatments')}
+        onClick={() => navigate('/app/treatments')}
         className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
       >
         <ArrowLeft className="w-5 h-5" />
@@ -530,17 +532,40 @@ const TreatmentDetail = () => {
                 <label className="block text-sm font-medium text-gray-700">
                   Select Image * <span className="text-xs text-red-600">{!imageUploadData.image ? '(Required)' : ''}</span>
                 </label>
+                <div className="mt-2 flex gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => galleryInputRef.current?.click()}
+                    className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Choose from gallery
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Use camera
+                  </button>
+                </div>
+
                 <input
+                  ref={galleryInputRef}
                   type="file"
-                  required
+                  accept="image/*"
+                  onChange={handleImageFileSelect}
+                  className="hidden"
+                />
+                <input
+                  ref={cameraInputRef}
+                  type="file"
                   accept="image/*"
                   capture="environment"
                   onChange={handleImageFileSelect}
-                  className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-                    !imageUploadData.image ? 'border-gray-300' : 'border-green-300'
-                  }`}
+                  className="hidden"
                 />
-                <p className="text-xs text-gray-500 mt-1">
+
+                <p className="text-xs text-gray-500 mt-2">
                   Max file size: 50MB. Supported formats: JPEG, PNG, GIF, WebP
                 </p>
                 {imageUploadData.image && (

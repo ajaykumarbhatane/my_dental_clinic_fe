@@ -54,7 +54,7 @@ const PatientDetail = () => {
       <div className="flex justify-between items-center">
         <div className="flex items-center space-x-4">
           <Link
-            to="/patients"
+            to="/app/patients"
             className="text-gray-600 hover:text-gray-800"
           >
             <ArrowLeft className="w-6 h-6" />

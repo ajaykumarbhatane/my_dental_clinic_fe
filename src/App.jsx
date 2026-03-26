@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './context/AuthContext';
 import DashboardLayout from './components/layout/DashboardLayout';
 import Login from './pages/Login';
+import Landing from './pages/Landing';
 import Dashboard from './pages/Dashboard';
 import Patients from './pages/Patients';
 import PatientDetail from './pages/PatientDetail';
@@ -29,35 +30,45 @@ const ProtectedRoute = ({ children }) => {
 // App Routes component that uses auth context
 const AppRoutes = () => {
   const { isAuthenticated } = useAuth();
+  const isAuth = isAuthenticated();
+  const appBase = '/app';
 
   return (
     <Router>
       <Routes>
-        {/* Public route */}
+        <Route
+          path="/"
+          element={isAuth ? <Navigate to={appBase} replace /> : <Landing />}
+        />
         <Route
           path="/login"
-          element={isAuthenticated() ? <Navigate to="/" replace /> : <Login />}
+          element={isAuth ? <Navigate to={appBase} replace /> : <Login />}
         />
 
-        {/* Protected routes */}
         <Route
-          path="/*"
+          path="/app/*"
           element={
             <ProtectedRoute>
               <DashboardLayout>
                 <Routes>
-                  <Route path="/" element={<Dashboard />} />
-                  <Route path="/patients" element={<Patients />} />
-                  <Route path="/patients/:id" element={<PatientDetail />} />
-                  <Route path="/treatments" element={<Treatments />} />
-                  <Route path="/treatments/:id" element={<TreatmentDetail />} />
-                  <Route path="/treatment-videos" element={<TreatmentVideos />} />
-                  <Route path="/customer-care" element={<CustomerCare />} />
-                  <Route path="/settings" element={<Settings />} />
+                  <Route path="" element={<Dashboard />} />
+                  <Route path="patients" element={<Patients />} />
+                  <Route path="patients/:id" element={<PatientDetail />} />
+                  <Route path="treatments" element={<Treatments />} />
+                  <Route path="treatments/:id" element={<TreatmentDetail />} />
+                  <Route path="treatment-videos" element={<TreatmentVideos />} />
+                  <Route path="customer-care" element={<CustomerCare />} />
+                  <Route path="settings" element={<Settings />} />
+                  <Route path="*" element={<Navigate to="" replace />} />
                 </Routes>
               </DashboardLayout>
             </ProtectedRoute>
           }
+        />
+
+        <Route
+          path="*"
+          element={isAuth ? <Navigate to={appBase} replace /> : <Navigate to="/" replace />}
         />
       </Routes>
     </Router>
