@@ -24,11 +24,7 @@ export const visitImagesApi = {
     if (data.caption) {
       formData.append('caption', data.caption);
     }
-    return apiClient.post('/visit-images/', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    return apiClient.post('/visit-images/', formData);
   },
   update: (id, data) => {
     const formData = new FormData();
@@ -38,11 +34,7 @@ export const visitImagesApi = {
     if (data.caption) {
       formData.append('caption', data.caption);
     }
-    return apiClient.patch(`/visit-images/${id}/`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    return apiClient.patch(`/visit-images/${id}/`, formData);
   },
   delete: (id) => apiClient.delete(`/visit-images/${id}/`),
 };

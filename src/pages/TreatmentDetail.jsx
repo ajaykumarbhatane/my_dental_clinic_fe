@@ -159,23 +159,23 @@ const TreatmentDetail = () => {
   const handleImageFileSelect = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        alert('Please select a valid image file (JPEG, PNG, GIF, WebP, etc.)');
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      const maxSize = 50 * 1024 * 1024; // 50MB
+      const minSize = 1 * 1024; // 1KB (avoid corrupted files)
+
+      if (!allowedTypes.includes(file.type)) {
+        alert('Please select a valid image file (JPEG, PNG, GIF, WebP)');
         e.target.value = '';
         return;
       }
 
-      // Validate file size (max 50MB on backend)
-      const maxSize = 50 * 1024 * 1024; // 50MB
       if (file.size > maxSize) {
         alert('Image file is too large. Please select an image smaller than 50MB.');
         e.target.value = '';
         return;
       }
 
-      // Validate minimum file size (avoid corrupted files)
-      if (file.size < 100) {
+      if (file.size < minSize) {
         alert('The selected file appears to be corrupted or too small. Please select a different image.');
         e.target.value = '';
         return;
