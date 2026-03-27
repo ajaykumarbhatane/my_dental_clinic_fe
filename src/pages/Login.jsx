@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Stethoscope, Mail, Lock, LogIn, AlertCircle } from 'lucide-react';
+import { Stethoscope, Mail, Lock, LogIn, AlertCircle, Wifi } from 'lucide-react';
 import logo from '../assets/logo.png';
 
 const Login = () => {
@@ -9,12 +9,34 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  // Monitor online/offline status for mobile networks
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Mobile connectivity check
+    if (!isOnline) {
+      setError('No internet connection. Please check your network.');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
@@ -107,11 +129,30 @@ const Login = () => {
               </div>
             </div>
 
+            {/* Network Status */}
+            {!isOnline && (
+              <div className="flex items-start gap-3 bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-lg">
+                <Wifi className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-yellow-700">
+                  <p className="font-semibold">No Internet Connection</p>
+                  <p className="text-xs mt-1">Please check your mobile data or WiFi connection</p>
+                </div>
+              </div>
+            )}
+
             {/* Error Message */}
             {error && (
               <div className="flex items-start gap-3 bg-red-50 border-l-4 border-red-500 p-4 rounded-lg animate-in fade-in slide-in-from-top-2">
                 <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-red-700">{error}</p>
+                <div className="text-sm text-red-700">
+                  <p className="font-semibold">{error}</p>
+                  {error.includes('Network error') && (
+                    <p className="text-xs mt-1">Try checking your connection and try again</p>
+                  )}
+                  {error.includes('timeout') && (
+                    <p className="text-xs mt-1">Server is taking too long. Try again shortly</p>
+                  )}
+                </div>
               </div>
             )}
 
