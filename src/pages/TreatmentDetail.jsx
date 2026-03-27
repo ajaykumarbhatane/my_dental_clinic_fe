@@ -74,13 +74,8 @@ const TreatmentDetail = () => {
         return;
       }
 
-      // Additional validation before upload (max 45MB - accounts for multipart encoding)
-      if (imageUploadData.image.size > MAX_IMAGE_SIZE_BYTES) {
-        const fileSizeMB = (imageUploadData.image.size / 1024 / 1024).toFixed(2);
-        alert(`Image is ${fileSizeMB}MB. For mobile uploads, max size is ${MAX_IMAGE_SIZE_DISPLAY}. Try a compressed version.`);
-        setUploadingImage(false);
-        return;
-      }
+      // Additional validation before upload (no size limit)
+      // File size validation removed - allow any size
 
       const payload = {
         image: imageUploadData.image,
@@ -143,7 +138,7 @@ const TreatmentDetail = () => {
         errorMessage = 'Request timeout. Check your connection or try a compressed image.';
       } else if (error.response?.status === 413) {
         const fileSize = imageUploadData.image?.size ? (imageUploadData.image.size / 1024 / 1024).toFixed(1) : 'unknown';
-        errorMessage = `File (${fileSize}MB) exceeds server limit (${MAX_IMAGE_SIZE_DISPLAY}). Compress or select a smaller image.`;
+        errorMessage = `File (${fileSize}MB) is too large for server processing. Try a smaller or compressed image.`;
       } else if (error.response?.status === 415) {
         errorMessage = 'Image format not recognized. Is this actually an image file? Try: JPEG, PNG, GIF, or WebP.';
       } else if (error.response?.status === 400) {
@@ -167,10 +162,8 @@ const TreatmentDetail = () => {
     }
   };
 
-  // Mobile-optimized image size limit (leaves buffer for multipart encoding)
-  const MAX_IMAGE_SIZE_BYTES = 45 * 1024 * 1024; // 45MB (leaves 5MB buffer for FormData encoding)
-  const MAX_IMAGE_SIZE_DISPLAY = '45MB';
-  const MIN_IMAGE_SIZE = 100; // 100 bytes
+  // No size limits - allow any image size
+  const MIN_IMAGE_SIZE = 100; // 100 bytes (avoid corrupted files)
 
   const handleImageFileSelect = async (e) => {
     const file = e.target.files[0];
@@ -194,14 +187,6 @@ const TreatmentDetail = () => {
         console.warn(`Unusual MIME type: ${file.type}. Will validate on server.`);
       }
 
-      // Check file size - account for multipart encoding overhead (~33% extra)
-      if (file.size > MAX_IMAGE_SIZE_BYTES) {
-        const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
-        alert(`Image is ${fileSizeMB}MB, but maximum allowed is ${MAX_IMAGE_SIZE_DISPLAY}. Please select a smaller or compressed image.`);
-        e.target.value = '';
-        return;
-      }
-
       // Check if file appears valid (not corrupted)
       if (file.size < MIN_IMAGE_SIZE) {
         alert('The selected file appears to be corrupted or too small (< 100 bytes). Please select a different image.');
@@ -209,6 +194,7 @@ const TreatmentDetail = () => {
         return;
       }
 
+      // No size limit - allow any image size
       // For mobile, suggest image optimization if file is large
       const fileSizeMB = file.size / 1024 / 1024;
       if (fileSizeMB > 5) {
