@@ -14,12 +14,6 @@ apiClient.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Token ${token}`;
     }
-
-    // If using FormData, let Axios set the Content-Type header (including boundary)
-    if (config.data instanceof FormData) {
-      delete config.headers['Content-Type'];
-    }
-
     return config;
   },
   (error) => {
