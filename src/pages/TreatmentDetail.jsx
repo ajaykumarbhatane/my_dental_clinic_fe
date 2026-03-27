@@ -74,9 +74,10 @@ const TreatmentDetail = () => {
         return;
       }
 
-      // Additional validation before upload (max 50MB)
-      if (imageUploadData.image.size > 50 * 1024 * 1024) {
-        alert('Image file is too large. Please select an image smaller than 50MB.');
+      // Additional validation before upload (max 45MB - accounts for multipart encoding)
+      if (imageUploadData.image.size > MAX_IMAGE_SIZE_BYTES) {
+        const fileSizeMB = (imageUploadData.image.size / 1024 / 1024).toFixed(2);
+        alert(`Image is ${fileSizeMB}MB. For mobile uploads, max size is ${MAX_IMAGE_SIZE_DISPLAY}. Try a compressed version.`);
         setUploadingImage(false);
         return;
       }
@@ -133,21 +134,31 @@ const TreatmentDetail = () => {
     } catch (error) {
       console.error('Error uploading image:', error);
 
-      // Provide more specific error messages
+      // Provide more specific error messages for mobile users
       let errorMessage = 'Error uploading image';
 
       if (error.message?.includes('timed out') || error.message?.includes('timeout')) {
-        errorMessage = 'Upload timed out. Please check your internet connection and try again with a smaller image.';
+        errorMessage = 'Upload timed out - slow mobile connection detected. Try a smaller/compressed image or connect to WiFi.';
+      } else if (error.code === 'ECONNABORTED') {
+        errorMessage = 'Request timeout. Check your connection or try a compressed image.';
       } else if (error.response?.status === 413) {
-        errorMessage = 'Image file is too large. Please select a smaller image (max 50MB).';
+        const fileSize = imageUploadData.image?.size ? (imageUploadData.image.size / 1024 / 1024).toFixed(1) : 'unknown';
+        errorMessage = `File (${fileSize}MB) exceeds server limit (${MAX_IMAGE_SIZE_DISPLAY}). Compress or select a smaller image.`;
       } else if (error.response?.status === 415) {
-        errorMessage = 'Invalid image format. Please select a JPEG, PNG, or GIF image.';
+        errorMessage = 'Image format not recognized. Is this actually an image file? Try: JPEG, PNG, GIF, or WebP.';
+      } else if (error.response?.status === 400) {
+        // 400 can be from Django size limit or validation error
+        if (error.response?.data?.detail?.includes('too large') || error.response?.data?.detail?.includes('exceeded')) {
+          errorMessage = 'Request size exceeded. Try a smaller or compressed image.';
+        } else {
+          errorMessage = error.response.data.detail || 'Invalid request - check file format';
+        }
       } else if (error.response?.status >= 500) {
-        errorMessage = 'Server error. Please try again in a few moments.';
+        errorMessage = 'Server error. Try again in a moment, or contact support if it persists.';
       } else if (error.response?.data?.detail) {
         errorMessage = error.response.data.detail;
       } else if (!navigator.onLine) {
-        errorMessage = 'No internet connection. Please check your network and try again.';
+        errorMessage = 'No internet connection detected. Connect to WiFi or mobile data and try again.';
       }
 
       alert(errorMessage);
@@ -156,29 +167,58 @@ const TreatmentDetail = () => {
     }
   };
 
-  const handleImageFileSelect = (e) => {
+  // Mobile-optimized image size limit (leaves buffer for multipart encoding)
+  const MAX_IMAGE_SIZE_BYTES = 45 * 1024 * 1024; // 45MB (leaves 5MB buffer for FormData encoding)
+  const MAX_IMAGE_SIZE_DISPLAY = '45MB';
+  const MIN_IMAGE_SIZE = 100; // 100 bytes
+
+  const handleImageFileSelect = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-      const maxSize = 50 * 1024 * 1024; // 50MB
-      const minSize = 1 * 1024; // 1KB (avoid corrupted files)
+      // Mobile devices report different MIME types - be lenient
+      const allowedTypes = [
+        'image/jpeg',
+        'image/jpg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+        'image/heic',          // iPhone
+        'image/heif',          // iPhone
+        'application/octet-stream', // Some mobile browsers
+      ];
 
-      if (!allowedTypes.includes(file.type)) {
-        alert('Please select a valid image file (JPEG, PNG, GIF, WebP)');
+      // Skip MIME type check if unknown (mobile browser might report octet-stream)
+      // Instead validate by attempting to check magic bytes on backend
+      if (file.type && !allowedTypes.includes(file.type)) {
+        // Only warn, don't block - backend will validate magic bytes
+        console.warn(`Unusual MIME type: ${file.type}. Will validate on server.`);
+      }
+
+      // Check file size - account for multipart encoding overhead (~33% extra)
+      if (file.size > MAX_IMAGE_SIZE_BYTES) {
+        const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+        alert(`Image is ${fileSizeMB}MB, but maximum allowed is ${MAX_IMAGE_SIZE_DISPLAY}. Please select a smaller or compressed image.`);
         e.target.value = '';
         return;
       }
 
-      if (file.size > maxSize) {
-        alert('Image file is too large. Please select an image smaller than 50MB.');
+      // Check if file appears valid (not corrupted)
+      if (file.size < MIN_IMAGE_SIZE) {
+        alert('The selected file appears to be corrupted or too small (< 100 bytes). Please select a different image.');
         e.target.value = '';
         return;
       }
 
-      if (file.size < minSize) {
-        alert('The selected file appears to be corrupted or too small. Please select a different image.');
-        e.target.value = '';
-        return;
+      // For mobile, suggest image optimization if file is large
+      const fileSizeMB = file.size / 1024 / 1024;
+      if (fileSizeMB > 5) {
+        const shouldOptimize = window.confirm(
+          `Your image is ${fileSizeMB.toFixed(1)}MB. For faster upload on mobile networks, consider using a compressed version (e.g., 2-5MB). Continue with original file?`
+        );
+        if (!shouldOptimize) {
+          e.target.value = '';
+          return;
+        }
       }
 
       setImageUploadData({
