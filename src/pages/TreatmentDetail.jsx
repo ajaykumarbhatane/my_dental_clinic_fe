@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, Calendar, X } from 'lucide-react';
 import { treatmentApi } from '../api/treatmentApi';
 import { visitsApi, visitImagesApi } from '../api/visitsApi';
+import { compressImage } from '../utils/imageOptimizer';
 
 const TreatmentDetail = () => {
   const galleryInputRef = useRef(null);
@@ -23,6 +24,15 @@ const TreatmentDetail = () => {
     image: null,
     caption: ''
   });
+  const [uploadWarning, setUploadWarning] = useState('');
+  const [compressionInfo, setCompressionInfo] = useState('');
+  const [previewImageUrl, setPreviewImageUrl] = useState(null);
+
+  const MAX_IMAGE_SIZE_MB = 50;
+  const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
+  const RECOMMENDED_IMAGE_SIZE_MB = 5;
+  const RECOMMENDED_IMAGE_SIZE_BYTES = RECOMMENDED_IMAGE_SIZE_MB * 1024 * 1024;
+  const AUTO_COMPRESS_THRESHOLD_MB = 9; // compress >=9MB automatically with prompt
   const [visitFormData, setVisitFormData] = useState({
     next_visit_date: '',
     treatment_notes: '',
@@ -74,8 +84,12 @@ const TreatmentDetail = () => {
         return;
       }
 
-      // Additional validation before upload (no size limit)
-      // File size validation removed - allow any size
+      const payloadImageSizeBytes = imageUploadData.image.size;
+      if (payloadImageSizeBytes > MAX_IMAGE_SIZE_BYTES) {
+        alert(`Image size is ${(payloadImageSizeBytes / 1024 / 1024).toFixed(1)}MB. Maximum allowed is ${MAX_IMAGE_SIZE_MB}MB.`);
+        setUploadingImage(false);
+        return;
+      }
 
       const payload = {
         image: imageUploadData.image,
@@ -194,23 +208,49 @@ const TreatmentDetail = () => {
         return;
       }
 
-      // No size limit - allow any image size
-      // For mobile, suggest image optimization if file is large
-      const fileSizeMB = file.size / 1024 / 1024;
-      if (fileSizeMB > 5) {
-        const shouldOptimize = window.confirm(
-          `Your image is ${fileSizeMB.toFixed(1)}MB. For faster upload on mobile networks, consider using a compressed version (e.g., 2-5MB). Continue with original file?`
-        );
-        if (!shouldOptimize) {
-          e.target.value = '';
-          return;
-        }
+      const fileSizeBytes = file.size;
+      const fileSizeMB = fileSizeBytes / 1024 / 1024;
+
+      if (fileSizeBytes > MAX_IMAGE_SIZE_BYTES) {
+        alert(`Selected image is ${fileSizeMB.toFixed(1)}MB, which exceeds the 50MB upload limit. Please choose a smaller image.`);
+        e.target.value = '';
+        setImageUploadData({ ...imageUploadData, image: null });
+        setUploadWarning('');
+        setCompressionInfo('');
+        return;
       }
 
-      setImageUploadData({
-        ...imageUploadData,
-        image: file
-      });
+      if (fileSizeBytes > AUTO_COMPRESS_THRESHOLD_MB * 1024 * 1024) {
+        const shouldCompress = window.confirm(
+          `Selected image is ${fileSizeMB.toFixed(1)}MB. Compress it to reduce upload issues (slow mobile, proxy body limits)?`
+        );
+        if (shouldCompress) {
+          try {
+            const compressed = await compressImage(file, 2048, 2048, 0.75);
+            const compressedSizeMB = (compressed.size / 1024 / 1024).toFixed(1);
+            setImageUploadData({ ...imageUploadData, image: compressed });
+            setCompressionInfo(`Image compressed from ${fileSizeMB.toFixed(1)}MB to ${compressedSizeMB}MB.`);
+          } catch (err) {
+            console.warn('Compression failed; continuing with original image', err);
+            setImageUploadData({ ...imageUploadData, image: file });
+            setCompressionInfo('Auto compression failed; using original image.');
+          }
+        } else {
+          setImageUploadData({ ...imageUploadData, image: file });
+          setCompressionInfo('Using original image.');
+        }
+      } else {
+        setImageUploadData({ ...imageUploadData, image: file });
+        setCompressionInfo('');
+      }
+
+      if (fileSizeBytes > RECOMMENDED_IMAGE_SIZE_BYTES) {
+        setUploadWarning(
+          `Large image selected (${fileSizeMB.toFixed(1)}MB). Upload may take longer on slow mobile networks. For best performance, compress to 5MB or smaller.`
+        );
+      } else {
+        setUploadWarning('');
+      }
     }
   };
 
@@ -220,6 +260,7 @@ const TreatmentDetail = () => {
       image: null,
       caption: ''
     });
+    setUploadWarning('');
     setShowUploadImageModal(true);
   };
 
@@ -393,7 +434,9 @@ const TreatmentDetail = () => {
                       <div key={img.id} className="relative group">
                         <img
                           src={img.image_url}
-                          className="rounded-lg h-28 w-full object-cover"
+                          className="rounded-lg h-28 w-full object-cover cursor-pointer"
+                          alt={img.caption || `Visit image ${img.id}`}
+                          onClick={() => setPreviewImageUrl(img.image_url)}
                         />
                         <button
                           onClick={() => handleDeleteImage(img.id)}
@@ -535,6 +578,26 @@ const TreatmentDetail = () => {
         </div>
       )}
 
+      {/* Full-screen preview modal */}
+      {previewImageUrl && (
+        <div className="fixed inset-0 z-70 flex items-center justify-center bg-black bg-opacity-75 p-4">
+          <div className="relative w-full max-w-4xl rounded-lg overflow-hidden bg-transparent">
+            <button
+              onClick={() => setPreviewImageUrl(null)}
+              className="absolute top-2 right-2 z-20 bg-white/90 text-gray-800 rounded-full p-2 border border-gray-200 hover:bg-white"
+              aria-label="Close preview"
+            >
+              ✕
+            </button>
+            <img
+              src={previewImageUrl}
+              alt="Preview"
+              className="h-screen max-h-[90vh] w-auto max-w-full object-contain mx-auto"
+            />
+          </div>
+        </div>
+      )}
+
       {/* Upload Image Modal */}
       {showUploadImageModal && selectedVisitForUpload && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-[60]">
@@ -546,6 +609,7 @@ const TreatmentDetail = () => {
                   setShowUploadImageModal(false);
                   setImageUploadData({ image: null, caption: '' });
                   setSelectedVisitForUpload(null);
+                  setUploadWarning('');
                 }}
                 className="text-gray-400 hover:text-gray-600"
               >
@@ -604,6 +668,17 @@ const TreatmentDetail = () => {
                     </p>
                   </div>
                 )}
+
+                {uploadWarning && (
+                  <p className="text-xs mt-1 text-yellow-700 bg-yellow-100 border border-yellow-200 p-2 rounded">
+                    {uploadWarning}
+                  </p>
+                )}
+                {compressionInfo && (
+                  <p className="text-xs mt-1 text-blue-700 bg-blue-50 border border-blue-200 p-2 rounded">
+                    {compressionInfo}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -624,6 +699,7 @@ const TreatmentDetail = () => {
                     setShowUploadImageModal(false);
                     setImageUploadData({ image: null, caption: '' });
                     setSelectedVisitForUpload(null);
+                    setUploadWarning('');
                   }}
                   className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
