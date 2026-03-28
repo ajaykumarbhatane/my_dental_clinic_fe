@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Edit, Save, AlertCircle, Check } from 'lucide-react';
 import { userApi } from '../api/userApi';
+import { formatDate } from '../utils/dateUtils';
 
 const Settings = () => {
   const [isEditing, setIsEditing] = useState(false);
@@ -231,11 +232,7 @@ const Settings = () => {
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">Joining Date</label>
                 <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 font-medium">
-                  {userData.joining_date ? new Date(userData.joining_date).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  }) : 'N/A'}
+                  {formatDate(userData.joining_date)}
                 </div>
               </div>
             </div>

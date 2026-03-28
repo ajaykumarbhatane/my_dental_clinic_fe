@@ -4,6 +4,7 @@ import { ArrowLeft, Plus, Trash2, Calendar, X } from 'lucide-react';
 import { treatmentApi } from '../api/treatmentApi';
 import { visitsApi, visitImagesApi } from '../api/visitsApi';
 import { compressImage } from '../utils/imageOptimizer';
+import { formatDate } from '../utils/dateUtils';
 
 const TreatmentDetail = () => {
   const galleryInputRef = useRef(null);
@@ -367,10 +368,11 @@ const TreatmentDetail = () => {
       <div className="grid md:grid-cols-2 gap-6">
         <div className="bg-white p-5 rounded-xl shadow border">
           <h3 className="font-semibold mb-3">Patient Info</h3>
-          <p>Name: {treatment.patient_name}</p>
-          <p>DOB: {treatment.patient_date_of_birth || 'N/A'}</p>
+          <p>Name: {treatment.patient_name || 'N/A'}</p>
+          <p>DOB: {treatment.patient_date_of_birth ? formatDate(treatment.patient_date_of_birth) : 'N/A'}</p>
           <p>Gender: {treatment.patient_gender || 'N/A'}</p>
           <p>Mobile: {treatment.patient_mobile || 'N/A'}</p>
+          <p>Assigned Doctor: {treatment.patient_assigned_doctor || 'N/A'}</p>
         </div>
 
         <div className="bg-white p-5 rounded-xl shadow border">
@@ -402,11 +404,13 @@ const TreatmentDetail = () => {
             <div className="bg-gray-50 p-4 rounded-xl">
 
               <div className="flex justify-between">
-                <div className="flex gap-2 items-center">
-                  <Calendar className="w-4 h-4 text-blue-600" />
-                  {new Date(visit.next_visit_date).toLocaleDateString()}
+                <div className="flex flex-col">
+                  <div className="flex gap-2 items-center">
+                    <Calendar className="w-4 h-4 text-blue-600" />
+                    <span className="font-medium">Next Visit: {formatDate(visit.next_visit_date)}</span>
+                  </div>
+                  <div className="text-xs text-gray-500">Created: {formatDate(visit.created_at)}</div>
                 </div>
-
                 <span className="text-green-600 font-semibold">
                   {formatAmount(visit.patient_payment_amount)}
                 </span>

@@ -4,6 +4,7 @@ import { Filter, Eye, Plus, X } from 'lucide-react';
 import { treatmentApi } from '../api/treatmentApi';
 import { patientApi } from '../api/patientApi';
 import { visitsApi } from '../api/visitsApi';
+import { formatDate, toISODate, toDDMMYYYY } from '../utils/dateUtils';
 
 const Treatments = () => {
   const navigate = useNavigate();
@@ -602,7 +603,7 @@ const Treatments = () => {
                     {selectedVisits.map((visit) => (
                       <tr key={visit.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {visit.next_visit_date ? new Date(visit.next_visit_date).toLocaleDateString() : 'N/A'}
+                          {formatDate(visit.next_visit_date)}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-500">{visit.treatment_notes || 'N/A'}</td>
                         <td className="px-6 py-4 text-sm text-gray-500">{visit.patient_complaints || 'N/A'}</td>
@@ -663,8 +664,11 @@ const Treatments = () => {
                 <input
                   type="date"
                   required
-                  value={visitFormData.next_visit_date}
-                  onChange={(e) => setVisitFormData({...visitFormData, next_visit_date: e.target.value})}
+                  value={toISODate(visitFormData.next_visit_date)}
+                  onChange={(e) => setVisitFormData({
+                    ...visitFormData,
+                    next_visit_date: e.target.value ? toDDMMYYYY(e.target.value) : ''
+                  })}
                   className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
                     !visitFormData.next_visit_date ? 'border-red-500 bg-red-50' : 'border-gray-300'
                   }`}

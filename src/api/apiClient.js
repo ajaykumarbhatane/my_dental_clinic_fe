@@ -56,7 +56,7 @@ apiClient.interceptors.response.use(
     }
     
     if (error.response?.status === 401) {
-      // Clear auth data on unauthorized responses
+      // Clear auth data on unauthorized responses and redirect to landing
       try {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
@@ -66,6 +66,7 @@ apiClient.interceptors.response.use(
           sessionStorage.removeItem('user');
         } catch (e2) {}
       }
+      window.location.href = '/';
     }
     
     return Promise.reject(error);

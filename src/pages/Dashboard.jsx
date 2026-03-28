@@ -5,6 +5,7 @@ import { patientApi } from '../api/patientApi';
 import { treatmentApi } from '../api/treatmentApi';
 import { visitsApi } from '../api/visitsApi';
 import { clinicApi } from '../api/clinicApi';
+import { formatDate, parseDateString } from '../utils/dateUtils';
 
 // chart.js imports
 import {
@@ -157,8 +158,17 @@ const Dashboard = () => {
       ).length;
 
       const upcomingVisitsData = visits
-        .filter(v => v.next_visit_date && new Date(v.next_visit_date) >= new Date())
-        .sort((a, b) => new Date(a.next_visit_date) - new Date(b.next_visit_date))
+        .filter(v => {
+          const visitDate = parseDateString(v.next_visit_date);
+          const today = new Date();
+          today.setHours(0,0,0,0);
+          return visitDate && visitDate >= today;
+        })
+        .sort((a, b) => {
+          const dateA = parseDateString(a.next_visit_date);
+          const dateB = parseDateString(b.next_visit_date);
+          return (dateA ? dateA.getTime() : 0) - (dateB ? dateB.getTime() : 0);
+        })
         .slice(0, 10);
 
       // Update stats
@@ -362,14 +372,10 @@ const Dashboard = () => {
                       {visit.doctor_name || visit.doctor?.name || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
-                      {visit.created_at
-                        ? new Date(visit.created_at).toLocaleDateString('en-GB')
-                        : 'N/A'}
+                      {formatDate(visit.created_at)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
-                      {visit.next_visit_date
-                        ? new Date(visit.next_visit_date).toLocaleDateString('en-GB')
-                        : 'N/A'}
+                      {formatDate(visit.next_visit_date)}
                     </td>
                   </tr>
                 ))}

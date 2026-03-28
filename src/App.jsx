@@ -24,7 +24,7 @@ const ProtectedRoute = ({ children }) => {
     );
   }
 
-  return isAuthenticated() ? children : <Navigate to="/login" replace />;
+  return isAuthenticated() ? children : <Navigate to="/" replace />;
 };
 
 // App Routes component that uses auth context

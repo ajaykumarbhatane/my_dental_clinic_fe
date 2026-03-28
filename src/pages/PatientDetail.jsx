@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Edit, ArrowLeft } from 'lucide-react';
 import { patientApi } from '../api/patientApi';
 import { treatmentApi } from '../api/treatmentApi';
+import { formatDate } from '../utils/dateUtils';
 
 const PatientDetail = () => {
   const { id } = useParams();
@@ -87,7 +88,7 @@ const PatientDetail = () => {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">Date of Birth</label>
-            <p className="mt-1 text-sm text-gray-900">{patient.date_of_birth || 'N/A'}</p>
+            <p className="mt-1 text-sm text-gray-900">{formatDate(patient.date_of_birth)}</p>
           </div>
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700">Address</label>

@@ -4,6 +4,7 @@ import { Search, Filter, Plus, Eye, Edit, Trash2, X } from 'lucide-react';
 import { patientApi } from '../api/patientApi';
 import { userApi } from '../api/userApi';
 import { useAuth } from '../context/AuthContext';
+import { formatDate, toISODate, toDDMMYYYY } from '../utils/dateUtils';
 
 const Patients = () => {
   const [patients, setPatients] = useState([]);
@@ -222,13 +223,13 @@ const Patients = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {patient.date_of_birth ? new Date(patient.date_of_birth).toLocaleDateString() : 'N/A'}
+                      {formatDate(patient.date_of_birth)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
-                      {patient.doctor_name || patient.user?.first_name ? `Dr. ${patient.user?.first_name || ''} ${patient.user?.last_name || ''}`.trim() : 'N/A'}
+                      {patient.assigned_doctor || (patient.user && (patient.user.first_name || patient.user.last_name) ? `Dr. ${patient.user.first_name || ''} ${patient.user.last_name || ''}`.trim() : 'N/A')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
-                      {new Date(patient.created_at).toLocaleDateString()}
+                      {formatDate(patient.created_at)}
                     </td>
                     <td
                       className="px-6 py-4 whitespace-nowrap text-sm font-medium"
@@ -354,8 +355,8 @@ const Patients = () => {
                 <label className="block text-sm font-bold text-gray-700 mb-2">Date of Birth</label>
                 <input
                   type="date"
-                  value={formData.date_of_birth}
-                  onChange={(e) => setFormData({...formData, date_of_birth: e.target.value})}
+                  value={toISODate(formData.date_of_birth)}
+                  onChange={(e) => setFormData({...formData, date_of_birth: e.target.value ? toDDMMYYYY(e.target.value) : ''})}
                   className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
                 />
               </div>
