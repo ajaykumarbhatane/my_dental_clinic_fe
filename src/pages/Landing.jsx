@@ -345,7 +345,7 @@ const Landing = () => {
         <div className="border-t border-slate-700 text-center text-xs py-6 text-slate-500">
           © 2026 MyDentalClinicPro. All rights reserved.
           <br></br>
-          Built by Ajaykumar Bhatane and Dr. Swati Lahane (Lahane Dental Clinic - Owners of MyDentalClinicPro)
+          Built by Ajaykumar Bhatane and Clinical Advisor Dr. Swati Lahane.
         </div>
       </footer>
     </div>
