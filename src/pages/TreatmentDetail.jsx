@@ -29,11 +29,6 @@ const TreatmentDetail = () => {
   const [compressionInfo, setCompressionInfo] = useState('');
   const [previewImageUrl, setPreviewImageUrl] = useState(null);
 
-  const MAX_IMAGE_SIZE_MB = 50;
-  const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
-  const RECOMMENDED_IMAGE_SIZE_MB = 5;
-  const RECOMMENDED_IMAGE_SIZE_BYTES = RECOMMENDED_IMAGE_SIZE_MB * 1024 * 1024;
-  const AUTO_COMPRESS_THRESHOLD_MB = 9; // compress >=9MB automatically with prompt
   const [visitFormData, setVisitFormData] = useState({
     next_visit_date: '',
     treatment_notes: '',
@@ -145,8 +140,8 @@ const TreatmentDetail = () => {
       } else if (error.code === 'ECONNABORTED') {
         errorMessage = 'Request timeout. Check your connection or try a compressed image.';
       } else if (error.response?.status === 413) {
-        const fileSize = imageUploadData.image?.size ? (imageUploadData.image.size / 1024 / 1024).toFixed(1) : 'unknown';
-        errorMessage = `File (${fileSize}MB) is too large for server processing. Try a smaller or compressed image.`;
+        // Allow server to handle size limits; do not present app-side hard limit error
+        errorMessage = 'Upload failed: server rejected request. Please retry (this may be a temporary issue).';
       } else if (error.response?.status === 415) {
         errorMessage = 'Image format not recognized. Is this actually an image file? Try: JPEG, PNG, GIF, or WebP.';
       } else if (error.response?.status === 400) {
@@ -173,62 +168,16 @@ const TreatmentDetail = () => {
   const handleImageFileSelect = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Mobile devices report different MIME types - be lenient
-      const allowedTypes = [
-        'image/jpeg',
-        'image/jpg',
-        'image/png',
-        'image/gif',
-        'image/webp',
-        'image/heic',          // iPhone
-        'image/heif',          // iPhone
-        'application/octet-stream', // Some mobile browsers
-      ];
-
-      // Skip MIME type check if unknown (mobile browser might report octet-stream)
-      // Instead validate by attempting to check magic bytes on backend
-      if (file.type && !allowedTypes.includes(file.type)) {
-        // Only warn, don't block - backend will validate magic bytes
-        console.warn(`Unusual MIME type: ${file.type}. Will validate on server.`);
-      }
-
-
+      // No client-side validation for MIME/type/size. Upload any selected image file.
       const fileSizeBytes = file.size;
       const fileSizeMB = fileSizeBytes / 1024 / 1024;
 
       // Do not enforce hard min/max file-size limits in the app.
       // Keep compression recommendation for better mobile UX, but allow all sizes.
-      if (fileSizeBytes > AUTO_COMPRESS_THRESHOLD_MB * 1024 * 1024) {
-        const shouldCompress = window.confirm(
-          `Selected image is ${fileSizeMB.toFixed(1)}MB. Compress it to reduce upload issues (slow mobile, proxy body limits)?`
-        );
-        if (shouldCompress) {
-          try {
-            const compressed = await compressImage(file, 2048, 2048, 0.75);
-            const compressedSizeMB = (compressed.size / 1024 / 1024).toFixed(1);
-            setImageUploadData({ ...imageUploadData, image: compressed });
-            setCompressionInfo(`Image compressed from ${fileSizeMB.toFixed(1)}MB to ${compressedSizeMB}MB.`);
-          } catch (err) {
-            console.warn('Compression failed; continuing with original image', err);
-            setImageUploadData({ ...imageUploadData, image: file });
-            setCompressionInfo('Auto compression failed; using original image.');
-          }
-        } else {
-          setImageUploadData({ ...imageUploadData, image: file });
-          setCompressionInfo('Using original image.');
-        }
-      } else {
-        setImageUploadData({ ...imageUploadData, image: file });
-        setCompressionInfo('');
-      }
-
-      if (fileSizeBytes > RECOMMENDED_IMAGE_SIZE_BYTES) {
-        setUploadWarning(
-          `Large image selected (${fileSizeMB.toFixed(1)}MB). Upload may take longer on slow mobile networks.`
-        );
-      } else {
-        setUploadWarning('');
-      }
+      // Always accept selected image for upload, while still showing a non-blocking advisory note.
+      setImageUploadData({ ...imageUploadData, image: file });
+      setUploadWarning('');
+      setCompressionInfo('');
     }
   };
 
@@ -637,7 +586,7 @@ const TreatmentDetail = () => {
                 />
 
                 <p className="text-xs text-gray-500 mt-2">
-                  Max file size: 50MB. Supported formats: JPEG, PNG, GIF, WebP
+                  Supported formats: JPEG, PNG, GIF, WebP (no enforced client-side max file size)
                 </p>
                 {imageUploadData.image && (
                   <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded">

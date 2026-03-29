@@ -5,9 +5,9 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  // allow larger uploads in Node and proxies; for browser it is vendor-specific
-  maxContentLength: 100 * 1024 * 1024,
-  maxBodyLength: 100 * 1024 * 1024,
+  // no size restriction in API client (the server will determine actual limits)
+  maxContentLength: Infinity,
+  maxBodyLength: Infinity,
   // Critical for mobile auth: enables cookies and credentials in cross-origin requests
   withCredentials: true,
   timeout: 30000, // 30 second timeout for mobile networks
