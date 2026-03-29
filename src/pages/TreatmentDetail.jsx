@@ -85,13 +85,6 @@ const TreatmentDetail = () => {
         return;
       }
 
-      const payloadImageSizeBytes = imageUploadData.image.size;
-      if (payloadImageSizeBytes > MAX_IMAGE_SIZE_BYTES) {
-        alert(`Image size is ${(payloadImageSizeBytes / 1024 / 1024).toFixed(1)}MB. Maximum allowed is ${MAX_IMAGE_SIZE_MB}MB.`);
-        setUploadingImage(false);
-        return;
-      }
-
       const payload = {
         image: imageUploadData.image,
         visit: selectedVisitForUpload.id,
@@ -177,9 +170,6 @@ const TreatmentDetail = () => {
     }
   };
 
-  // No size limits - allow any image size
-  const MIN_IMAGE_SIZE = 100; // 100 bytes (avoid corrupted files)
-
   const handleImageFileSelect = async (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -202,25 +192,12 @@ const TreatmentDetail = () => {
         console.warn(`Unusual MIME type: ${file.type}. Will validate on server.`);
       }
 
-      // Check if file appears valid (not corrupted)
-      if (file.size < MIN_IMAGE_SIZE) {
-        alert('The selected file appears to be corrupted or too small (< 100 bytes). Please select a different image.');
-        e.target.value = '';
-        return;
-      }
 
       const fileSizeBytes = file.size;
       const fileSizeMB = fileSizeBytes / 1024 / 1024;
 
-      if (fileSizeBytes > MAX_IMAGE_SIZE_BYTES) {
-        alert(`Selected image is ${fileSizeMB.toFixed(1)}MB, which exceeds the 50MB upload limit. Please choose a smaller image.`);
-        e.target.value = '';
-        setImageUploadData({ ...imageUploadData, image: null });
-        setUploadWarning('');
-        setCompressionInfo('');
-        return;
-      }
-
+      // Do not enforce hard min/max file-size limits in the app.
+      // Keep compression recommendation for better mobile UX, but allow all sizes.
       if (fileSizeBytes > AUTO_COMPRESS_THRESHOLD_MB * 1024 * 1024) {
         const shouldCompress = window.confirm(
           `Selected image is ${fileSizeMB.toFixed(1)}MB. Compress it to reduce upload issues (slow mobile, proxy body limits)?`
@@ -247,7 +224,7 @@ const TreatmentDetail = () => {
 
       if (fileSizeBytes > RECOMMENDED_IMAGE_SIZE_BYTES) {
         setUploadWarning(
-          `Large image selected (${fileSizeMB.toFixed(1)}MB). Upload may take longer on slow mobile networks. For best performance, compress to 5MB or smaller.`
+          `Large image selected (${fileSizeMB.toFixed(1)}MB). Upload may take longer on slow mobile networks.`
         );
       } else {
         setUploadWarning('');
