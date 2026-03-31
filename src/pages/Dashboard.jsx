@@ -290,7 +290,28 @@ const Dashboard = () => {
                 options={{
                   responsive: true,
                   maintainAspectRatio: false,
-                  plugins: { legend: { position: 'right' } },
+                  plugins: {
+                    legend: {
+                      position: 'right',
+                      labels: {
+                        generateLabels: function(chart) {
+                          const data = chart.data;
+                          if (data.labels.length && data.datasets.length) {
+                            return data.labels.map((label, i) => {
+                              const value = data.datasets[0].data[i];
+                              return {
+                                text: `${label} (${value})`, // 🔥 ADD COUNT HERE
+                                fillStyle: data.datasets[0].backgroundColor[i],
+                                strokeStyle: data.datasets[0].backgroundColor[i],
+                                index: i,
+                              };
+                            });
+                          }
+                          return [];
+                        }
+                      }
+                    }
+                  }
                 }}
               />
             ) : (

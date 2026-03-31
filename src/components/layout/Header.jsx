@@ -29,7 +29,7 @@ const Header = ({ onMenuClick }) => {
 
   const handleLogout = async () => {
     await logout();
-    navigate('/login');
+    navigate('/', { replace: true });
   };
 
   const getUserDisplayName = () => {

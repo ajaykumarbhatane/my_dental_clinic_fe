@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const apiClient = axios.create({
-  baseURL: 'https://mydentalclinicpro.com/api', // 'http://127.0.0.1:8000/api' for local development
+  baseURL: 'http://127.0.0.1:8000/api', // 'https://mydentalclinicpro.com/api' for local development
   headers: {
     'Content-Type': 'application/json',
   },
