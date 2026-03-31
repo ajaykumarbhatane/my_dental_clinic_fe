@@ -70,35 +70,61 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   // chart data states
-  const [patientChartData, setPatientChartData] = useState(null); // bar chart data (patients per clinic)
+  const [visitChartData, setVisitChartData] = useState(null); // bar chart data (visits per month)
   const [treatmentChartData, setTreatmentChartData] = useState(null);
+  const [visitFilter, setVisitFilter] = useState('all');
+  const [treatmentFilterOptions, setTreatmentFilterOptions] = useState([]);
+  const [allVisits, setAllVisits] = useState([]);
+  const [allTreatments, setAllTreatments] = useState([]);
 
   // helper utilities
-  // helper that groups patients by clinic name
-  const buildPatientChart = (patients, clinics = []) => {
-    // create quick id→name map from clinics list
-    const clinicNameMap = clinics.reduce((map, c) => {
-      if (c.id) map[c.id] = c.name || `Clinic ${c.id}`;
-      return map;
-    }, {});
+  const getMonthLabel = (dateObj) => {
+    if (!dateObj) return 'Unknown';
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${months[dateObj.getMonth()]} - ${dateObj.getFullYear()}`;
+  };
 
+  const buildVisitChart = (visits = [], selectedTreatment = 'all') => {
     const counts = {};
-    patients.forEach((p) => {
-      const clinicId = p.clinic || (p.clinic_id ? p.clinic_id : null);
-      const name =
-        (clinicId && clinicNameMap[clinicId]) ||
-        p.clinic?.name ||
-        'Unknown';
-      counts[name] = (counts[name] || 0) + 1;
+
+    // Filter visits by treatment if specified
+    const filteredVisits = selectedTreatment === 'all'
+      ? visits
+      : visits.filter(v => v.treatment_name === selectedTreatment);
+
+    filteredVisits.forEach((v) => {
+      const createdAt = parseDateString(v.created_at || v.updated_at);
+      if (!createdAt) return;
+
+      const monthKey = `${createdAt.getFullYear()}-${String(createdAt.getMonth() + 1).padStart(2, '0')}`;
+      counts[monthKey] = (counts[monthKey] || 0) + 1;
     });
+
+    // Ensure only last 6 months appear
+    const now = new Date();
+    const months = [];
+    for (let i = 5; i >= 0; i -= 1) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      months.push(key);
+    }
+
+    const labels = months.map((key) => {
+      const [year, month] = key.split('-').map(Number);
+      return getMonthLabel(new Date(year, month - 1, 1));
+    });
+
+    const dataValues = months.map((key) => counts[key] || 0);
+
     return {
-      labels: Object.keys(counts),
+      labels,
       datasets: [
         {
-          label: 'Patients',
-          data: Object.values(counts),
-          backgroundColor: 'rgba(59, 130, 246, 0.6)',
-          borderColor: 'rgba(59, 130, 246, 1)',
+          label: 'Visits (per month)',
+          data: dataValues,
+          backgroundColor: 'rgba(59, 130, 246, 0.75)',
+          borderColor: 'rgba(37, 99, 235, 1)',
+          borderWidth: 1,
         },
       ],
     };
@@ -152,6 +178,16 @@ const Dashboard = () => {
       const visits = visitsRes.data || [];
       const clinics = (clinicsRes && clinicsRes.data) || [];
 
+      // build treatment filter options (for visits-per-month filter)
+      const treatmentNames = Array.from(
+        new Set(
+          visits
+            .map((v) => v.treatment_name)
+            .filter(Boolean)
+        )
+      );
+      setTreatmentFilterOptions(['all', ...treatmentNames]);
+
       // Calculate statistics
       const activeTreatments = treatments.filter(t => 
         ['scheduled', 'ongoing'].includes(t.status)
@@ -180,15 +216,15 @@ const Dashboard = () => {
           color: 'bg-blue-500',
         },
         {
-          title: 'Active Treatments',
-          value: activeTreatments.toString(),
-          icon: UserCheck,
+          title: 'Total Visits',
+          value: visits.length.toString(),
+          icon: Calendar,
           color: 'bg-green-500',
         },
         {
-          title: 'Upcoming Visits',
-          value: upcomingVisitsData.length.toString(),
-          icon: Calendar,
+          title: 'Active Treatments',
+          value: activeTreatments.toString(),
+          icon: UserCheck,
           color: 'bg-yellow-500',
         },
         {
@@ -201,8 +237,12 @@ const Dashboard = () => {
 
       setUpcomingVisits(upcomingVisitsData);
 
+      // keep raw data for dynamic filtering
+      setAllVisits(visits);
+      setAllTreatments(treatments);
+
       // build charts
-      setPatientChartData(buildPatientChart(patients, clinics));
+      setVisitChartData(buildVisitChart(visits, visitFilter));
       setTreatmentChartData(buildTreatmentChart(treatments));
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
@@ -250,24 +290,63 @@ const Dashboard = () => {
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-lg transition-shadow">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold text-gray-900">Patients per Clinic</h3>
-            <div className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-medium">Current</div>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-3">
+            <div>
+              <h3 className="text-lg font-bold text-gray-900">Patient Visits per Month</h3>
+              <p className="text-sm text-gray-500">Filter by treatment type and see monthly visit trends</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <label htmlFor="visitFilter" className="text-sm font-medium text-gray-700">Treatment:</label>
+              <select
+                id="visitFilter"
+                className="border border-gray-300 rounded-lg px-2 py-1 text-sm"
+                value={visitFilter}
+                onChange={(e) => {
+                  const selected = e.target.value;
+                  setVisitFilter(selected);
+                  setVisitChartData(buildVisitChart(allVisits, selected));
+                }}
+              >
+                {treatmentFilterOptions.map((option) => (
+                  <option key={option} value={option}>{option === 'all' ? 'All' : option}</option>
+                ))}
+              </select>
+            </div>
+            <div className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-medium">Monthly Trend</div>
           </div>
           <div className="h-64">
-            {patientChartData ? (
+            {visitChartData ? (
               <Bar
-                data={patientChartData}
+                data={visitChartData}
                 options={{
                   responsive: true,
                   maintainAspectRatio: false,
                   plugins: {
                     legend: { display: false },
                     title: { display: false },
+                    tooltip: {
+                      callbacks: {
+                        label: (context) => {
+                          const value = context.parsed.y;
+                          const label = context.label;
+                          return `${label}: ${value} visit${value === 1 ? '' : 's'}`;
+                        },
+                      },
+                    },
                   },
                   scales: {
-                    x: { grid: { display: false } },
-                    y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                    x: {
+                      grid: { display: false },
+                      ticks: { color: '#374151', font: { size: 12 } },
+                    },
+                    y: {
+                      beginAtZero: true,
+                      ticks: {
+                        stepSize: 1,
+                        color: '#374151',
+                        font: { size: 12 },
+                      },
+                    },
                   },
                 }}
               />

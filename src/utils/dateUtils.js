@@ -16,18 +16,25 @@ const parseDate = (dateValue) => {
 
   if (typeof dateValue !== 'string') return null;
 
-  const ddmmyyyyRegex = /^(\d{2})[\/\-](\d{2})[\/\-](\d{4})$/;
+  const ddmmyyyyRegex = /^(\d{2})[\/\-](\d{2})[\/\-](\d{4})(?:\s+(\d{2}):(\d{2}):(\d{2}))?$/;
   const isoDateRegex = /^\d{4}-\d{2}-\d{2}(?:[T ].*)?$/;
 
   let matches = dateValue.match(ddmmyyyyRegex);
   if (matches) {
-    const [, dayStr, monthStr, yearStr] = matches;
+    const [, dayStr, monthStr, yearStr, hourStr = '00', minuteStr = '00', secondStr = '00'] = matches;
     const day = Number(dayStr);
     const month = Number(monthStr);
     const year = Number(yearStr);
+    const hour = Number(hourStr);
+    const minute = Number(minuteStr);
+    const second = Number(secondStr);
 
-    const d = new Date(year, month - 1, day);
-    if (d.getFullYear() === year && d.getMonth() === month - 1 && d.getDate() === day) {
+    const d = new Date(year, month - 1, day, hour, minute, second);
+    if (
+      d.getFullYear() === year &&
+      d.getMonth() === month - 1 &&
+      d.getDate() === day
+    ) {
       return d;
     }
     return null;
