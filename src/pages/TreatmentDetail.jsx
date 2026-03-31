@@ -92,14 +92,14 @@ const TreatmentDetail = () => {
       const uploadWithRetry = async () => {
         try {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+          const timeoutId = setTimeout(() => controller.abort(), 120000); // 120 second timeout for Android Chrome
 
           const response = await visitImagesApi.create(payload);
           clearTimeout(timeoutId);
           return response;
         } catch (error) {
           if (error.name === 'AbortError') {
-            throw new Error('Upload timed out. Please check your internet connection and try again.');
+            throw new Error('Upload timed out. Please check your internet connection and try again. Android Chrome users may need to switch to WiFi or clear browser cache.');
           }
           throw error;
         }
@@ -135,15 +135,18 @@ const TreatmentDetail = () => {
       // Provide more specific error messages for mobile users
       let errorMessage = 'Error uploading image';
 
-      if (error.message?.includes('timed out') || error.message?.includes('timeout')) {
-        errorMessage = 'Upload timed out - slow mobile connection detected. Try a smaller/compressed image or connect to WiFi.';
+      if (error.message?.includes('timed out') || error.message?.includes('timeout') || error.name === 'AbortError') {
+        errorMessage = 'Upload timed out - slow mobile connection detected. Try a smaller/compressed image or connect to WiFi. Android Chrome users: try clearing browser cache or use "Desktop site" mode.';
       } else if (error.code === 'ECONNABORTED') {
-        errorMessage = 'Request timeout. Check your connection or try a compressed image.';
+        errorMessage = 'Request timeout. Check your connection or try a compressed image. Android users may need to switch to WiFi.';
       } else if (error.response?.status === 413) {
         // Allow server to handle size limits; do not present app-side hard limit error
         errorMessage = 'Upload failed: server rejected request. Please retry (this may be a temporary issue).';
       } else if (error.response?.status === 415) {
-        errorMessage = 'Image format not recognized. Is this actually an image file? Try: JPEG, PNG, GIF, or WebP.';
+        errorMessage = 'Image format not recognized. Supported: JPEG, PNG, GIF, WebP, BMP, HEIC. Android Chrome users: try selecting the image again or use a different browser.';
+        if (error.response?.data?.android_chrome_help) {
+          errorMessage += ' ' + error.response.data.android_chrome_help;
+        }
       } else if (error.response?.status === 400) {
         // 400 can be from Django size limit or validation error
         if (error.response?.data?.detail?.includes('too large') || error.response?.data?.detail?.includes('exceeded')) {
@@ -171,6 +174,32 @@ const TreatmentDetail = () => {
       // No client-side validation for MIME/type/size. Upload any selected image file.
       const fileSizeBytes = file.size;
       const fileSizeMB = fileSizeBytes / 1024 / 1024;
+
+      // For very large files (>10MB), suggest compression for Android Chrome users
+      if (fileSizeMB > 10) {
+        const isAndroidChrome = /Android.*Chrome/i.test(navigator.userAgent);
+        const shouldCompress = confirm(
+          `Image is ${fileSizeMB.toFixed(1)}MB. ${
+            isAndroidChrome ? 'Android Chrome detected - ' : ''
+          }Compress it for faster upload? (Recommended for mobile networks)`
+        );
+        
+        if (shouldCompress) {
+          try {
+            // Import compression utility
+            const { compressImage } = await import('../utils/imageOptimizer.js');
+            const compressedFile = await compressImage(file, 2000, 2000, 0.8);
+            console.log(`Compressed: ${(compressedFile.size / 1024 / 1024).toFixed(1)}MB`);
+            setImageUploadData({ ...imageUploadData, image: compressedFile });
+            setUploadWarning(`Image compressed from ${fileSizeMB.toFixed(1)}MB to ${(compressedFile.size / 1024 / 1024).toFixed(1)}MB`);
+            setCompressionInfo('Compression applied - upload should be faster');
+            return;
+          } catch (err) {
+            console.warn('Compression failed, using original:', err);
+            setUploadWarning('Compression failed, using original image');
+          }
+        }
+      }
 
       // Do not enforce hard min/max file-size limits in the app.
       // Keep compression recommendation for better mobile UX, but allow all sizes.

@@ -33,9 +33,9 @@ export const visitImagesApi = {
       formData.append('caption', data.caption);
     }
 
-    // Use longer timeout for mobile networks and large files
+    // Extended timeout for mobile networks, especially Android Chrome
     return apiClient.post('/visit-images/', formData, {
-      timeout: 60000, // 60 second timeout for image upload
+      timeout: 120000, // 120 second timeout for Android Chrome and slow networks
       onUploadProgress: (progressEvent) => {
         if (progressEvent.lengthComputable) {
           const percentComplete = Math.round((progressEvent.loaded / progressEvent.total) * 100);
