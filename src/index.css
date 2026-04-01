@@ -175,3 +175,25 @@
 .animate-slide {
   animation: slideLoop 10s linear infinite;
 }
+
+/* add in index.css */
+.input {
+  @apply w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none;
+}
+
+/* same style as patient modal */
+.input2 {
+  @apply w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg 
+  focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 
+  transition-all duration-200;
+}
+
+.label {
+  @apply block text-sm font-bold text-gray-700 mb-2;
+}
+
+.input2 {
+  @apply w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg 
+  focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 
+  transition-all duration-200;
+}

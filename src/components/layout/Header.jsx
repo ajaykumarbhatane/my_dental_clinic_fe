@@ -90,7 +90,7 @@ const Header = ({ onMenuClick }) => {
 
   return (
     <header className="fixed top-0 left-0 right-0 h-14 md:h-16 z-50 bg-white border-b border-gray-200 shadow-sm">
-      <div className="h-full px-3 sm:px-4 md:px-6 flex items-center justify-between md:ml-64">
+      <div className="h-full px-3 sm:px-4 md:px-6 flex items-center justify-between">
 
         {/* Left Section */}
         <div className="flex items-center gap-2 sm:gap-3">

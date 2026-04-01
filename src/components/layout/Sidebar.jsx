@@ -1,98 +1,167 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, Stethoscope, Settings, Film, X, Phone } from 'lucide-react';
+import {
+  LayoutDashboard, Users, Stethoscope,
+  Settings, Film, Phone, X
+} from 'lucide-react';
+import { useRef } from 'react';
 
-const Sidebar = ({ isOpen, onClose }) => {
+const Sidebar = ({ isOpen, onClose, isExpanded, setIsExpanded }) => {
   const location = useLocation();
+  const touchStartX = useRef(null);
+
+  // 👉 Swipe (mobile)
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchMove = (e) => {
+    if (!touchStartX.current) return;
+    const diff = e.touches[0].clientX - touchStartX.current;
+    if (diff < -80) onClose();
+  };
+
+  // 👉 Hover (desktop only)
+  const handleMouseEnter = () => {
+    if (window.innerWidth >= 768) setIsExpanded(true);
+  };
+
+  const handleMouseLeave = () => {
+    if (window.innerWidth >= 768) setIsExpanded(false);
+  };
 
   const menuItems = [
     { path: '/app', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/app/patients', icon: Users, label: 'Patients' },
     { path: '/app/treatments', icon: Stethoscope, label: 'Treatments' },
-    { path: '/app/treatment-videos', icon: Film, label: 'Treatment Videos' },
-    { path: '/app/customer-care', icon: Phone, label: 'Customer Care' },
+    { path: '/app/treatment-videos', icon: Film, label: 'Videos' },
+    { path: '/app/customer-care', icon: Phone, label: 'Support' },
     { path: '/app/settings', icon: Settings, label: 'Settings' },
   ];
 
   return (
-    <aside className={`fixed top-14 md:top-16 left-0 z-50 
-      h-[calc(100vh-56px)] md:h-[calc(100vh-64px)] 
-      w-64 bg-gradient-to-b from-blue-950 via-blue-900 to-blue-800 
-      text-white shadow-2xl transform transition-transform duration-300 
-      ease-in-out flex flex-col 
-      ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
+    <aside
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      className={`
+        fixed top-14 md:top-16 left-0 z-50
+        h-[calc(100vh-56px)] md:h-[calc(100vh-64px)]
 
-      {/* 🔷 BRAND SECTION */}
-      <div className="px-4 py-5 border-t border-blue-700 mt-auto shrink-0 bg-blue-900/40 backdrop-blur-sm">
-        <div className="flex items-center gap-3">
+        w-64
+        ${isExpanded ? 'md:w-64' : 'md:w-16'}
 
-          {/* Logo */}
-          <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-lg">
-            <Stethoscope className="w-7 h-7 text-blue-900" />
-          </div>
+        bg-gradient-to-b from-blue-950 via-blue-900 to-blue-800
+        text-white shadow-xl transition-all duration-300
+        flex flex-col
 
-          {/* Name + Tagline */}
-          <div>
-            <h1 className="text-xl font-bold tracking-wide">DentalPro</h1>
-            <p className="text-xs text-blue-200">Smart Clinic Management</p>
-          </div>
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0
+      `}
+    >
+
+      {/* 🔷 BRAND */}
+      <div className={`
+        px-4 py-5 flex items-center gap-4
+        md:${isExpanded ? 'gap-4' : 'justify-center'}
+      `}>
+        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center">
+          <Stethoscope className="w-6 h-6 text-blue-900" />
+        </div>
+
+        {/* Mobile */}
+        <div className="block md:hidden">
+          <h1 className="text-lg font-bold">DentalPro</h1>
+          <p className="text-xs text-blue-200">Smart Clinic Management</p>
+        </div>
+
+        {/* Desktop */}
+        <div className="hidden md:block">
+          {isExpanded && (
+            <>
+              <h1 className="text-lg font-bold">DentalPro</h1>
+              <p className="text-xs text-blue-200">Smart Clinic Management</p>
+            </>
+          )}
         </div>
       </div>
 
-      {/* 📱 MOBILE CLOSE BUTTON */}
-      {/* 📱 MOBILE CLOSE BUTTON (FIXED TOP RIGHT) */}
+      {/* Mobile Close */}
       <button
         onClick={onClose}
-        className="md:hidden absolute top-3 right-3 p-2 rounded-lg bg-blue-800/70 hover:bg-blue-700 transition z-50"
+        className="md:hidden absolute top-3 right-3 p-2 bg-blue-800 rounded"
       >
-        <X className="w-5 h-5 text-white" />
+        <X className="w-5 h-5" />
       </button>
 
-      {/* 🧭 NAVIGATION */}
-      <nav className="flex-1 mt-4 px-3 overflow-y-auto min-h-0">
+      {/* MENU */}
+      <nav className="flex-1 mt-4 px-3 md:px-2">
         <ul className="space-y-2">
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
 
             return (
-              <li key={item.path}>
+              <li key={item.path} className="relative group">
                 <Link
                   to={item.path}
                   onClick={onClose}
-                  className={`group flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-300 ${
-                    isActive
-                      ? 'bg-white text-blue-900 shadow-lg scale-[1.03]'
-                      : 'text-blue-100 hover:bg-blue-700/60 hover:scale-[1.02]'
-                  }`}
+                  className={`
+                    flex items-center
+                    py-3
+                    rounded-lg transition
+
+                    /* 📱 Mobile */
+                    px-4 gap-4
+
+                    /* 💻 Desktop Expanded */
+                    ${isExpanded ? 'md:px-3 md:gap-4' : 'md:justify-center md:px-0 md:gap-0'}
+
+                    ${isActive
+                      ? 'bg-white text-blue-900'
+                      : 'hover:bg-blue-700'}
+                  `}
                 >
-                  <Icon className={`w-5 h-5 mr-3 transition ${
-                    isActive ? 'text-blue-600' : 'group-hover:text-white'
-                  }`} />
+                  <Icon className="w-5 h-5 shrink-0" />
 
-                  <span className="flex-1">{item.label}</span>
+                  {/* Mobile */}
+                  <span className="block md:hidden">
+                    {item.label}
+                  </span>
 
-                  {/* Active indicator */}
-                  {isActive && (
-                    <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
+                  {/* Desktop */}
+                  <span className="hidden md:block">
+                    {isExpanded && item.label}
+                  </span>
+
+                  {isActive && isExpanded && (
+                    <div className="ml-auto w-2 h-2 bg-blue-600 rounded-full"></div>
                   )}
                 </Link>
+
+                {/* Tooltip */}
+                {!isExpanded && (
+                  <div className="
+                    hidden md:block
+                    absolute left-16 top-1/2 -translate-y-1/2
+                    bg-black text-white text-xs px-2 py-1 rounded
+                    opacity-0 group-hover:opacity-100
+                    whitespace-nowrap transition
+                  ">
+                    {item.label}
+                  </div>
+                )}
               </li>
             );
           })}
         </ul>
       </nav>
 
-      {/* 💎 FOOTER BRANDING */}
-      <div className="px-4 py-5 border-t border-blue-700 mt-auto bg-blue-900/40 backdrop-blur-sm">
-        <div className="text-center space-y-1">
-          <p className="text-[11px] text-blue-300">
-            Developed by Ajaykumar Bhatane & Dr. Swati Lahane
-          </p>
-          
-          <p className="text-xs text-blue-200">
-            ©2026 MyDentalClinicPro. All rights reserved.
-          </p>
-        </div>
+      {/* FOOTER */}
+      <div className="p-4 text-xs text-blue-200 border-t border-blue-700 text-center">
+        <span className="block md:hidden">© MyDentalClinicPro</span>
+        <span className="hidden md:block">
+          {isExpanded ? '© MyDentalClinicPro' : '©'}
+        </span>
       </div>
 
     </aside>

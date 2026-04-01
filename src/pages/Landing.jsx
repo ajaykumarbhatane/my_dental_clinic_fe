@@ -466,147 +466,209 @@ const Landing = () => {
       </section>
 
       {showSignupModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
-          <div className="w-full max-w-xl bg-white rounded-xl shadow-2xl p-6 relative">
-            <button
-              onClick={closeSignupModal}
-              className="absolute top-3 right-3 text-gray-500 hover:text-gray-800"
-            >
-              ✕
-            </button>
-            <h3 className="text-2xl font-bold mb-4">Request Signup for Clinic</h3>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
 
-            {signupError && <div className="p-3 mb-3 text-sm text-red-700 bg-red-100 rounded">{signupError}</div>}
-            {signupSuccess && <div className="p-3 mb-3 text-sm text-green-700 bg-green-100 rounded">{signupSuccess}</div>}
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-gray-100">
 
-            <form onSubmit={handleSignupSubmit} className="space-y-3">
-              <h4 className="font-semibold text-lg mb-2">User Details</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <input
-                  type="text"
-                  placeholder="First Name"
-                  value={signupForm.first_name}
-                  onChange={(e) => handleSignupInput('first_name', e.target.value)}
-                  className="w-full border border-slate-300 rounded px-3 py-2"
-                  required
-                />
-                <input
-                  type="text"
-                  placeholder="Last Name"
-                  value={signupForm.last_name}
-                  onChange={(e) => handleSignupInput('last_name', e.target.value)}
-                  className="w-full border border-slate-300 rounded px-3 py-2"
-                  required
-                />
+            {/* HEADER (EXACT SAME) */}
+            <div className="sticky top-0 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200 px-6 py-5 flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">Request Signup</h3>
+                <p className="text-sm text-gray-600 mt-1">Fill clinic registration details</p>
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <input
-                  type="email"
-                  placeholder="Email"
-                  value={signupForm.email}
-                  onChange={(e) => handleSignupInput('email', e.target.value)}
-                  className="w-full border border-slate-300 rounded px-3 py-2"
-                  required
-                />
-                <select
-                  value={signupForm.gender}
-                  onChange={(e) => handleSignupInput('gender', e.target.value)}
-                  className="w-full border border-slate-300 rounded px-3 py-2"
-                  required
-                >
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <input
-                  type="tel"
-                  placeholder="Primary Phone"
-                  value={signupForm.mobile}
-                  onChange={(e) => handleSignupInput('mobile', e.target.value)}
-                  className="w-full border border-slate-300 rounded px-3 py-2"
-                  required
-                />
-                <input
-                  type="tel"
-                  placeholder="Secondary Phone"
-                  value={signupForm.secondary_phone_number}
-                  onChange={(e) => handleSignupInput('secondary_phone_number', e.target.value)}
-                  className="w-full border border-slate-300 rounded px-3 py-2"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <input
-                  type="date"
-                  placeholder="Date of Birth"
-                  value={toISODate(signupForm.date_of_birth)}
-                  onChange={(e) => {
-                    const value = e.target.value; // yyyy-mm-dd
-                    handleSignupInput('date_of_birth', value ? toDDMMYYYY(value) : '');
-                  }}
-                  className="w-full border border-slate-300 rounded px-3 py-2"
-                  required
-                />
-                <input
-                  type="text"
-                  placeholder="Contact Number"
-                  value={signupForm.contact_number}
-                  onChange={(e) => handleSignupInput('contact_number', e.target.value)}
-                  className="w-full border border-slate-300 rounded px-3 py-2"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <input
-                  type="password"
-                  placeholder="Password"
-                  value={signupForm.password}
-                  onChange={(e) => handleSignupInput('password', e.target.value)}
-                  className="w-full border border-slate-300 rounded px-3 py-2"
-                  required
-                />
-                <input
-                  type="password"
-                  placeholder="Confirm Password"
-                  value={signupForm.confirm_password}
-                  onChange={(e) => handleSignupInput('confirm_password', e.target.value)}
-                  className="w-full border border-slate-300 rounded px-3 py-2"
-                  required
-                />
-              </div>
-
-              <h4 className="font-semibold text-lg mt-4 mb-2">Clinic Details</h4>
-
-              <input
-                type="text"
-                placeholder="Clinic Name"
-                value={signupForm.clinic_name}
-                onChange={(e) => handleSignupInput('clinic_name', e.target.value)}
-                className="w-full border border-slate-300 rounded px-3 py-2"
-                required
-              />
-
-              <textarea
-                placeholder="Address"
-                value={signupForm.address}
-                onChange={(e) => handleSignupInput('address', e.target.value)}
-                className="w-full border border-slate-300 rounded px-3 py-2"
-                rows={3}
-                required
-              />
 
               <button
-                type="submit"
-                disabled={signupSubmitting}
-                className="w-full mt-3 bg-blue-600 text-white py-3 rounded hover:bg-blue-700 transition"
+                onClick={closeSignupModal}
+                className="text-gray-400 hover:text-gray-600 hover:bg-gray-200 p-2 rounded-lg transition-colors"
               >
-                {signupSubmitting ? 'Submitting...' : 'Send Request'}
+                ✕
               </button>
+            </div>
+
+            {/* FORM */}
+            <form onSubmit={handleSignupSubmit} className="p-6 space-y-5">
+
+              {signupError && (
+                <div className="p-3 text-sm text-red-700 bg-red-100 rounded">
+                  {signupError}
+                </div>
+              )}
+
+              {/* USER DETAILS */}
+              <div>
+                <h4 className="text-sm font-bold text-gray-700 mb-2">User Details *</h4>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="label">First Name *</label>
+                    <input
+                      value={signupForm.first_name}
+                      onChange={(e) => handleSignupInput('first_name', e.target.value)}
+                      className="input2"
+                      placeholder="Enter first name"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="label">Last Name *</label>
+                    <input
+                      value={signupForm.last_name}
+                      onChange={(e) => handleSignupInput('last_name', e.target.value)}
+                      className="input2"
+                      placeholder="Enter last name"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="label">Email *</label>
+                    <input
+                      type="email"
+                      value={signupForm.email}
+                      onChange={(e) => handleSignupInput('email', e.target.value)}
+                      className="input2"
+                      placeholder="Enter email"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="label">Gender *</label>
+                    <select
+                      value={signupForm.gender}
+                      onChange={(e) => handleSignupInput('gender', e.target.value)}
+                      className="input2"
+                    >
+                      <option>Male</option>
+                      <option>Female</option>
+                      <option>Other</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="label">Primary Phone *</label>
+                    <input
+                      value={signupForm.mobile}
+                      onChange={(e) => handleSignupInput('mobile', e.target.value)}
+                      className="input2"
+                      placeholder="+91 XXXXX XXXXX"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="label">Secondary Phone</label>
+                    <input
+                      value={signupForm.secondary_phone_number}
+                      onChange={(e) => handleSignupInput('secondary_phone_number', e.target.value)}
+                      className="input2"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="label">Date of Birth *</label>
+                    <input
+                      type="date"
+                      value={toISODate(signupForm.date_of_birth)}
+                      onChange={(e) =>
+                        handleSignupInput(
+                          'date_of_birth',
+                          e.target.value ? toDDMMYYYY(e.target.value) : ''
+                        )
+                      }
+                      className="input2"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="label">Contact Number *</label>
+                    <input
+                      value={signupForm.contact_number}
+                      onChange={(e) => handleSignupInput('contact_number', e.target.value)}
+                      className="input2"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="label">Password *</label>
+                    <input
+                      type="password"
+                      value={signupForm.password}
+                      onChange={(e) => handleSignupInput('password', e.target.value)}
+                      className="input2"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="label">Confirm Password *</label>
+                    <input
+                      type="password"
+                      value={signupForm.confirm_password}
+                      onChange={(e) => handleSignupInput('confirm_password', e.target.value)}
+                      className="input2"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* CLINIC DETAILS */}
+              <div>
+                <h4 className="text-sm font-bold text-gray-700 mb-2">Clinic Details *</h4>
+
+                <div>
+                  <label className="label">Clinic Name *</label>
+                  <input
+                    value={signupForm.clinic_name}
+                    onChange={(e) => handleSignupInput('clinic_name', e.target.value)}
+                    className="input2"
+                    required
+                  />
+                </div>
+
+                <div className="mt-4">
+                  <label className="label">Address *</label>
+                  <textarea
+                    rows={3}
+                    value={signupForm.address}
+                    onChange={(e) => handleSignupInput('address', e.target.value)}
+                    className="input2 resize-none"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* FOOTER */}
+              <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={closeSignupModal}
+                  className="px-6 py-2.5 border-2 border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={signupSubmitting}
+                  className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg text-sm font-semibold hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 transition shadow-md"
+                >
+                  {signupSubmitting ? 'Submitting...' : 'Send Request'}
+                </button>
+              </div>
+
             </form>
           </div>
         </div>
