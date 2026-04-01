@@ -1,7 +1,11 @@
 import axios from 'axios';
+baseURL: import.meta.env.VITE_API_BASE_URL,
+
+console.log('check host url::-->>', import.meta.env.VITE_API_BASE_URL);
+
 
 const apiClient = axios.create({
-  baseURL: 'https://mydentalclinicpro.com/api', // 'http://127.0.0.1:8000/api' for local development
+  baseURL: import.meta.env.VITE_API_BASE_URL, // 'http://127.0.0.1:8000/api' for local development
   headers: {
     'Content-Type': 'application/json',
   },
@@ -72,5 +76,6 @@ apiClient.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
 
 export default apiClient;

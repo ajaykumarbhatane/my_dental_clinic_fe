@@ -83,3 +83,9 @@ temp/
 # TypeScript
 # ========================
 *.tsbuildinfo
+
+
+# ========================
+# Environment variables (if not already covered by .env*)
+# ========================
+.env*
