@@ -6,24 +6,32 @@ const TreatmentVideos = () => {
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [playingVideoId, setPlayingVideoId] = useState(null);
   const videoRefs = useRef({});
 
   useEffect(() => {
-    const fetchVideos = async () => {
-      try {
-        const response = await treatmentVideosApi.getAll();
-        setVideos(response.data);
-      } catch (err) {
-        console.error('Error fetching videos:', err);
-        setError('Unable to load treatment videos.');
-      } finally {
-        setLoading(false);
-      }
-    };
+    fetchVideos(currentPage);
+  }, [currentPage]);
 
-    fetchVideos();
-  }, []);
+  const fetchVideos = async (page = 1) => {
+    try {
+      setLoading(true);
+      const params = { page };
+      const response = await treatmentVideosApi.getAll(params);
+      setVideos(response.data.results || response.data);
+      setTotalCount(response.data.count || response.data.length);
+      setTotalPages(Math.ceil((response.data.count || response.data.length) / 10));
+      setCurrentPage(page);
+    } catch (err) {
+      console.error('Error fetching videos:', err);
+      setError('Unable to load treatment videos.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Handle video play - pause all others when one plays
   const handleVideoPlay = (videoId) => {
@@ -110,6 +118,34 @@ const TreatmentVideos = () => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between bg-white px-6 py-4 border-t border-gray-200 mt-6 rounded-lg">
+          <div className="text-sm text-gray-700">
+            Showing {((currentPage - 1) * 10) + 1} to {Math.min(currentPage * 10, totalCount)} of {totalCount} videos
+          </div>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <span className="px-3 py-2 text-sm font-medium text-gray-700">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
         </div>
       )}
     </div>

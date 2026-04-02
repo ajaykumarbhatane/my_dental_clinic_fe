@@ -28,12 +28,10 @@ const PatientDetail = () => {
     try {
       const [patientResponse, treatmentsResponse] = await Promise.all([
         patientApi.getById(id),
-        treatmentApi.getAll()
+        treatmentApi.getByPatient(id)
       ]);
       setPatient(patientResponse.data);
-      // Filter treatments for this patient
-      // patient IDs are string keys; compare directly
-      setTreatments(treatmentsResponse.data.filter(t => t.patient === id));
+      setTreatments(treatmentsResponse.data.results || treatmentsResponse.data);
     } catch (error) {
       console.error('Error fetching patient data:', error);
     } finally {

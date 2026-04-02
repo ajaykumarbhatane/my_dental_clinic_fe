@@ -737,15 +737,14 @@ const Landing = () => {
           </div>
         </div>
       )}
-
-      {/* WHATSAPP FLOAT */}
+      {/* 📱 FLOATING WHATSAPP */}
       <a
-        href="https://wa.me/917558291536"
+        href="https://wa.me/919970609951?text=Hello%20MyDentalClinicPro%2C%20I%20would%20like%20to%20know%20more%20about%20your%20dental%20clinic%20management%20system."
         target="_blank"
-        rel="noopener noreferrer"
-        className="fixed bottom-6 right-6 bg-green-500 text-white p-4 rounded-full shadow-lg hover:scale-110 transition z-50"
+        rel="noreferrer"
+        className="fixed bottom-6 right-6 bg-green-500 hover:bg-green-600 text-white p-4 rounded-full shadow-lg animate-bounce z-50"
       >
-        💬
+        <MessageCircle size={24} />
       </a>
 
       {/* FOOTER */}

@@ -71,7 +71,16 @@ const StorageHelper = {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    console.warn('useAuth must be used within an AuthProvider. Returning safe fallback.');
+    return {
+      user: null,
+      token: null,
+      loading: false,
+      error: null,
+      login: async () => ({ success: false, error: 'Auth provider not available' }),
+      logout: async () => {},
+      isAuthenticated: () => false,
+    };
   }
   return context;
 };

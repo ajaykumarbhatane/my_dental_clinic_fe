@@ -56,7 +56,7 @@ const TreatmentDetail = () => {
 
   const fetchVisits = async () => {
     const res = await visitsApi.getByTreatment(id);
-    setVisits(res.data);
+    setVisits(res.data?.results || res.data || []);
   };
 
   const handleDeleteVisit = async (visitId) => {

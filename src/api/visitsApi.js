@@ -1,12 +1,12 @@
 import apiClient from './apiClient';
 
 export const visitsApi = {
-  getAll: () => apiClient.get('/visits/'),
+  getAll: (params = {}) => apiClient.get('/visits/', { params }),
   getById: (id) => apiClient.get(`/visits/${id}/`),
   create: (data) => apiClient.post('/visits/', data),
   update: (id, data) => apiClient.put(`/visits/${id}/`, data),
   delete: (id) => apiClient.delete(`/visits/${id}/`),
-  getByTreatment: (treatmentId) => apiClient.get('/visits/', { params: { treatment: treatmentId } }),
+  getByTreatment: (treatmentId, params = {}) => apiClient.get('/visits/', { params: { treatment: treatmentId, ...params } }),
 };
 
 export const visitImagesApi = {

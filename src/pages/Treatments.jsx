@@ -12,6 +12,9 @@ const Treatments = () => {
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [treatmentTypes, setTreatmentTypes] = useState([]);
   const [patients, setPatients] = useState([]);
   const [selectedTreatment, setSelectedTreatment] = useState(null);
@@ -43,7 +46,10 @@ const Treatments = () => {
   const [submittingVisit, setSubmittingVisit] = useState(false);
 
   useEffect(() => {
-    fetchTreatments();
+    fetchTreatments(currentPage);
+  }, [currentPage, filterType, filterStatus]);
+
+  useEffect(() => {
     fetchTreatmentTypes();
     fetchPatients();
   }, []);
@@ -51,10 +57,21 @@ const Treatments = () => {
   const selectedType = treatmentTypes.find(t => t.id === formData.type_of_treatment);
   const selectedTypeName = selectedType?.name || '';
 
-  const fetchTreatments = async () => {
+  const fetchTreatments = async (page = 1) => {
     try {
-      const response = await treatmentApi.getAll();
-      setTreatments(response.data);
+      setLoading(true);
+      const params = { page };
+      if (filterType !== 'all') {
+        params.type_of_treatment = filterType;
+      }
+      if (filterStatus !== 'all') {
+        params.status = filterStatus;
+      }
+      const response = await treatmentApi.getAll(params);
+      setTreatments(response.data.results || response.data);
+      setTotalCount(response.data.count || response.data.length);
+      setTotalPages(Math.ceil((response.data.count || response.data.length) / 10));
+      setCurrentPage(page);
     } catch (error) {
       console.error('Error fetching treatments:', error);
     } finally {
@@ -209,12 +226,6 @@ const Treatments = () => {
     }
   };
 
-  const filteredTreatments = treatments.filter(treatment => {
-    const matchesType = filterType === 'all' || treatment.type_of_treatment === filterType;
-    const matchesStatus = filterStatus === 'all' || treatment.status === filterStatus;
-    return matchesType && matchesStatus;
-  });
-
   const formatAmount = (amount) => {
     if (!amount) return 'N/A';
     return new Intl.NumberFormat('en-IN', {
@@ -304,7 +315,7 @@ const Treatments = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredTreatments.map((treatment) => (
+              {treatments.map((treatment) => (
                 <tr
                   key={treatment.id}
                   onClick={() => handleViewTreatment(treatment)}
@@ -360,6 +371,34 @@ const Treatments = () => {
           </table>
         </div>
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between bg-white px-6 py-4 border-t border-gray-200">
+          <div className="text-sm text-gray-700">
+            Showing {((currentPage - 1) * 10) + 1} to {Math.min(currentPage * 10, totalCount)} of {totalCount} treatments
+          </div>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <span className="px-3 py-2 text-sm font-medium text-gray-700">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Add Treatment Modal */}
       {showAddModal && (

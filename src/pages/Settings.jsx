@@ -29,7 +29,7 @@ const Settings = () => {
       // Get current user info from localStorage or API
       // Typically the first /user call gets current user
       const response = await userApi.getAll();
-      const users = response.data || [];
+      const users = response.data?.results || response.data || [];
       
       if (users.length > 0) {
         // Use the first user (current logged-in user)
@@ -59,7 +59,8 @@ const Settings = () => {
       // Update user profile
       // Get user ID - in a real app, store this from login
       const allUsers = await userApi.getAll();
-      const currentUser = allUsers.data?.[0];
+      const users = allUsers.data?.results || allUsers.data || [];
+      const currentUser = users[0];
       
       if (currentUser?.id) {
         await userApi.update(currentUser.id, {

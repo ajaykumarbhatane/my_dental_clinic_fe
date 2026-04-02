@@ -74,7 +74,7 @@ const Header = ({ onMenuClick }) => {
 
       try {
         const response = await clinicApi.getAll();
-        const clinics = response?.data || [];
+        const clinics = response?.data?.results || response?.data || [];
         if (Array.isArray(clinics) && clinics.length > 0) {
           setClinicName(clinics[0]?.name || '');
         }

@@ -12,6 +12,9 @@ const Patients = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const navigate = useNavigate();
   const [doctors, setDoctors] = useState([]);
   const [formData, setFormData] = useState({
@@ -29,14 +32,37 @@ const Patients = () => {
   const { user } = useAuth();
 
   useEffect(() => {
-    fetchPatients();
+    fetchPatients(currentPage, searchTerm);
+  }, [currentPage]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchTerm !== '') {
+        fetchPatients(1, searchTerm);
+      } else {
+        fetchPatients(1, '');
+      }
+    }, 500); // Debounce search
+
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm]);
+
+  useEffect(() => {
     fetchDoctors();
   }, []);
 
-  const fetchPatients = async () => {
+  const fetchPatients = async (page = 1, search = '') => {
     try {
-      const response = await patientApi.getAll();
-      setPatients(response.data);
+      setLoading(true);
+      const params = { page };
+      if (search) {
+        params.search = search;
+      }
+      const response = await patientApi.getAll(params);
+      setPatients(response.data.results || response.data);
+      setTotalCount(response.data.count || response.data.length);
+      setTotalPages(Math.ceil((response.data.count || response.data.length) / 10));
+      setCurrentPage(page);
     } catch (error) {
       console.error('Error fetching patients:', error);
     } finally {
@@ -98,13 +124,6 @@ const Patients = () => {
       setSubmitting(false);
     }
   };
-
-  const filteredPatients = patients.filter(patient => {
-    const matchesSearch = patient.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         patient.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         patient.mobile.includes(searchTerm);
-    return matchesSearch;
-  });
 
   if (loading) {
     return <div className="flex justify-center items-center h-64">Loading...</div>;
@@ -183,9 +202,9 @@ const Patients = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredPatients.length === 0 ? (
+              {patients.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center">
+                  <td colSpan="7" className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <div className="text-5xl mb-4">🔍</div>
                       <p className="text-gray-500 font-medium">No patients found</p>
@@ -194,7 +213,7 @@ const Patients = () => {
                   </td>
                 </tr>
               ) : (
-                filteredPatients.map((patient) => (
+                patients.map((patient) => (
                   <tr
                   key={patient.id}
                   onClick={() => navigate(`/patients/${patient.id}`)}
@@ -258,6 +277,34 @@ const Patients = () => {
           </table>
         </div>
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between bg-white px-6 py-4 border-t border-gray-200">
+          <div className="text-sm text-gray-700">
+            Showing {((currentPage - 1) * 10) + 1} to {Math.min(currentPage * 10, totalCount)} of {totalCount} patients
+          </div>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <span className="px-3 py-2 text-sm font-medium text-gray-700">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Add Patient Modal */}
       {showAddModal && (

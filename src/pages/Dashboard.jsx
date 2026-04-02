@@ -1,10 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, UserCheck, Calendar, TrendingUp } from 'lucide-react';
-import { patientApi } from '../api/patientApi';
-import { treatmentApi } from '../api/treatmentApi';
-import { visitsApi } from '../api/visitsApi';
-import { clinicApi } from '../api/clinicApi';
+import { dashboardApi } from '../api/dashboardApi';
 import { formatDate, parseDateString } from '../utils/dateUtils';
 
 // chart.js imports
@@ -64,6 +61,8 @@ const Dashboard = () => {
   ]);
 
   const [upcomingVisits, setUpcomingVisits] = useState([]);
+  const [upcomingPage, setUpcomingPage] = useState(1);
+  const upcomingPerPage = 10;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -165,39 +164,28 @@ const Dashboard = () => {
       setLoading(true);
       setError(null);
 
-      // Fetch all data (add clinics for patient chart labels)
-      const [patientsRes, treatmentsRes, visitsRes, clinicsRes] = await Promise.all([
-        patientApi.getAll(),
-        treatmentApi.getAll(),
-        visitsApi.getAll(),
-        clinicApi.getAll(),
-      ]);
+      const response = await dashboardApi.get();
+      const data = response.data || {};
 
-      const patients = patientsRes.data || [];
-      const treatments = treatmentsRes.data || [];
-      const visits = visitsRes.data || [];
-      const clinics = (clinicsRes && clinicsRes.data) || [];
+      const patients = data.patients?.results || [];
+      const treatments = data.treatments?.results || [];
+      const visits = data.visits?.results || [];
+      const clinics = data.clinics?.results || [];
 
-      // build treatment filter options (for visits-per-month filter)
-      const treatmentNames = Array.from(
-        new Set(
-          visits
-            .map((v) => v.treatment_name)
-            .filter(Boolean)
-        )
-      );
+      const totalPatients = data.summary?.total_patients ?? patients.length;
+      const totalVisits = data.summary?.total_visits ?? visits.length;
+      const activeTreatments = data.summary?.active_treatments ??
+        treatments.filter(t => ['scheduled', 'ongoing'].includes(t.status)).length;
+      const totalTreatments = data.summary?.total_treatments ?? treatments.length;
+
+      const treatmentNames = Array.from(new Set(visits.map((v) => v.treatment_name).filter(Boolean)));
       setTreatmentFilterOptions(['all', ...treatmentNames]);
-
-      // Calculate statistics
-      const activeTreatments = treatments.filter(t => 
-        ['scheduled', 'ongoing'].includes(t.status)
-      ).length;
 
       const upcomingVisitsData = visits
         .filter(v => {
           const visitDate = parseDateString(v.next_visit_date);
           const today = new Date();
-          today.setHours(0,0,0,0);
+          today.setHours(0, 0, 0, 0);
           return visitDate && visitDate >= today;
         })
         .sort((a, b) => {
@@ -207,17 +195,16 @@ const Dashboard = () => {
         })
         .slice(0, 10);
 
-      // Update stats
       setStats([
         {
           title: 'Total Patients',
-          value: patients.length.toString(),
+          value: totalPatients.toString(),
           icon: Users,
           color: 'bg-blue-500',
         },
         {
           title: 'Total Visits',
-          value: visits.length.toString(),
+          value: totalVisits.toString(),
           icon: Calendar,
           color: 'bg-green-500',
         },
@@ -229,19 +216,16 @@ const Dashboard = () => {
         },
         {
           title: 'Total Treatments',
-          value: treatments.length.toString(),
+          value: totalTreatments.toString(),
           icon: TrendingUp,
           color: 'bg-purple-500',
         },
       ]);
 
       setUpcomingVisits(upcomingVisitsData);
-
-      // keep raw data for dynamic filtering
       setAllVisits(visits);
       setAllTreatments(treatments);
 
-      // build charts
       setVisitChartData(buildVisitChart(visits, visitFilter));
       setTreatmentChartData(buildTreatmentChart(treatments));
     } catch (err) {
@@ -251,6 +235,12 @@ const Dashboard = () => {
       setLoading(false);
     }
   };
+
+  const upcomingTotalPages = Math.max(1, Math.ceil(upcomingVisits.length / upcomingPerPage));
+  const paginatedUpcomingVisits = upcomingVisits.slice(
+    (upcomingPage - 1) * upcomingPerPage,
+    upcomingPage * upcomingPerPage
+  );
 
   const formatAmount = (amount) => {
     return new Intl.NumberFormat('en-IN', {
@@ -431,10 +421,11 @@ const Dashboard = () => {
             <p className="text-sm text-gray-400 mt-2">All appointments are up to date</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
-                <tr>
+          <>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
+                  <tr>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                     Patient Name
                   </th>
@@ -454,7 +445,7 @@ const Dashboard = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {upcomingVisits.map((visit, idx) => (
+                {paginatedUpcomingVisits.map((visit, idx) => (
                   <tr
                     key={visit.id}
                     className="hover:bg-gray-50 transition-colors cursor-pointer"
@@ -482,6 +473,32 @@ const Dashboard = () => {
               </tbody>
             </table>
           </div>
+
+          {upcomingTotalPages > 1 && (
+            <div className="mt-4 flex items-center justify-between">
+              <div className="text-sm text-gray-700">
+                Showing {((upcomingPage - 1) * upcomingPerPage) + 1} to {Math.min(upcomingPage * upcomingPerPage, upcomingVisits.length)} of {upcomingVisits.length} upcoming visits
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setUpcomingPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={upcomingPage === 1}
+                  className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <span className="text-sm text-gray-700">Page {upcomingPage} of {upcomingTotalPages}</span>
+                <button
+                  onClick={() => setUpcomingPage((prev) => Math.min(prev + 1, upcomingTotalPages))}
+                  disabled={upcomingPage === upcomingTotalPages}
+                  className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+        </>
         )}
       </div>
     </div>
