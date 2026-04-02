@@ -54,7 +54,9 @@ const Treatments = () => {
     fetchPatients();
   }, []);
 
-  const selectedType = treatmentTypes.find(t => t.id === formData.type_of_treatment);
+  const selectedType = Array.isArray(treatmentTypes)
+    ? treatmentTypes.find(t => t.id === formData.type_of_treatment)
+    : null;
   const selectedTypeName = selectedType?.name || '';
 
   const fetchTreatments = async (page = 1) => {
@@ -82,7 +84,8 @@ const Treatments = () => {
   const fetchTreatmentTypes = async () => {
     try {
       const response = await treatmentApi.getTypes();
-      setTreatmentTypes(response.data);
+      const treatmentTypesData = response.data?.results || response.data || [];
+      setTreatmentTypes(Array.isArray(treatmentTypesData) ? treatmentTypesData : []);
     } catch (error) {
       console.error('Error fetching treatment types:', error);
     }
@@ -91,8 +94,8 @@ const Treatments = () => {
   const fetchPatients = async () => {
     try {
       const response = await patientApi.getAll();
-      console.log('patients response', response.data);
-      setPatients(response.data);
+      const patientsData = response.data?.results || response.data || [];
+      setPatients(Array.isArray(patientsData) ? patientsData : []);
     } catch (error) {
       console.error('Error fetching patients:', error);
     }

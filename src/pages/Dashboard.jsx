@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, UserCheck, Calendar, TrendingUp } from 'lucide-react';
 import { dashboardApi } from '../api/dashboardApi';
@@ -75,6 +75,7 @@ const Dashboard = () => {
   const [treatmentFilterOptions, setTreatmentFilterOptions] = useState([]);
   const [allVisits, setAllVisits] = useState([]);
   const [allTreatments, setAllTreatments] = useState([]);
+  const hasFetchedDashboard = useRef(false);
 
   // helper utilities
   const getMonthLabel = (dateObj) => {
@@ -156,6 +157,8 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
+    if (hasFetchedDashboard.current) return;
+    hasFetchedDashboard.current = true;
     fetchDashboardData();
   }, []);
 
