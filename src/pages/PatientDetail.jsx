@@ -140,7 +140,6 @@ const PatientDetail = () => {
       <div className="flex flex-col lg:flex-row justify-between gap-4">
         <div className="space-y-2">
           <h1 className="text-3xl font-bold text-gray-900">{patient.first_name} {patient.last_name}</h1>
-          <p className="text-sm text-gray-500">Patient ID: {patient.id}</p>
           <div className="flex gap-2 flex-wrap items-center">
             <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">
               <Users className="w-3.5 h-3.5" /> {patient.gender || 'N/A'}
@@ -156,12 +155,6 @@ const PatientDetail = () => {
             className="inline-flex items-center gap-2 rounded-lg px-4 py-2 bg-green-600 text-white hover:bg-green-700 transition"
           >
             <Plus className="w-4 h-4" /> Add Treatment
-          </button>
-          <button
-            onClick={() => setIsAddingVisit(true)}
-            className="inline-flex items-center gap-2 rounded-lg px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 transition"
-          >
-            <Plus className="w-4 h-4" /> Add Visit
           </button>
         </div>
       </div>
@@ -275,46 +268,152 @@ const PatientDetail = () => {
         )}
 
         {activeTab === 'treatments' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="w-full flex flex-col gap-5">
+
             {treatments.length === 0 ? (
-              <div className="p-6 text-center bg-white border border-gray-200 rounded-lg">
+              <div className="p-10 text-center bg-white border border-gray-200 rounded-2xl shadow-sm">
                 <p className="text-gray-500">No treatments found for this patient.</p>
               </div>
             ) : (
               treatments.map((treatment) => {
                 const visits = getVisitsForTreatment(treatment.id);
                 const progress = treatmentProgress(treatment);
+
+                const statusClass =
+                  treatment.status === 'completed'
+                    ? 'bg-green-100 text-green-700'
+                    : treatment.status === 'ongoing'
+                    ? 'bg-blue-100 text-blue-700'
+                    : treatment.status === 'scheduled'
+                    ? 'bg-yellow-100 text-yellow-700'
+                    : 'bg-gray-100 text-gray-700';
+
                 return (
-                  <div key={treatment.id} className="bg-white rounded-lg border border-gray-100 shadow-sm p-4 hover:shadow-lg transition cursor-pointer" onClick={() => { setSelectedTreatment(treatment); setTreatmentDrawerOpen(true); }}>
-                    <div className="flex justify-between items-start">
+                  <div
+                    key={treatment.id}
+                    onClick={() => {
+                      setSelectedTreatment(treatment);
+                      setTreatmentDrawerOpen(true);
+                    }}
+                    className="group relative rounded-xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow-md transition-all"
+                  >
+                    {/* Accent line */}
+                    <div className="absolute left-0 top-0 h-full w-[3px] bg-blue-500 rounded-l-2xl"></div>
+
+                    {/* HEADER */}
+                    {/* HEADER */}
+                    <div className="flex justify-between items-center">
+
                       <div>
-                        <p className="text-lg font-semibold text-gray-900">{treatment.type_of_treatment_name || 'Untitled Treatment'}</p>
-                        <p className="text-sm text-gray-500">{treatment.status}</p>
+                        <h3 className="text-base md:text-lg font-semibold text-gray-900">
+                          {treatment.type_of_treatment_name || "Untitled"}
+                        </h3>
+                        <p className="text-xs text-gray-500 mt-1">Treatment</p>
                       </div>
-                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                        treatment.status === 'completed' ? 'bg-green-100 text-green-800' :
-                        treatment.status === 'ongoing' ? 'bg-blue-100 text-blue-800' :
-                        treatment.status === 'scheduled' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-gray-100 text-gray-700'
-                      }`}>
-                        {treatment.status}
-                      </span>
+
+                      {/* RIGHT SIDE ACTIONS */}
+                      <div className="flex items-center gap-2">
+
+                        {/* ADD VISIT BUTTON 🔥 */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();   // VERY IMPORTANT (prevents card click)
+                            setSelectedTreatment(treatment);
+                            setIsAddingVisit(true);
+                          }}
+                          className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          Add Visit
+                        </button>
+
+                        {/* STATUS */}
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusClass}`}>
+                          {treatment.status || "N/A"}
+                        </span>
+
+                      </div>
                     </div>
-                    <div className="mt-3 text-sm text-gray-700 space-y-1">
-                      <p><span className="font-semibold">Initial Findings:</span> {treatment.initial_findings || 'N/A'}</p>
-                      <p><span className="font-semibold">Treatment Plan:</span> {treatment.treatment_plan || 'N/A'}</p>
-                      <p><span className="font-semibold">Notes:</span> {treatment.treatment_notes || 'N/A'}</p>
-                      <p><span className="font-semibold">Duration:</span> {treatment.estimated_duration_months ? `${treatment.estimated_duration_months} months` : 'N/A'}</p>
-                      <p><span className="font-semibold">Planned Amount:</span> {treatment.planned_amount ? formatAmount(treatment.planned_amount) : 'N/A'}</p>
-                      <p><span className="font-semibold">Cap Type:</span> {treatment.cap_type || 'N/A'}</p>
-                      <p><span className="font-semibold">Braces Type:</span> {treatment.braces_type || 'N/A'}</p>
+
+                    {/* MAIN SECTION */}
+                    {/* MAIN SECTION */}
+                    <div className="mt-4 grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
+
+                      {/* LEFT CONTENT */}
+                      <div className="md:col-span-8 space-y-3">
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-[11px] text-gray-400 uppercase">Treatment Plan</p>
+                            <p className="text-sm font-medium text-gray-800">
+                              {treatment.treatment_plan || "N/A"}
+                            </p>
+                          </div>
+
+                          <div>
+                            <p className="text-[11px] text-gray-400 uppercase">Notes</p>
+                            <p className="text-sm font-medium text-gray-800">
+                              {treatment.treatment_notes || "N/A"}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* TAGS */}
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          {treatment.cap_type && (
+                            <span className="px-2 py-0.5 text-[11px] rounded-full bg-gray-100 text-gray-700">
+                              {treatment.cap_type}
+                            </span>
+                          )}
+
+                          <span className="px-2 py-0.5 text-[11px] rounded-full bg-blue-50 text-blue-700">
+                            {visits.length} visits
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* RIGHT COMPACT PANEL 🔥 */}
+                      <div className="md:col-span-4">
+
+                        <div className="bg-gray-50 border border-gray-100 rounded-lg p-3 space-y-3">
+
+                          <div>
+                            <p className="text-[11px] text-gray-400 uppercase">Cost</p>
+                            <p className="text-lg font-bold text-gray-900">
+                              {formatAmount(treatment.planned_amount)}
+                            </p>
+                          </div>
+
+                          <div>
+                            <p className="text-[11px] text-gray-400 uppercase">Duration</p>
+                            <p className="text-sm font-semibold text-gray-800">
+                              {treatment.estimated_duration_months
+                                ? `${treatment.estimated_duration_months} months`
+                                : "N/A"}
+                            </p>
+                          </div>
+
+                        </div>
+
+                      </div>
+
                     </div>
+
+                    {/* PROGRESS */}
                     <div className="mt-4">
-                      <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
-                        <div style={{ width: `${progress}%` }} className="h-full bg-blue-600" />
+                      <div className="flex justify-between text-xs text-gray-500 mb-1">
+                        <span>Progress</span>
+                        <span>{progress}%</span>
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">Progress: {progress}% ({visits.length} / {treatment.estimated_duration_months || 'N/A'})</p>
+
+                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-500"
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
                     </div>
+
                   </div>
                 );
               })
