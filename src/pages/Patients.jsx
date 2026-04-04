@@ -216,7 +216,7 @@ const Patients = () => {
                 patients.map((patient) => (
                   <tr
                   key={patient.id}
-                  onClick={() => navigate(`/patients/${patient.id}`)}
+                  onClick={() => navigate(`${patient.id}`)}
                   className="hover:bg-blue-50 transition-colors cursor-pointer"
                 >
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -256,7 +256,7 @@ const Patients = () => {
                     >
                       <div className="flex gap-2">
                         <Link
-                          to={`/patients/${patient.id}`}
+                          to={`${patient.id}`}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                           title="View"
                         >

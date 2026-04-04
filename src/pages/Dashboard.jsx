@@ -452,7 +452,7 @@ const Dashboard = () => {
                   <tr
                     key={visit.id}
                     className="hover:bg-gray-50 transition-colors cursor-pointer"
-                    onClick={() => navigate(visit.treatment || visit.treatment_id ? `/treatments/${visit.treatment || visit.treatment_id}` : '#')}
+                    onClick={() => navigate(visit.treatment || visit.treatment_id ? `treatments/${visit.treatment || visit.treatment_id}` : '#')}
                   >
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
                       {visit.patient_full_name || `${visit.patient_name || ''} ${visit.patient_last_name || ''}`.trim() || 'N/A'}
