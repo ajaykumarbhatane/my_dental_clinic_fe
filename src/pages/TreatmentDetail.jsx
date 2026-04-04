@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, Calendar, X } from 'lucide-react';
 import { treatmentApi } from '../api/treatmentApi';
 import { visitsApi, visitImagesApi } from '../api/visitsApi';
@@ -11,6 +11,7 @@ const TreatmentDetail = () => {
   const cameraInputRef = useRef(null);
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [treatment, setTreatment] = useState(null);
   const [visits, setVisits] = useState([]);
@@ -283,7 +284,15 @@ const TreatmentDetail = () => {
 
       {/* 🔷 Back */}
       <button
-        onClick={() => navigate('/app/treatments')}
+        onClick={() => {
+          const { fromPatientDetail, patientId, returnTab } = location.state || {};
+          if (fromPatientDetail && patientId) {
+            const query = returnTab ? `?tab=${returnTab}` : '';
+            navigate(`/app/patients/${patientId}${query}`);
+          } else {
+            navigate('/app/treatments');
+          }
+        }}
         className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
       >
         <ArrowLeft className="w-5 h-5" />

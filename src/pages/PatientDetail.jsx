@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   Edit,
   ArrowLeft,
@@ -19,11 +19,12 @@ import {
 import { patientApi } from '../api/patientApi';
 import { treatmentApi } from '../api/treatmentApi';
 import { visitsApi } from '../api/visitsApi';
-import { formatDate, parseDateString } from '../utils/dateUtils';
+import { formatDate, parseDateString, toISODate, toDDMMYYYY } from '../utils/dateUtils';
 
 const PatientDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [patient, setPatient] = useState(null);
   const [treatments, setTreatments] = useState([]);
@@ -37,6 +38,28 @@ const PatientDetail = () => {
 
   const [isAddingTreatment, setIsAddingTreatment] = useState(false);
   const [isAddingVisit, setIsAddingVisit] = useState(false);
+  const [submittingVisit, setSubmittingVisit] = useState(false);
+  const [treatmentTypes, setTreatmentTypes] = useState([]);
+  const [treatmentFormData, setTreatmentFormData] = useState({
+    type_of_treatment: '',
+    status: 'scheduled',
+    estimated_duration_months: '',
+    planned_amount: '',
+    initial_findings: '',
+    treatment_plan: '',
+    treatment_notes: '',
+    braces_type: '',
+    cap_type: ''
+  });
+  const [submittingTreatment, setSubmittingTreatment] = useState(false);
+  const [visitFormData, setVisitFormData] = useState({
+    next_visit_date: '',
+    treatment_notes: '',
+    patient_complaints: '',
+    patient_payment_amount: '',
+    patient_payment_type: 'cash',
+    payment_note: ''
+  });
 
   const formatAmount = (amount) => {
     if (amount === 0 || amount) {
@@ -59,17 +82,109 @@ const PatientDetail = () => {
     return { totalTreatments, totalVisits, totalPaid, pendingAmount, totalPlanned };
   };
 
+  const handleAddVisit = async (e) => {
+    e.preventDefault();
+    setSubmittingVisit(true);
+
+    try {
+      if (!visitFormData.next_visit_date) {
+        alert('Please select a visit date');
+        setSubmittingVisit(false);
+        return;
+      }
+
+      const payload = {
+        treatment: selectedTreatment.id,
+        next_visit_date: toISODate(visitFormData.next_visit_date),
+        treatment_notes: visitFormData.treatment_notes || null,
+        patient_complaints: visitFormData.patient_complaints || null,
+        patient_payment_amount: visitFormData.patient_payment_amount ? parseInt(visitFormData.patient_payment_amount, 10) : null,
+        patient_payment_type: visitFormData.patient_payment_type || null,
+        payment_note: visitFormData.payment_note || null
+      };
+
+      await visitsApi.create(payload);
+      setIsAddingVisit(false);
+      setVisitFormData({
+        next_visit_date: '',
+        treatment_notes: '',
+        patient_complaints: '',
+        patient_payment_amount: '',
+        patient_payment_type: 'cash',
+        payment_note: ''
+      });
+      await loadData();
+      alert('Visit added successfully!');
+    } catch (error) {
+      console.error('Error creating visit:', error);
+      alert(error.response?.data?.detail || 'Error creating visit');
+    } finally {
+      setSubmittingVisit(false);
+    }
+  };
+
+  const handleAddTreatment = async (e) => {
+    e.preventDefault();
+    setSubmittingTreatment(true);
+
+    try {
+      // Validate required fields
+      if (!treatmentFormData.type_of_treatment) {
+        alert('Please select a treatment type');
+        setSubmittingTreatment(false);
+        return;
+      }
+
+      const payload = {
+        patient: id, // Use the patient ID from URL params
+        type_of_treatment: treatmentFormData.type_of_treatment,
+        status: treatmentFormData.status,
+        estimated_duration_months: treatmentFormData.estimated_duration_months ? parseInt(treatmentFormData.estimated_duration_months, 10) : null,
+        planned_amount: treatmentFormData.planned_amount ? parseFloat(treatmentFormData.planned_amount) : null,
+        initial_findings: treatmentFormData.initial_findings || null,
+        treatment_plan: treatmentFormData.treatment_plan || null,
+        treatment_notes: treatmentFormData.treatment_notes || null,
+        braces_type: treatmentFormData.braces_type || null,
+        cap_type: treatmentFormData.cap_type || null
+      };
+
+      await treatmentApi.create(payload);
+      setIsAddingTreatment(false);
+      setTreatmentFormData({
+        type_of_treatment: '',
+        status: 'scheduled',
+        estimated_duration_months: '',
+        planned_amount: '',
+        initial_findings: '',
+        treatment_plan: '',
+        treatment_notes: '',
+        braces_type: '',
+        cap_type: ''
+      });
+      await loadData();
+      alert('Treatment added successfully!');
+    } catch (error) {
+      console.error('Error creating treatment:', error);
+      alert(error.response?.data?.detail || 'Error creating treatment');
+    } finally {
+      setSubmittingTreatment(false);
+    }
+  };
+
   const loadData = async () => {
     setLoading(true);
     try {
       const patientResponse = await patientApi.getById(id);
       const treatmentsResponse = await treatmentApi.getByPatient(id);
+      const treatmentTypesResponse = await treatmentApi.getTypes();
 
       const patientData = patientResponse.data;
       const treatmentsData = treatmentsResponse.data?.results || treatmentsResponse.data || [];
+      const treatmentTypesData = treatmentTypesResponse.data?.results || treatmentTypesResponse.data || [];
 
       setPatient(patientData);
-      setTreatments(Array.isArray(treatmentsData) ? treatmentsData : []);
+      setTreatments(treatmentsData);
+      setTreatmentTypes(treatmentTypesData);
 
       const visitPromises = treatmentsData.map((t) => visitsApi.getByTreatment(t.id));
       const visitResponses = visitPromises.length > 0 ? await Promise.all(visitPromises) : [];
@@ -100,8 +215,11 @@ const PatientDetail = () => {
   };
 
   useEffect(() => {
+    const query = new URLSearchParams(location.search);
+    const tab = query.get('tab');
+    setActiveTab(tab === 'treatments' || tab === 'visits' ? tab : 'overview');
     loadData();
-  }, [id]);
+  }, [id, location.search]);
 
   const getVisitsForTreatment = (treatmentId) => {
     return allVisits.filter(
@@ -119,6 +237,16 @@ const PatientDetail = () => {
   const closeDrawer = () => {
     setTreatmentDrawerOpen(false);
     setSelectedTreatment(null);
+  };
+
+  const handleViewTreatment = (treatment) => {
+    navigate(`/app/treatments/${treatment.id}`, {
+      state: {
+        fromPatientDetail: true,
+        patientId: patient?.id,
+        returnTab: 'treatments'
+      }
+    });
   };
 
   const { totalTreatments, totalVisits, totalPaid, pendingAmount } = calculateTotals();
@@ -291,10 +419,7 @@ const PatientDetail = () => {
                 return (
                   <div
                     key={treatment.id}
-                    onClick={() => {
-                      setSelectedTreatment(treatment);
-                      setTreatmentDrawerOpen(true);
-                    }}
+                    onClick={() => handleViewTreatment(treatment)}
                     className="group relative rounded-xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow-md transition-all"
                   >
                     {/* Accent line */}
@@ -316,9 +441,11 @@ const PatientDetail = () => {
 
                         {/* ADD VISIT BUTTON 🔥 */}
                         <button
+                          type="button"
                           onClick={(e) => {
                             e.stopPropagation();   // VERY IMPORTANT (prevents card click)
                             setSelectedTreatment(treatment);
+                            setTreatmentDrawerOpen(false);
                             setIsAddingVisit(true);
                           }}
                           className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
@@ -473,8 +600,7 @@ const PatientDetail = () => {
                         <td className="px-4 py-3 text-sm text-blue-600 hover:text-blue-800 cursor-pointer" onClick={() => {
                           const related = treatments.find((t) => String(t.id) === String(visit.treatment) || String(t.id) === String(visit.treatment_id));
                           if (related) {
-                            setSelectedTreatment(related);
-                            setTreatmentDrawerOpen(true);
+                            handleViewTreatment(related);
                           }
                         }}>
                           View Treatment
@@ -545,11 +671,13 @@ const PatientDetail = () => {
                 <div className="flex justify-between items-center">
                   <h4 className="text-base font-semibold text-gray-900">Treatment Timeline</h4>
                   <div className="flex gap-2">
-                    <button onClick={() => setIsAddingVisit(true)} className="inline-flex items-center gap-1 text-sm px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-100"><Plus className="w-3.5 h-3.5" /> Add Visit</button>
-                    <button onClick={() => alert('Upload images flow TBD')} className="inline-flex items-center gap-1 text-sm px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-100"><UploadCloud className="w-3.5 h-3.5" /> Upload Images</button>
+                    <button type="button" onClick={() => {
+                      setTreatmentDrawerOpen(false);
+                      setIsAddingVisit(true);
+                    }} className="inline-flex items-center gap-1 text-sm px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-100"><Plus className="w-3.5 h-3.5" /> Add Visit</button>
+                    <button type="button" onClick={() => alert('Upload images flow TBD')} className="inline-flex items-center gap-1 text-sm px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-100"><UploadCloud className="w-3.5 h-3.5" /> Upload Images</button>
                   </div>
                 </div>
-
                 {getVisitsForTreatment(selectedTreatment.id).length === 0 ? (
                   <div className="mt-4 p-4 bg-gray-50 rounded-lg text-sm text-gray-500">No visits for this treatment.</div>
                 ) : (
@@ -579,25 +707,280 @@ const PatientDetail = () => {
       )}
 
       {isAddingTreatment && (
-        <div className="fixed inset-0 z-40 bg-black/40 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl w-full max-w-lg p-6 border border-gray-200">
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Add Treatment</h3>
-              <button onClick={() => setIsAddingTreatment(false)} className="p-2 rounded-full hover:bg-gray-100"><X className="w-4 h-4" /></button>
+              <h3 className="text-lg font-medium text-gray-900">Add New Treatment</h3>
+              <button
+                onClick={() => setIsAddingTreatment(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
             </div>
-            <p className="text-sm text-gray-500">Implement treatment creation form here.</p>
+
+            <form onSubmit={handleAddTreatment} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Treatment Type * <span className="text-xs text-red-600">{!treatmentFormData.type_of_treatment ? '(Required)' : ''}</span></label>
+                <select
+                  required
+                  value={treatmentFormData.type_of_treatment}
+                  onChange={(e) => setTreatmentFormData({...treatmentFormData, type_of_treatment: e.target.value})}
+                  className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                    !treatmentFormData.type_of_treatment ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                  }`}
+                >
+                  <option value="">Select Treatment Type</option>
+                  {treatmentTypes.map(type => (
+                    <option key={type.id} value={type.id}>
+                      {type.name}
+                    </option>
+                  ))}
+                </select>
+
+                {/* conditional options based on selected type */}
+                {treatmentTypes.find(type => type.id === treatmentFormData.type_of_treatment)?.name?.toLowerCase().includes('ortho') ||
+                 treatmentTypes.find(type => type.id === treatmentFormData.type_of_treatment)?.name?.toLowerCase().includes('braces') && (
+                  <div className="mt-3">
+                    <label className="block text-sm font-medium text-gray-700">Braces Type</label>
+                    <select
+                      value={treatmentFormData.braces_type}
+                      onChange={(e) => setTreatmentFormData({...treatmentFormData, braces_type: e.target.value})}
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="">Select Type</option>
+                      <option value="metal">Metal</option>
+                      <option value="ceramic">Ceramic</option>
+                    </select>
+                  </div>
+                )}
+                {treatmentTypes.find(type => type.id === treatmentFormData.type_of_treatment)?.name?.toLowerCase().includes('root canal') && (
+                  <div className="mt-3">
+                    <label className="block text-sm font-medium text-gray-700">Cap Type</label>
+                    <select
+                      value={treatmentFormData.cap_type}
+                      onChange={(e) => setTreatmentFormData({...treatmentFormData, cap_type: e.target.value})}
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="">Select Type</option>
+                      <option value="metal">Metal</option>
+                      <option value="ceramic">Ceramic</option>
+                      <option value="cadcam">CAD/CAM</option>
+                      <option value="zirconia">Zirconia</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Status *</label>
+                  <select
+                    required
+                    value={treatmentFormData.status}
+                    onChange={(e) => setTreatmentFormData({...treatmentFormData, status: e.target.value})}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="scheduled">Scheduled</option>
+                    <option value="ongoing">Ongoing</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                    <option value="on_hold">On Hold</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    {treatmentTypes.find(type => type.id === treatmentFormData.type_of_treatment)?.name?.toLowerCase().includes('root canal')
+                      ? 'Estimated Visits'
+                      : 'Estimated Duration (Months)'}
+                  </label>
+                  <input
+                    type="number"
+                    value={treatmentFormData.estimated_duration_months}
+                    onChange={(e) => setTreatmentFormData({...treatmentFormData, estimated_duration_months: e.target.value})}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    placeholder={
+                      treatmentTypes.find(type => type.id === treatmentFormData.type_of_treatment)?.name?.toLowerCase().includes('root canal')
+                        ? 'e.g., 5'
+                        : 'e.g., 3'
+                    }
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Planned Amount (₹)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={treatmentFormData.planned_amount}
+                  onChange={(e) => setTreatmentFormData({...treatmentFormData, planned_amount: e.target.value})}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="e.g., 5000"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Initial Findings</label>
+                <textarea
+                  value={treatmentFormData.initial_findings}
+                  onChange={(e) => setTreatmentFormData({...treatmentFormData, initial_findings: e.target.value})}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Describe initial findings..."
+                  rows="3"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Treatment Plan</label>
+                <textarea
+                  value={treatmentFormData.treatment_plan}
+                  onChange={(e) => setTreatmentFormData({...treatmentFormData, treatment_plan: e.target.value})}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Describe treatment plan..."
+                  rows="3"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Treatment Notes</label>
+                <textarea
+                  value={treatmentFormData.treatment_notes}
+                  onChange={(e) => setTreatmentFormData({...treatmentFormData, treatment_notes: e.target.value})}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Add any additional notes..."
+                  rows="3"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsAddingTreatment(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingTreatment || !treatmentFormData.type_of_treatment}
+                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                >
+                  {submittingTreatment ? 'Adding...' : 'Add Treatment'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
 
-      {isAddingVisit && (
-        <div className="fixed inset-0 z-40 bg-black/40 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl w-full max-w-lg p-6 border border-gray-200">
+      {isAddingVisit && selectedTreatment && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-60">
+          <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Add Visit</h3>
-              <button onClick={() => setIsAddingVisit(false)} className="p-2 rounded-full hover:bg-gray-100"><X className="w-4 h-4" /></button>
+              <h3 className="text-lg font-medium text-gray-900">Add New Visit</h3>
+              <button
+                onClick={() => setIsAddingVisit(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
             </div>
-            <p className="text-sm text-gray-500">Implement visit creation form here.</p>
+
+            <form onSubmit={handleAddVisit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Next Visit Date * <span className="text-xs text-red-600">{!visitFormData.next_visit_date ? '(Required)' : ''}</span></label>
+                <input
+                  type="date"
+                  required
+                  value={toISODate(visitFormData.next_visit_date)}
+                  onChange={(e) => setVisitFormData({
+                    ...visitFormData,
+                    next_visit_date: e.target.value ? toDDMMYYYY(e.target.value) : ''
+                  })}
+                  className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                    !visitFormData.next_visit_date ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                  }`}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Treatment Notes</label>
+                <textarea
+                  value={visitFormData.treatment_notes}
+                  onChange={(e) => setVisitFormData({...visitFormData, treatment_notes: e.target.value})}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Add treatment notes..."
+                  rows="3"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Patient Complaints</label>
+                <textarea
+                  value={visitFormData.patient_complaints}
+                  onChange={(e) => setVisitFormData({...visitFormData, patient_complaints: e.target.value})}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Document patient complaints..."
+                  rows="3"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Payment Amount (₹)</label>
+                  <input
+                    type="number"
+                    value={visitFormData.patient_payment_amount}
+                    onChange={(e) => setVisitFormData({...visitFormData, patient_payment_amount: e.target.value})}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="e.g., 1000"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Payment Type</label>
+                  <select
+                    value={visitFormData.patient_payment_type}
+                    onChange={(e) => setVisitFormData({...visitFormData, patient_payment_type: e.target.value})}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="cash">Cash</option>
+                    <option value="card">Card</option>
+                    <option value="online">Online</option>
+                    <option value="cheque">Cheque</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Payment Note</label>
+                <textarea
+                  value={visitFormData.payment_note}
+                  onChange={(e) => setVisitFormData({...visitFormData, payment_note: e.target.value})}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Add any payment notes..."
+                  rows="2"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsAddingVisit(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingVisit || !visitFormData.next_visit_date}
+                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                >
+                  {submittingVisit ? 'Adding...' : 'Add Visit'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
