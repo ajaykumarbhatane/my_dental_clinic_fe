@@ -277,7 +277,13 @@ const PatientDetail = () => {
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            to="/app/patients"
+            className="inline-flex items-center gap-2 rounded-lg px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 transition"
+          >
+            <ArrowLeft className="w-4 h-4" /> Back to All Patients
+          </Link>
           <button
             onClick={() => setIsAddingTreatment(true)}
             className="inline-flex items-center gap-2 rounded-lg px-4 py-2 bg-green-600 text-white hover:bg-green-700 transition"

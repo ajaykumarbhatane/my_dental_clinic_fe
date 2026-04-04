@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Users, UserCheck, Calendar, TrendingUp } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';import Pagination from '../components/Pagination';import { Users, UserCheck, Calendar, TrendingUp } from 'lucide-react';
 import { dashboardApi } from '../api/dashboardApi';
 import { formatDate, parseDateString } from '../utils/dateUtils';
 
@@ -478,27 +477,13 @@ const Dashboard = () => {
           </div>
 
           {upcomingTotalPages > 1 && (
-            <div className="mt-4 flex items-center justify-between">
-              <div className="text-sm text-gray-700">
-                Showing {((upcomingPage - 1) * upcomingPerPage) + 1} to {Math.min(upcomingPage * upcomingPerPage, upcomingVisits.length)} of {upcomingVisits.length} upcoming visits
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setUpcomingPage((prev) => Math.max(prev - 1, 1))}
-                  disabled={upcomingPage === 1}
-                  className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Previous
-                </button>
-                <span className="text-sm text-gray-700">Page {upcomingPage} of {upcomingTotalPages}</span>
-                <button
-                  onClick={() => setUpcomingPage((prev) => Math.min(prev + 1, upcomingTotalPages))}
-                  disabled={upcomingPage === upcomingTotalPages}
-                  className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Next
-                </button>
-              </div>
+            <div className="mt-4">
+              <Pagination
+                currentPage={upcomingPage}
+                totalPages={upcomingTotalPages}
+                onPageChange={setUpcomingPage}
+                itemCountText={`Showing ${((upcomingPage - 1) * upcomingPerPage) + 1} to ${Math.min(upcomingPage * upcomingPerPage, upcomingVisits.length)} of ${upcomingVisits.length} upcoming visits`}
+              />
             </div>
           )}
         </>

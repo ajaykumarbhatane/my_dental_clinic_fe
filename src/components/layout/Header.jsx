@@ -98,8 +98,8 @@ const Header = ({ onMenuClick }) => {
           {/* Mobile Menu Button */}
           <button
             onClick={onMenuClick}
-            className="md:hidden p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            aria-label="Open sidebar"
+            className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            aria-label="Toggle sidebar"
           >
             <Menu className="w-5 h-5" />
           </button>

@@ -20,14 +20,6 @@ const Sidebar = ({ isOpen, onClose, isExpanded, setIsExpanded }) => {
     if (diff < -80) onClose();
   };
 
-  // 👉 Hover (desktop only)
-  const handleMouseEnter = () => {
-    if (window.innerWidth >= 768) setIsExpanded(true);
-  };
-
-  const handleMouseLeave = () => {
-    if (window.innerWidth >= 768) setIsExpanded(false);
-  };
 
   const menuItems = [
     { path: '/app', icon: LayoutDashboard, label: 'Dashboard' },
@@ -40,8 +32,6 @@ const Sidebar = ({ isOpen, onClose, isExpanded, setIsExpanded }) => {
 
   return (
     <aside
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       className={`

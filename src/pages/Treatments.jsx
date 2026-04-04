@@ -4,6 +4,7 @@ import { Filter, Eye, Plus, X } from 'lucide-react';
 import { treatmentApi } from '../api/treatmentApi';
 import { patientApi } from '../api/patientApi';
 import { visitsApi } from '../api/visitsApi';
+import Pagination from '../components/Pagination';
 import { formatDate, toISODate, toDDMMYYYY } from '../utils/dateUtils';
 
 const Treatments = () => {
@@ -377,29 +378,13 @@ const Treatments = () => {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between bg-white px-6 py-4 border-t border-gray-200">
-          <div className="text-sm text-gray-700">
-            Showing {((currentPage - 1) * 10) + 1} to {Math.min(currentPage * 10, totalCount)} of {totalCount} treatments
-          </div>
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
-              className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Previous
-            </button>
-            <span className="px-3 py-2 text-sm font-medium text-gray-700">
-              Page {currentPage} of {totalPages}
-            </span>
-            <button
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-              disabled={currentPage === totalPages}
-              className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Next
-            </button>
-          </div>
+        <div className="mt-4">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            itemCountText={`Showing ${((currentPage - 1) * 10) + 1} to ${Math.min(currentPage * 10, totalCount)} of ${totalCount} treatments`}
+          />
         </div>
       )}
 

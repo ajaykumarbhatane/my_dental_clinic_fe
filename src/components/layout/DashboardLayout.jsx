@@ -6,6 +6,14 @@ const DashboardLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false); // 🔥 important
 
+  const handleMenuClick = () => {
+    if (window.innerWidth >= 768) {
+      setIsExpanded((prev) => !prev);
+    } else {
+      setSidebarOpen(true);
+    }
+  };
+
   return (
     <div className="flex min-h-screen bg-gray-50">
 
@@ -33,7 +41,7 @@ const DashboardLayout = ({ children }) => {
           ${isExpanded ? 'md:ml-64' : 'md:ml-16'}
         `}
       >
-        <Header onMenuClick={() => setSidebarOpen(true)} />
+        <Header onMenuClick={handleMenuClick} />
 
         <main className="flex-1 overflow-y-auto bg-gradient-to-br from-gray-50 via-gray-50 to-blue-50 p-3 sm:p-4 md:p-6">
           {children}

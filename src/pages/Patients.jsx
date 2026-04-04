@@ -4,6 +4,7 @@ import { Search, Filter, Plus, Eye, Edit, Trash2, X } from 'lucide-react';
 import { patientApi } from '../api/patientApi';
 import { userApi } from '../api/userApi';
 import { useAuth } from '../context/AuthContext';
+import Pagination from '../components/Pagination';
 import { formatDate, toISODate, toDDMMYYYY } from '../utils/dateUtils';
 
 const Patients = () => {
@@ -173,138 +174,132 @@ const Patients = () => {
       </div>
 
       {/* Patients Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-shadow">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
-              <tr>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                  Patient Name
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                  Mobile
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                  Gender
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                  Date of Birth
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                  Assigned Doctor
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                  Created Date
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {patients.length === 0 ? (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="px-6 py-5 border-b border-gray-200 bg-white">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Patient Records</h2>
+              <p className="text-sm text-gray-500 mt-1">Browse records while search, filters and pagination remain fixed.</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-h-[calc(100vh-28rem)] overflow-y-auto">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
                 <tr>
-                  <td colSpan="7" className="px-6 py-12 text-center">
-                    <div className="flex flex-col items-center justify-center">
-                      <div className="text-5xl mb-4">🔍</div>
-                      <p className="text-gray-500 font-medium">No patients found</p>
-                      <p className="text-sm text-gray-400 mt-1">Try adjusting your search terms</p>
-                    </div>
-                  </td>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    Patient Name
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    Mobile
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    Gender
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    Date of Birth
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    Assigned Doctor
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    Created Date
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
-              ) : (
-                patients.map((patient) => (
-                  <tr
-                  key={patient.id}
-                  onClick={() => navigate(`${patient.id}`)}
-                  className="hover:bg-blue-50 transition-colors cursor-pointer"
-                >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold text-sm">
-                          {patient.first_name.charAt(0)}{patient.last_name.charAt(0)}
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-gray-900">
-                            {patient.first_name} {patient.last_name}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="flex items-center gap-1 text-sm text-gray-600">
-                        📱 {patient.mobile}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full capitalize">
-                        {patient.gender || 'N/A'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {formatDate(patient.date_of_birth)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
-                      {patient.assigned_doctor || (patient.user && (patient.user.first_name || patient.user.last_name) ? `Dr. ${patient.user.first_name || ''} ${patient.user.last_name || ''}`.trim() : 'N/A')}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
-                      {formatDate(patient.created_at)}
-                    </td>
-                    <td
-                      className="px-6 py-4 whitespace-nowrap text-sm font-medium"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <div className="flex gap-2">
-                        <Link
-                          to={`${patient.id}`}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="View"
-                        >
-                          <Eye className="w-5 h-5" />
-                        </Link>
-                        <button className="p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors" title="Edit">
-                          <Edit className="w-5 h-5" />
-                        </button>
-                        <button className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
-                          <Trash2 className="w-5 h-5" />
-                        </button>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {patients.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" className="px-6 py-12 text-center">
+                      <div className="flex flex-col items-center justify-center">
+                        <div className="text-5xl mb-4">🔍</div>
+                        <p className="text-gray-500 font-medium">No patients found</p>
+                        <p className="text-sm text-gray-400 mt-1">Try adjusting your search terms</p>
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  patients.map((patient) => (
+                    <tr
+                      key={patient.id}
+                      onClick={() => navigate(`${patient.id}`)}
+                      className="hover:bg-blue-50 transition-colors cursor-pointer"
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold text-sm">
+                            {patient.first_name.charAt(0)}{patient.last_name.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900">
+                              {patient.first_name} {patient.last_name}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="flex items-center gap-1 text-sm text-gray-600">
+                          📱 {patient.mobile}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full capitalize">
+                          {patient.gender || 'N/A'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {formatDate(patient.date_of_birth)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
+                        {patient.assigned_doctor || (patient.user && (patient.user.first_name || patient.user.last_name) ? `Dr. ${patient.user.first_name || ''} ${patient.user.last_name || ''}`.trim() : 'N/A')}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
+                        {formatDate(patient.created_at)}
+                      </td>
+                      <td
+                        className="px-6 py-4 whitespace-nowrap text-sm font-medium"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex gap-2">
+                          <Link
+                            to={`${patient.id}`}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="View"
+                          >
+                            <Eye className="w-5 h-5" />
+                          </Link>
+                          <button className="p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors" title="Edit">
+                            <Edit className="w-5 h-5" />
+                          </button>
+                          <button className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between bg-white px-6 py-4 border-t border-gray-200">
-          <div className="text-sm text-gray-700">
-            Showing {((currentPage - 1) * 10) + 1} to {Math.min(currentPage * 10, totalCount)} of {totalCount} patients
+        {totalPages > 1 && (
+          <div className="px-6 py-4 border-t border-gray-200 bg-white">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              itemCountText={`Showing ${((currentPage - 1) * 10) + 1} to ${Math.min(currentPage * 10, totalCount)} of ${totalCount} patients`}
+            />
           </div>
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
-              className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Previous
-            </button>
-            <span className="px-3 py-2 text-sm font-medium text-gray-700">
-              Page {currentPage} of {totalPages}
-            </span>
-            <button
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-              disabled={currentPage === totalPages}
-              className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Add Patient Modal */}
       {showAddModal && (
