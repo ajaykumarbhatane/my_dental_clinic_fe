@@ -70,91 +70,13 @@ const Dashboard = () => {
   // chart data states
   const [visitChartData, setVisitChartData] = useState(null); // bar chart data (visits per month)
   const [treatmentChartData, setTreatmentChartData] = useState(null);
+  const [visitChartLabels, setVisitChartLabels] = useState([]);
+  const [visitChartSeries, setVisitChartSeries] = useState({});
   const [visitFilter, setVisitFilter] = useState('all');
   const [treatmentFilterOptions, setTreatmentFilterOptions] = useState([]);
-  const [allVisits, setAllVisits] = useState([]);
-  const [allTreatments, setAllTreatments] = useState([]);
   const hasFetchedDashboard = useRef(false);
 
   // helper utilities
-  const getMonthLabel = (dateObj) => {
-    if (!dateObj) return 'Unknown';
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return `${months[dateObj.getMonth()]} - ${dateObj.getFullYear()}`;
-  };
-
-  const buildVisitChart = (visits = [], selectedTreatment = 'all') => {
-    const counts = {};
-
-    // Filter visits by treatment if specified
-    const filteredVisits = selectedTreatment === 'all'
-      ? visits
-      : visits.filter(v => v.treatment_name === selectedTreatment);
-
-    filteredVisits.forEach((v) => {
-      const createdAt = parseDateString(v.created_at || v.updated_at);
-      if (!createdAt) return;
-
-      const monthKey = `${createdAt.getFullYear()}-${String(createdAt.getMonth() + 1).padStart(2, '0')}`;
-      counts[monthKey] = (counts[monthKey] || 0) + 1;
-    });
-
-    // Ensure only last 6 months appear
-    const now = new Date();
-    const months = [];
-    for (let i = 5; i >= 0; i -= 1) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      months.push(key);
-    }
-
-    const labels = months.map((key) => {
-      const [year, month] = key.split('-').map(Number);
-      return getMonthLabel(new Date(year, month - 1, 1));
-    });
-
-    const dataValues = months.map((key) => counts[key] || 0);
-
-    return {
-      labels,
-      datasets: [
-        {
-          label: 'Visits (per month)',
-          data: dataValues,
-          backgroundColor: 'rgba(59, 130, 246, 0.75)',
-          borderColor: 'rgba(37, 99, 235, 1)',
-          borderWidth: 1,
-        },
-      ],
-    };
-  };
-
-  const buildTreatmentChart = (treatments) => {
-    const counts = {};
-    treatments.forEach((t) => {
-      // serializer provides type_of_treatment_name for convenience,
-      // fall back to nested object if present
-      const name = t.type_of_treatment_name || t.type_of_treatment?.name || 'Unknown';
-      counts[name] = (counts[name] || 0) + 1;
-    });
-
-    return {
-      labels: Object.keys(counts),
-      datasets: [
-        {
-          data: Object.values(counts),
-          backgroundColor: [
-            '#3b82f6',
-            '#10b981',
-            '#f59e0b',
-            '#ef4444',
-            '#8b5cf6',
-          ],
-        },
-      ],
-    };
-  };
-
   useEffect(() => {
     if (hasFetchedDashboard.current) return;
     hasFetchedDashboard.current = true;
@@ -168,34 +90,14 @@ const Dashboard = () => {
 
       const response = await dashboardApi.get();
       const data = response.data || {};
+      const summary = data.summary || {};
 
-      const patients = data.patients?.results || [];
-      const treatments = data.treatments?.results || [];
-      const visits = data.visits?.results || [];
-      const clinics = data.clinics?.results || [];
+      const totalPatients = summary.total_patients ?? 0;
+      const totalVisits = summary.total_visits ?? 0;
+      const activeTreatments = summary.active_treatments ?? 0;
+      const totalTreatments = summary.total_treatments ?? 0;
 
-      const totalPatients = data.summary?.total_patients ?? patients.length;
-      const totalVisits = data.summary?.total_visits ?? visits.length;
-      const activeTreatments = data.summary?.active_treatments ??
-        treatments.filter(t => ['scheduled', 'ongoing'].includes(t.status)).length;
-      const totalTreatments = data.summary?.total_treatments ?? treatments.length;
-
-      const treatmentNames = Array.from(new Set(visits.map((v) => v.treatment_name).filter(Boolean)));
-      setTreatmentFilterOptions(['all', ...treatmentNames]);
-
-      const upcomingVisitsData = visits
-        .filter(v => {
-          const visitDate = parseDateString(v.next_visit_date);
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          return visitDate && visitDate >= today;
-        })
-        .sort((a, b) => {
-          const dateA = parseDateString(a.next_visit_date);
-          const dateB = parseDateString(b.next_visit_date);
-          return (dateA ? dateA.getTime() : 0) - (dateB ? dateB.getTime() : 0);
-        })
-        .slice(0, 10);
+      setTreatmentFilterOptions(summary.treatment_filter_options || ['all']);
 
       setStats([
         {
@@ -224,12 +126,36 @@ const Dashboard = () => {
         },
       ]);
 
-      setUpcomingVisits(upcomingVisitsData);
-      setAllVisits(visits);
-      setAllTreatments(treatments);
-
-      setVisitChartData(buildVisitChart(visits, visitFilter));
-      setTreatmentChartData(buildTreatmentChart(treatments));
+      setUpcomingVisits(summary.upcoming_visits || []);
+      setVisitChartLabels(summary.visit_chart?.labels || []);
+      setVisitChartSeries(summary.visit_chart?.series || {});
+      setVisitChartData({
+        labels: summary.visit_chart?.labels || [],
+        datasets: [
+          {
+            label: 'Visits (per month)',
+            data: summary.visit_chart?.series?.all || [],
+            backgroundColor: 'rgba(59, 130, 246, 0.75)',
+            borderColor: 'rgba(37, 99, 235, 1)',
+            borderWidth: 1,
+          },
+        ],
+      });
+      setTreatmentChartData({
+        labels: summary.treatment_chart?.labels || [],
+        datasets: [
+          {
+            data: summary.treatment_chart?.data || [],
+            backgroundColor: [
+              '#3b82f6',
+              '#10b981',
+              '#f59e0b',
+              '#ef4444',
+              '#8b5cf6',
+            ],
+          },
+        ],
+      });
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
       setError('Failed to load dashboard data');
@@ -296,7 +222,18 @@ const Dashboard = () => {
                 onChange={(e) => {
                   const selected = e.target.value;
                   setVisitFilter(selected);
-                  setVisitChartData(buildVisitChart(allVisits, selected));
+                  setVisitChartData({
+                    labels: visitChartLabels,
+                    datasets: [
+                      {
+                        label: 'Visits (per month)',
+                        data: visitChartSeries[selected] || [],
+                        backgroundColor: 'rgba(59, 130, 246, 0.75)',
+                        borderColor: 'rgba(37, 99, 235, 1)',
+                        borderWidth: 1,
+                      },
+                    ],
+                  });
                 }}
               >
                 {treatmentFilterOptions.map((option) => (

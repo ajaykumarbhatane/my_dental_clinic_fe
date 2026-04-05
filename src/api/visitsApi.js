@@ -7,6 +7,7 @@ export const visitsApi = {
   update: (id, data) => apiClient.put(`/visits/${id}/`, data),
   delete: (id) => apiClient.delete(`/visits/${id}/`),
   getByTreatment: (treatmentId, params = {}) => apiClient.get('/visits/', { params: { treatment: treatmentId, ...params } }),
+  getByPatient: (patientId, params = {}) => apiClient.get('/visits/', { params: { 'treatment__patient': patientId, ...params } }),
 };
 
 export const visitImagesApi = {
