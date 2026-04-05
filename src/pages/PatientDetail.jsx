@@ -20,6 +20,7 @@ import {
 import { patientApi } from '../api/patientApi';
 import { treatmentApi } from '../api/treatmentApi';
 import { visitsApi } from '../api/visitsApi';
+import { userApi } from '../api/userApi';
 import { formatDate, parseDateString, toISODate, toDDMMYYYY } from '../utils/dateUtils';
 
 const PatientDetail = () => {
@@ -61,6 +62,20 @@ const PatientDetail = () => {
     patient_payment_type: 'cash',
     payment_note: ''
   });
+  const [doctors, setDoctors] = useState([]);
+  const [isEditingPatient, setIsEditingPatient] = useState(false);
+  const [patientFormData, setPatientFormData] = useState({
+    first_name: '',
+    last_name: '',
+    mobile: '',
+    gender: '',
+    date_of_birth: '',
+    address: '',
+    medical_history: '',
+    dental_history: '',
+    user: ''
+  });
+  const [submittingPatient, setSubmittingPatient] = useState(false);
 
   const formatAmount = (amount) => {
     if (amount === 0 || amount) {
@@ -172,6 +187,96 @@ const PatientDetail = () => {
     }
   };
 
+  const fetchDoctors = async () => {
+    try {
+      const response = await userApi.getAll();
+      const doctorsData = Array.isArray(response.data)
+        ? response.data
+        : response.data.results ?? [];
+      setDoctors(doctorsData);
+      return doctorsData;
+    } catch (error) {
+      console.error('Error fetching doctors:', error);
+      return [];
+    }
+  };
+
+  const getUserId = (user) => {
+    if (user == null || user === '') return null;
+    if (typeof user === 'object') return user.id ?? null;
+    return String(user);
+  };
+
+  const findDoctorIdByAssignedDoctor = (assignedDoctor, doctorList = []) => {
+    if (!assignedDoctor || doctorList.length === 0) return null;
+    const normalizedAssignedName = assignedDoctor.replace(/^Dr\.\s*/i, '').trim().toLowerCase();
+    const matchedDoctor = doctorList.find((doctor) => {
+      const doctorName = `${doctor.first_name || ''} ${doctor.last_name || ''}`.trim().toLowerCase();
+      return doctorName === normalizedAssignedName;
+    });
+    return matchedDoctor?.id ?? null;
+  };
+
+  const openEditPatientModal = async () => {
+    let doctorsList = doctors;
+    if (doctorsList.length === 0) {
+      doctorsList = await fetchDoctors();
+    }
+
+    const assignedDoctorId = getUserId(patient.user)
+      ?? findDoctorIdByAssignedDoctor(patient.assigned_doctor, doctorsList);
+    const defaultDoctorId = assignedDoctorId ?? (doctorsList[0]?.id ?? null);
+
+    setPatientFormData({
+      first_name: patient.first_name || '',
+      last_name: patient.last_name || '',
+      mobile: patient.mobile || '',
+      gender: patient.gender || '',
+      date_of_birth: patient.date_of_birth ? toISODate(patient.date_of_birth) : '',
+      address: patient.address || '',
+      medical_history: patient.medical_history || '',
+      dental_history: patient.dental_history || '',
+      user: defaultDoctorId != null ? String(defaultDoctorId) : ''
+    });
+    setIsEditingPatient(true);
+  };
+
+  const handleEditPatient = async (e) => {
+    e.preventDefault();
+    setSubmittingPatient(true);
+
+    try {
+      const selectedUserId = patientFormData.user
+        ? getUserId(patientFormData.user)
+        : getUserId(patient?.user);
+
+      const payload = {
+        first_name: patientFormData.first_name,
+        last_name: patientFormData.last_name,
+        mobile: patientFormData.mobile || null,
+        gender: patientFormData.gender,
+        date_of_birth: patientFormData.date_of_birth || null,
+        address: patientFormData.address || null,
+        medical_history: patientFormData.medical_history || null,
+        dental_history: patientFormData.dental_history || null,
+      };
+
+      if (selectedUserId !== null) {
+        payload.user = selectedUserId;
+      }
+
+      await patientApi.update(id, payload);
+      setIsEditingPatient(false);
+      await loadData();
+      alert('Patient updated successfully!');
+    } catch (error) {
+      console.error('Error updating patient:', error);
+      alert(error.response?.data?.detail || 'Error updating patient');
+    } finally {
+      setSubmittingPatient(false);
+    }
+  };
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -216,6 +321,7 @@ const PatientDetail = () => {
     const tab = query.get('tab');
     setActiveTab(tab === 'treatments' || tab === 'visits' ? tab : 'overview');
     loadData();
+    fetchDoctors();
   }, [id, location.search]);
 
   const getVisitsForTreatment = (treatmentId) => {
@@ -583,10 +689,18 @@ const PatientDetail = () => {
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-sky-500 text-white shadow-md">
                   <Users className="w-5 h-5" />
                 </div>
-                <div>
+                <div className="flex-1">
                   <p className="text-xs uppercase tracking-wider text-gray-500 font-semibold">Patient Information</p>
                   <h2 className="text-lg font-bold text-gray-900">{patient.first_name} {patient.last_name}</h2>
                 </div>
+                <button
+                  type="button"
+                  onClick={openEditPatientModal}
+                  className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition"
+                >
+                  <Edit className="w-4 h-4" />
+                  Edit Patient
+                </button>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -600,7 +714,11 @@ const PatientDetail = () => {
                 </div>
                 <div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 p-3 border border-emerald-100 col-span-2">
                   <p className="text-[10px] uppercase tracking-widest text-emerald-600 font-semibold">Doctor</p>
-                  <p className="mt-1.5 text-sm font-semibold text-gray-900">{patient.assigned_doctor || 'N/A'}</p>
+                  <p className="mt-1.5 text-sm font-semibold text-gray-900">
+                    {patient.assigned_doctor ||
+                      (patient.user && `${patient.user.first_name || ''} ${patient.user.last_name || ''}`.trim()) ||
+                      'N/A'}
+                  </p>
                 </div>
               </div>
 
@@ -633,6 +751,158 @@ const PatientDetail = () => {
           </div>
         </aside>
       </div>
+
+      {isEditingPatient && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center px-4 py-8 sm:px-6 lg:px-8">
+          <div className="fixed inset-0 bg-black/40" onClick={() => setIsEditingPatient(false)} />
+          <div className="relative w-full max-w-2xl max-h-[calc(100vh-6rem)] overflow-y-auto rounded-[28px] bg-white shadow-2xl ring-1 ring-black/5">
+            <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-6 py-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900">Edit Patient</h3>
+                  <p className="text-sm text-gray-500">Update patient details and assigned doctor</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsEditingPatient(false)}
+                  className="rounded-full p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <div className="p-6">
+              <form onSubmit={handleEditPatient} className="space-y-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">First Name</label>
+                    <input
+                      required
+                      value={patientFormData.first_name}
+                      onChange={(e) => setPatientFormData({ ...patientFormData, first_name: e.target.value })}
+                      className="mt-1 block w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Last Name</label>
+                    <input
+                      required
+                      value={patientFormData.last_name}
+                      onChange={(e) => setPatientFormData({ ...patientFormData, last_name: e.target.value })}
+                      className="mt-1 block w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Mobile</label>
+                    <input
+                      value={patientFormData.mobile}
+                      onChange={(e) => setPatientFormData({ ...patientFormData, mobile: e.target.value })}
+                      className="mt-1 block w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Gender</label>
+                    <select
+                      required
+                      value={patientFormData.gender}
+                      onChange={(e) => setPatientFormData({ ...patientFormData, gender: e.target.value })}
+                      className="mt-1 block w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    >
+                      <option value="">Select gender</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Date of Birth</label>
+                    <input
+                      type="date"
+                      value={patientFormData.date_of_birth}
+                      onChange={(e) => setPatientFormData({ ...patientFormData, date_of_birth: e.target.value })}
+                      className="mt-1 block w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Doctor</label>
+                    <select
+                      required
+                      value={patientFormData.user}
+                      onChange={(e) => setPatientFormData({ ...patientFormData, user: e.target.value })}
+                      className="mt-1 block w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    >
+                      <option value="">Select doctor</option>
+                      {doctors.length > 0 ? (
+                        doctors.map((doctor) => (
+                          <option key={doctor.id} value={doctor.id}>
+                            {doctor.first_name} {doctor.last_name}
+                          </option>
+                        ))
+                      ) : (
+                        <option value="" disabled>No doctors available</option>
+                      )}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Address</label>
+                  <textarea
+                    value={patientFormData.address}
+                    onChange={(e) => setPatientFormData({ ...patientFormData, address: e.target.value })}
+                    rows={2}
+                    className="mt-1 block w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Medical History</label>
+                    <textarea
+                      value={patientFormData.medical_history}
+                      onChange={(e) => setPatientFormData({ ...patientFormData, medical_history: e.target.value })}
+                      rows={3}
+                      className="mt-1 block w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Dental History</label>
+                    <textarea
+                      value={patientFormData.dental_history}
+                      onChange={(e) => setPatientFormData({ ...patientFormData, dental_history: e.target.value })}
+                      rows={3}
+                      className="mt-1 block w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-3 pt-4 border-t border-gray-200 sm:flex-row sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingPatient(false)}
+                    className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submittingPatient}
+                    className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+                  >
+                    {submittingPatient ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
 
       {treatmentDrawerOpen && selectedTreatment && (
         <div className="fixed inset-0 z-50 flex">
