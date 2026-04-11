@@ -19,6 +19,14 @@ const TreatmentDetail = () => {
   const [expandedVisit, setExpandedVisit] = useState(null);
   const [showAddVisitModal, setShowAddVisitModal] = useState(false);
   const [submittingVisit, setSubmittingVisit] = useState(false);
+  const [showDeleteVisitModal, setShowDeleteVisitModal] = useState(false);
+  const [visitToDelete, setVisitToDelete] = useState(null);
+  const [isDeletingVisit, setIsDeletingVisit] = useState(false);
+  const [showDeleteImageModal, setShowDeleteImageModal] = useState(false);
+  const [imageToDelete, setImageToDelete] = useState(null);
+  const [isDeletingImage, setIsDeletingImage] = useState(false);
+  const [showDeleteTreatmentModal, setShowDeleteTreatmentModal] = useState(false);
+  const [isDeletingTreatment, setIsDeletingTreatment] = useState(false);
   const [showUploadImageModal, setShowUploadImageModal] = useState(false);
   const [selectedVisitForUpload, setSelectedVisitForUpload] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -60,14 +68,64 @@ const TreatmentDetail = () => {
     setVisits(res.data?.results || res.data || []);
   };
 
-  const handleDeleteVisit = async (visitId) => {
-    await visitsApi.delete(visitId);
-    fetchVisits();
+  const handleDeleteVisit = (visit) => {
+    setVisitToDelete(visit);
+    setShowDeleteVisitModal(true);
   };
 
-  const handleDeleteImage = async (imageId) => {
-    await visitImagesApi.delete(imageId);
-    fetchVisits();
+  const handleConfirmDeleteVisit = async () => {
+    setIsDeletingVisit(true);
+    try {
+      await visitsApi.delete(visitToDelete.id);
+      setShowDeleteVisitModal(false);
+      setVisitToDelete(null);
+      alert('Visit deleted successfully!');
+      await fetchVisits();
+    } catch (error) {
+      console.error('Error deleting visit:', error);
+      alert(error.response?.data?.detail || 'Error deleting visit');
+    } finally {
+      setIsDeletingVisit(false);
+    }
+  };
+
+  const handleDeleteImage = (image) => {
+    setImageToDelete(image);
+    setShowDeleteImageModal(true);
+  };
+
+  const handleConfirmDeleteImage = async () => {
+    setIsDeletingImage(true);
+    try {
+      await visitImagesApi.delete(imageToDelete.id);
+      setShowDeleteImageModal(false);
+      setImageToDelete(null);
+      alert('Image deleted successfully!');
+      await fetchVisits();
+    } catch (error) {
+      console.error('Error deleting image:', error);
+      alert(error.response?.data?.detail || 'Error deleting image');
+    } finally {
+      setIsDeletingImage(false);
+    }
+  };
+
+  const handleDeleteTreatment = () => {
+    setShowDeleteTreatmentModal(true);
+  };
+
+  const handleConfirmDeleteTreatment = async () => {
+    setIsDeletingTreatment(true);
+    try {
+      await treatmentApi.delete(id);
+      alert('Treatment deleted successfully!');
+      navigate('/treatments');
+    } catch (error) {
+      console.error('Error deleting treatment:', error);
+      alert(error.response?.data?.detail || 'Error deleting treatment');
+    } finally {
+      setIsDeletingTreatment(false);
+    }
   };
 
   const handleUploadImage = async (e) => {
@@ -283,21 +341,30 @@ const TreatmentDetail = () => {
     <div className="space-y-6">
 
       {/* 🔷 Back */}
-      <button
-        onClick={() => {
-          const { fromPatientDetail, patientId, returnTab } = location.state || {};
-          if (fromPatientDetail && patientId) {
-            const query = returnTab ? `?tab=${returnTab}` : '';
-            navigate(`/app/patients/${patientId}${query}`);
-          } else {
-            navigate('/app/treatments');
-          }
-        }}
-        className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
-      >
-        <ArrowLeft className="w-5 h-5" />
-        Back to Treatments
-      </button>
+      <div className="flex justify-between items-center">
+        <button
+          onClick={() => {
+            const { fromPatientDetail, patientId, returnTab } = location.state || {};
+            if (fromPatientDetail && patientId) {
+              const query = returnTab ? `?tab=${returnTab}` : '';
+              navigate(`/app/patients/${patientId}${query}`);
+            } else {
+              navigate('/app/treatments');
+            }
+          }}
+          className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          Back to Treatments
+        </button>
+        <button
+          onClick={handleDeleteTreatment}
+          className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-600 hover:bg-red-200 rounded-lg transition-colors"
+        >
+          <Trash2 className="w-5 h-5" />
+          Delete Treatment
+        </button>
+      </div>
 
       {/* 🔷 Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -407,7 +474,7 @@ const TreatmentDetail = () => {
                           onClick={() => setPreviewImageUrl(img.image_url)}
                         />
                         <button
-                          onClick={() => handleDeleteImage(img.id)}
+                          onClick={() => handleDeleteImage(img)}
                           className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded opacity-0 group-hover:opacity-100"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -425,7 +492,7 @@ const TreatmentDetail = () => {
                   </button>
 
                   <button
-                    onClick={() => handleDeleteVisit(visit.id)}
+                    onClick={() => handleDeleteVisit(visit)}
                     className="mt-3 text-red-600 text-sm"
                   >
                     Delete Visit
@@ -682,6 +749,147 @@ const TreatmentDetail = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Treatment Confirmation Modal */}
+      {showDeleteTreatmentModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-gray-100">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-red-50 to-red-100 border-b border-red-200 px-6 py-4">
+              <h3 className="text-xl font-bold text-red-900">Delete Treatment</h3>
+            </div>
+
+            {/* Modal Content */}
+            <div className="px-6 py-6">
+              <div className="mb-4">
+                <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                  <Trash2 className="w-6 h-6 text-red-600" />
+                </div>
+              </div>
+              <p className="text-center text-gray-600 mb-2">
+                Are you sure you want to delete this treatment?
+              </p>
+              <p className="text-center text-sm text-red-600 font-semibold mb-4">
+                ⚠️ This action will delete all associated visits and images. This cannot be undone.
+              </p>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
+              <button
+                onClick={() => setShowDeleteTreatmentModal(false)}
+                disabled={isDeletingTreatment}
+                className="px-6 py-2.5 border-2 border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDeleteTreatment}
+                disabled={isDeletingTreatment}
+                className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold disabled:opacity-50 transition-colors shadow-md hover:shadow-lg"
+              >
+                {isDeletingTreatment ? 'Deleting...' : 'Delete Treatment'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Visit Confirmation Modal */}
+      {showDeleteVisitModal && visitToDelete && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-gray-100">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-red-50 to-red-100 border-b border-red-200 px-6 py-4">
+              <h3 className="text-xl font-bold text-red-900">Delete Visit</h3>
+            </div>
+
+            {/* Modal Content */}
+            <div className="px-6 py-6">
+              <div className="mb-4">
+                <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                  <Trash2 className="w-6 h-6 text-red-600" />
+                </div>
+              </div>
+              <p className="text-center text-gray-600 mb-2">
+                Are you sure you want to delete this visit?
+              </p>
+              <p className="text-center text-sm text-red-600 font-semibold mb-4">
+                ⚠️ This action will also delete all associated images. This cannot be undone.
+              </p>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteVisitModal(false);
+                  setVisitToDelete(null);
+                }}
+                disabled={isDeletingVisit}
+                className="px-6 py-2.5 border-2 border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDeleteVisit}
+                disabled={isDeletingVisit}
+                className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold disabled:opacity-50 transition-colors shadow-md hover:shadow-lg"
+              >
+                {isDeletingVisit ? 'Deleting...' : 'Delete Visit'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Image Confirmation Modal */}
+      {showDeleteImageModal && imageToDelete && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-gray-100">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-red-50 to-red-100 border-b border-red-200 px-6 py-4">
+              <h3 className="text-xl font-bold text-red-900">Delete Image</h3>
+            </div>
+
+            {/* Modal Content */}
+            <div className="px-6 py-6">
+              <div className="mb-4">
+                <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                  <Trash2 className="w-6 h-6 text-red-600" />
+                </div>
+              </div>
+              <p className="text-center text-gray-600 mb-2">
+                Are you sure you want to delete this image?
+              </p>
+              <p className="text-center text-sm text-red-600 font-semibold mb-4">
+                ⚠️ This action cannot be undone.
+              </p>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteImageModal(false);
+                  setImageToDelete(null);
+                }}
+                disabled={isDeletingImage}
+                className="px-6 py-2.5 border-2 border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDeleteImage}
+                disabled={isDeletingImage}
+                className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold disabled:opacity-50 transition-colors shadow-md hover:shadow-lg"
+              >
+                {isDeletingImage ? 'Deleting...' : 'Delete Image'}
+              </button>
+            </div>
           </div>
         </div>
       )}
