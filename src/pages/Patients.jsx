@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Search, Plus, Eye, Edit, Trash2, Phone } from 'lucide-react';
 import { patientApi } from '../api/patientApi';
 import Pagination from '../components/Pagination';
@@ -38,8 +38,27 @@ const Patients = () => {
       setTotalCount(res.data.count || res.data.length);
       setTotalPages(Math.ceil((res.data.count || res.data.length) / 10));
       setCurrentPage(page);
+    } catch (err) {
+      console.error("Fetch error:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ✅ DELETE FUNCTION
+  const handleDelete = async (id) => {
+    try {
+      const confirmDelete = window.confirm("Are you sure you want to delete this patient?");
+      if (!confirmDelete) return;
+
+      await patientApi.delete(id);
+
+      // Refresh list after delete
+      fetchPatients(currentPage, searchTerm);
+
+    } catch (error) {
+      console.error("Delete failed:", error);
+      alert("Failed to delete patient");
     }
   };
 
@@ -77,7 +96,7 @@ const Patients = () => {
         <div className="flex-1 overflow-auto">
           <table className="min-w-full">
 
-            {/* Sticky Header */}
+            {/* Header */}
             <thead className="bg-gray-50 sticky top-0 z-10">
               <tr className="text-sm text-gray-600">
                 <th className="px-5 py-3 text-left font-semibold">Patient</th>
@@ -99,23 +118,14 @@ const Patients = () => {
 
                   {/* Patient */}
                   <td className="px-5 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm">
-                        {patient.first_name[0]}{patient.last_name[0]}
-                      </div>
-                      <span className="font-medium text-gray-900">
-                        {patient.first_name} {patient.last_name}
-                      </span>
-                    </div>
+                    <span className="font-medium text-gray-900">
+                      {patient.first_name} <br /> {patient.last_name}
+                    </span>
                   </td>
 
                   {/* Mobile */}
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
-                      <span className="text-gray-600">
-                        {patient.mobile || 'N/A'}
-                      </span>
-
                       {patient.mobile && (
                         <a
                           href={`tel:${patient.mobile}`}
@@ -125,6 +135,9 @@ const Patients = () => {
                           <Phone className="w-4 h-4" />
                         </a>
                       )}
+                      <span className="text-gray-600">
+                        {patient.mobile || 'N/A'}
+                      </span>
                     </div>
                   </td>
 
@@ -144,9 +157,20 @@ const Patients = () => {
                     onClick={(e) => e.stopPropagation()}
                   >
                     <div className="flex gap-3">
-                      <Eye className="w-4 h-4 text-blue-600" />
-                      <Edit className="w-4 h-4 text-yellow-600" />
-                      <Trash2 className="w-4 h-4 text-red-600" />
+
+                      <Eye className="w-4 h-4 text-blue-600 cursor-pointer" />
+
+                      <Edit className="w-4 h-4 text-yellow-600 cursor-pointer" />
+
+                      {/* ✅ DELETE FIX */}
+                      <Trash2
+                        className="w-4 h-4 text-red-600 cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(patient.id);
+                        }}
+                      />
+
                     </div>
                   </td>
 
@@ -156,7 +180,7 @@ const Patients = () => {
           </table>
         </div>
 
-        {/* Fixed Pagination */}
+        {/* Pagination */}
         {totalPages > 1 && (
           <div className="px-5 py-3 border-t bg-white">
             <Pagination
