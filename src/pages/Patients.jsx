@@ -69,13 +69,11 @@ const Patients = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
-      if (currentPage !== 1) {
-        setCurrentPage(1);
-      }
+      setCurrentPage(1);
     }, 400);
 
     return () => clearTimeout(timer);
-  }, [searchTerm, currentPage]);
+  }, [searchTerm]);
 
   // Fetch clinics, doctors, and treatment types when modal opens
   useEffect(() => {
