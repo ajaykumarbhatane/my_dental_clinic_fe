@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, Filter, Plus, Eye, Edit, Trash2, X } from 'lucide-react';
+import { Search, Filter, Plus, Eye, Edit, Trash2, X, Phone} from 'lucide-react';
 import { patientApi } from '../api/patientApi';
 import { userApi } from '../api/userApi';
 import { treatmentApi } from '../api/treatmentApi';
@@ -299,10 +299,10 @@ const Patients = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
+        {/* <div>
           <h1 className="text-3xl font-bold text-gray-900">Patients</h1>
           <p className="text-sm text-gray-600 mt-1">Manage and view all patient records</p>
-        </div>
+        </div> */}
         <button
           onClick={() => {
             setShowAddModal(true);
@@ -327,7 +327,7 @@ const Patients = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="flex items-center gap-2 px-4 py-2.5 border-2 border-gray-200 rounded-lg bg-white min-w-0">
+        {/* <div className="flex items-center gap-2 px-4 py-2.5 border-2 border-gray-200 rounded-lg bg-white min-w-0">
           <Filter className="w-5 h-5 text-gray-400" />
           <select
             className="flex-1 min-w-0 form-select text-sm font-medium"
@@ -338,17 +338,17 @@ const Patients = () => {
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
           </select>
-        </div>
+        </div> */}
       </div>
 
       {/* Patients Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="px-6 py-5 border-b border-gray-200 bg-white">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-            <div>
+            {/* <div>
               <h2 className="text-lg font-semibold text-gray-900">Patient Records</h2>
-              <p className="text-sm text-gray-500 mt-1">Browse records while search, filters and pagination remain fixed.</p>
-            </div>
+      
+            </div> */}
           </div>
         </div>
 
@@ -363,12 +363,12 @@ const Patients = () => {
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                     Mobile
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                  {/* <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                     Gender
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                  </th> */}
+                  {/* <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                     Date of Birth
-                  </th>
+                  </th> */}
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                     Assigned Doctor
                   </th>
@@ -411,18 +411,38 @@ const Patients = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="flex items-center gap-1 text-sm text-gray-600">
-                          📱 {patient.mobile}
-                        </span>
+                        <div className="flex flex-col gap-2">
+
+                          {/* Mobile Number */}
+                          <span className="flex items-center gap-1 text-sm text-gray-600">
+                            
+                          
+
+                          {/* Call Button with Icon */}
+                          {patient.mobile && (
+                            <a
+                              href={`tel:${patient.mobile}`}
+                              onClick={(e) => e.stopPropagation()}   // ✅ THIS IS THE FIX
+                              className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg hover:from-blue-600 hover:to-indigo-600 transition"
+                            >
+                            <div className="w-6 h-6 flex items-center justify-center rounded-md bg-white/20">
+                              <Phone className="w-3.5 h-3.5 text-white" />
+                            </div>
+                          </a>
+                          )}
+                          {patient.mobile || 'N/A'}
+                          </span>
+
+                        </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      {/* <td className="px-6 py-4 whitespace-nowrap">
                         <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full capitalize">
                           {patient.gender || 'N/A'}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      </td> */}
+                      {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                         {formatDate(patient.date_of_birth)}
-                      </td>
+                      </td> */}
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
                         {patient.assigned_doctor || (patient.user && (patient.user.first_name || patient.user.last_name) ? `Dr. ${patient.user.first_name || ''} ${patient.user.last_name || ''}`.trim() : 'N/A')}
                       </td>
@@ -467,7 +487,7 @@ const Patients = () => {
               currentPage={currentPage}
               totalPages={totalPages}
               onPageChange={setCurrentPage}
-              itemCountText={`Showing ${((currentPage - 1) * 10) + 1} to ${Math.min(currentPage * 10, totalCount)} of ${totalCount} patients`}
+              itemCountText={`${((currentPage - 1) * 10) + 1} - ${Math.min(currentPage * 10, totalCount)} of ${totalCount} patients`}
             />
           </div>
         )}
