@@ -14,6 +14,7 @@ const Patients = () => {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -62,15 +63,19 @@ const Patients = () => {
   const { user } = useAuth();
 
   useEffect(() => {
-    fetchPatients(currentPage, searchTerm);
-  }, [currentPage]);
+    fetchPatients(currentPage, debouncedSearchTerm);
+  }, [currentPage, debouncedSearchTerm]);
 
   useEffect(() => {
-    const t = setTimeout(() => {
-      fetchPatients(1, searchTerm);
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      if (currentPage !== 1) {
+        setCurrentPage(1);
+      }
     }, 400);
-    return () => clearTimeout(t);
-  }, [searchTerm]);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm, currentPage]);
 
   // Fetch clinics, doctors, and treatment types when modal opens
   useEffect(() => {
@@ -352,9 +357,9 @@ const Patients = () => {
     setPatientToDelete(null);
   };
 
-  if (loading) {
-    return <div className="flex justify-center items-center h-40">Loading...</div>;
-  }
+  // if (loading) {
+  //   return <div className="flex justify-center items-center h-40">Loading...</div>;
+  // }
 
   return (
     <div className="h-[calc(100vh-80px)] flex flex-col space-y-4">
@@ -370,17 +375,35 @@ const Patients = () => {
         </button>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input
-          type="text"
-          placeholder="Search patients..."
-          className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-200"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
+      {/* 🔥 FULL WIDTH SEARCH + HEADER */}
+<div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+
+  {/* LEFT: Search */}
+  <div className="relative w-full">
+    <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+
+    <input
+      type="text"
+      placeholder="Search patients by name or mobile..."
+      value={searchTerm}
+      onChange={(e) => setSearchTerm(e.target.value)}
+      className="w-full pl-12 pr-10 py-3 text-sm border-2 border-gray-200 rounded-xl
+                 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100
+                 transition-all duration-200 shadow-sm"
+    />
+
+    {/* ❌ Clear Button */}
+    {searchTerm && (
+      <button
+        onClick={() => setSearchTerm('')}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
+      >
+        ✕
+      </button>
+    )}
+  </div>
+
+</div>
 
       {/* Table Container */}
       <div className="flex flex-col flex-1 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -402,7 +425,20 @@ const Patients = () => {
 
             {/* Body */}
             <tbody className="divide-y">
-              {patients.map((patient) => (
+              {loading ? (
+                <tr>
+                  <td colSpan="5" className="text-center py-6 text-gray-500">
+                    Loading patients...
+                  </td>
+                </tr>
+              ) : patients.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="text-center py-6 text-gray-400">
+                    No patients found
+                  </td>
+                </tr>
+                ) : (
+              patients.map((patient) => (
                 <tr
                   key={patient.id}
                   onClick={() => navigate(`${patient.id}`)}
@@ -467,6 +503,8 @@ const Patients = () => {
                   </td>
 
                 </tr>
+                      )
+                
               ))}
             </tbody>
           </table>

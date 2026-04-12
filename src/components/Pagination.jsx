@@ -3,21 +3,34 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 const buildPageItems = (currentPage, totalPages) => {
   const pages = [];
 
-  // Show first 3 pages
-  for (let i = 1; i <= Math.min(3, totalPages); i++) {
-    pages.push(i);
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) {
+      pages.push(i);
+    }
+    return pages;
   }
 
-  // Add ellipsis if more pages exist
-  if (totalPages > 4) {
-    pages.push('ellipsis');
+  if (currentPage <= 4) {
+    pages.push(1, 2, 3, 4, 5, 'ellipsis', totalPages);
+    return pages;
   }
 
-  // Add last page (if not already included)
-  if (totalPages > 3) {
-    pages.push(totalPages);
+  if (currentPage >= totalPages - 3) {
+    pages.push(1, 'ellipsis', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+    return pages;
   }
 
+  pages.push(
+    1,
+    'ellipsis',
+    currentPage - 2,
+    currentPage - 1,
+    currentPage,
+    currentPage + 1,
+    currentPage + 2,
+    'ellipsis',
+    totalPages
+  );
   return pages;
 };
 
@@ -30,12 +43,14 @@ const Pagination = ({
   const pageItems = buildPageItems(currentPage, totalPages);
 
   return (
-    <div className="flex items-center justify-between bg-white border border-gray-200 rounded-xl px-3 py-2 shadow-sm">
+    <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between bg-white border border-gray-200 rounded-xl px-3 py-2 shadow-sm">
       {itemCountText && (
-        <div className="text-xs text-gray-600 whitespace-nowrap">{itemCountText}</div>
+        <div className="min-w-0 text-xs text-gray-600 truncate text-center sm:text-left">
+          {itemCountText}
+        </div>
       )}
 
-      <div className="flex items-center gap-1">
+      <div className="flex min-w-0 flex-wrap items-center justify-center gap-1 overflow-x-auto">
         <button
           onClick={() => onPageChange(Math.max(1, currentPage - 1))}
           disabled={currentPage === 1}
