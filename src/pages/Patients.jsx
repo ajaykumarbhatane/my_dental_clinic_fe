@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, Eye, Edit, Trash2, Phone } from 'lucide-react';
+import { Search, Plus, Eye, Edit, Trash2, Phone, X } from 'lucide-react';
 import { patientApi } from '../api/patientApi';
+import { clinicApi } from '../api/clinicApi';
+import { userApi } from '../api/userApi';
+import { useAuth } from '../context/AuthContext';
 import Pagination from '../components/Pagination';
 import { formatDate } from '../utils/dateUtils';
 
@@ -13,7 +16,24 @@ const Patients = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
 
+  // Add Patient Modal State
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [clinics, setClinics] = useState([]);
+  const [doctors, setDoctors] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    first_name: '',
+    last_name: '',
+    mobile: '',
+    gender: '',
+    date_of_birth: '',
+    address: '',
+    medical_history: '',
+    dental_history: ''
+  });
+
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   useEffect(() => {
     fetchPatients(currentPage, searchTerm);
@@ -25,6 +45,14 @@ const Patients = () => {
     }, 400);
     return () => clearTimeout(t);
   }, [searchTerm]);
+
+  // Fetch clinics and doctors when modal opens
+  useEffect(() => {
+    if (showAddModal) {
+      fetchClinics();
+      fetchDoctors();
+    }
+  }, [showAddModal]);
 
   const fetchPatients = async (page = 1, search = '') => {
     try {
@@ -43,6 +71,78 @@ const Patients = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Fetch clinics for dropdown
+  const fetchClinics = async () => {
+    try {
+      const response = await clinicApi.getAll();
+      setClinics(response.data);
+    } catch (error) {
+      console.error('Error fetching clinics:', error);
+    }
+  };
+
+  // Fetch doctors for dropdown
+  const fetchDoctors = async () => {
+    try {
+      const response = await userApi.getAll();
+      setDoctors(response.data);
+    } catch (error) {
+      console.error('Error fetching doctors:', error);
+    }
+  };
+
+  // Handle form submission
+  const handleAddPatient = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      const payload = {
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        mobile: formData.mobile,
+        gender: formData.gender,
+        date_of_birth: formData.date_of_birth,
+        address: formData.address,
+        medical_history: formData.medical_history,
+        dental_history: formData.dental_history
+      };
+
+      await patientApi.create(payload);
+
+      // Reset form and close modal
+      setFormData({
+        first_name: '',
+        last_name: '',
+        mobile: '',
+        gender: '',
+        date_of_birth: '',
+        address: '',
+        medical_history: '',
+        dental_history: ''
+      });
+      setShowAddModal(false);
+
+      // Refresh patient list
+      fetchPatients(currentPage, searchTerm);
+
+    } catch (error) {
+      console.error('Error creating patient:', error);
+      alert(error.response?.data?.detail || 'Error creating patient');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle form input changes
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   // ✅ DELETE FUNCTION
@@ -71,7 +171,10 @@ const Patients = () => {
 
       {/* Header */}
       <div className="flex justify-between items-center">
-        <button className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-5 py-2.5 rounded-lg flex items-center gap-2 text-sm shadow">
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-5 py-2.5 rounded-lg flex items-center gap-2 text-sm shadow hover:shadow-lg transition-shadow"
+        >
           <Plus className="w-4 h-4" />
           Add Patient
         </button>
@@ -192,6 +295,162 @@ const Patients = () => {
           </div>
         )}
       </div>
+
+      {/* Add Patient Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Add New Patient</h3>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddPatient} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    First Name *
+                  </label>
+                  <input
+                    type="text"
+                    name="first_name"
+                    value={formData.first_name}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter first name"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Last Name *
+                  </label>
+                  <input
+                    type="text"
+                    name="last_name"
+                    value={formData.last_name}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter last name"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Mobile *
+                  </label>
+                  <input
+                    type="tel"
+                    name="mobile"
+                    value={formData.mobile}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter mobile number"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Gender *
+                  </label>
+                  <select
+                    name="gender"
+                    value={formData.gender}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select Gender</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Date of Birth
+                  </label>
+                  <input
+                    type="date"
+                    name="date_of_birth"
+                    value={formData.date_of_birth}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Address
+                  </label>
+                  <textarea
+                    name="address"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter address"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Medical History
+                  </label>
+                  <textarea
+                    name="medical_history"
+                    value={formData.medical_history}
+                    onChange={handleInputChange}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter medical history"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Dental History
+                  </label>
+                  <textarea
+                    name="dental_history"
+                    value={formData.dental_history}
+                    onChange={handleInputChange}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter dental history"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? 'Adding...' : 'Add Patient'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
