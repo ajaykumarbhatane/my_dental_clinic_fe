@@ -5,17 +5,9 @@ import {
   ArrowLeft,
   ArrowRight,
   Plus,
-  FileText,
-  ClipboardList,
-  Calendar,
   Users,
-  DollarSign,
-  Clock,
   X,
   UploadCloud,
-  Search,
-  CheckCircle,
-  AlertCircle,
 } from 'lucide-react';
 import { patientApi } from '../api/patientApi';
 import { treatmentApi } from '../api/treatmentApi';
@@ -27,16 +19,21 @@ const PatientDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const patientsPage = parseInt(queryParams.get('page') || 1, 10);
+  const searchTerm = queryParams.get('search') || '';
 
   const [patient, setPatient] = useState(null);
   const [treatments, setTreatments] = useState([]);
   const [allVisits, setAllVisits] = useState([]);
   const [upcomingVisits, setUpcomingVisits] = useState([]);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('patient_info');
 
   const [loading, setLoading] = useState(true);
   const [treatmentDrawerOpen, setTreatmentDrawerOpen] = useState(false);
   const [selectedTreatment, setSelectedTreatment] = useState(null);
+  const [isEditingTreatment, setIsEditingTreatment] = useState(false);
+  const [editingTreatment, setEditingTreatment] = useState(null);
 
   const [isAddingTreatment, setIsAddingTreatment] = useState(false);
   const [isAddingVisit, setIsAddingVisit] = useState(false);
@@ -88,16 +85,6 @@ const PatientDetail = () => {
     return 'N/A';
   };
 
-  const calculateTotals = () => {
-    const totalTreatments = treatments.length;
-    const totalVisits = allVisits.length;
-    const totalPaid = allVisits.reduce((sum, v) => sum + Number(v.patient_payment_amount || 0), 0);
-    const totalPlanned = treatments.reduce((sum, t) => sum + Number(t.planned_amount || 0), 0);
-    const pendingAmount = Math.max(0, totalPlanned - totalPaid);
-
-    return { totalTreatments, totalVisits, totalPaid, pendingAmount, totalPlanned };
-  };
-
   const handleAddVisit = async (e) => {
     e.preventDefault();
     setSubmittingVisit(true);
@@ -139,12 +126,45 @@ const PatientDetail = () => {
     }
   };
 
-  const handleAddTreatment = async (e) => {
+  const openEditTreatmentModal = (treatment) => {
+    setEditingTreatment(treatment);
+    setIsEditingTreatment(true);
+    setIsAddingTreatment(false);
+    setTreatmentFormData({
+      type_of_treatment: treatment.type_of_treatment ? String(treatment.type_of_treatment) : (treatment.type_of_treatment_id ? String(treatment.type_of_treatment_id) : ''),
+      status: treatment.status || 'scheduled',
+      estimated_duration_months: treatment.estimated_duration_months || '',
+      planned_amount: treatment.planned_amount || '',
+      initial_findings: treatment.initial_findings || '',
+      treatment_plan: treatment.treatment_plan || '',
+      treatment_notes: treatment.treatment_notes || '',
+      braces_type: treatment.braces_type || '',
+      cap_type: treatment.cap_type || ''
+    });
+  };
+
+  const closeTreatmentModal = () => {
+    setIsAddingTreatment(false);
+    setIsEditingTreatment(false);
+    setEditingTreatment(null);
+    setTreatmentFormData({
+      type_of_treatment: '',
+      status: 'scheduled',
+      estimated_duration_months: '',
+      planned_amount: '',
+      initial_findings: '',
+      treatment_plan: '',
+      treatment_notes: '',
+      braces_type: '',
+      cap_type: ''
+    });
+  };
+
+  const handleSaveTreatment = async (e) => {
     e.preventDefault();
     setSubmittingTreatment(true);
 
     try {
-      // Validate required fields
       if (!treatmentFormData.type_of_treatment) {
         alert('Please select a treatment type');
         setSubmittingTreatment(false);
@@ -152,8 +172,6 @@ const PatientDetail = () => {
       }
 
       const payload = {
-        patient: id, // Use the patient ID from URL params
-        type_of_treatment: treatmentFormData.type_of_treatment,
         status: treatmentFormData.status,
         estimated_duration_months: treatmentFormData.estimated_duration_months ? parseInt(treatmentFormData.estimated_duration_months, 10) : null,
         planned_amount: treatmentFormData.planned_amount ? parseFloat(treatmentFormData.planned_amount) : null,
@@ -164,24 +182,23 @@ const PatientDetail = () => {
         cap_type: treatmentFormData.cap_type || null
       };
 
-      await treatmentApi.create(payload);
-      setIsAddingTreatment(false);
-      setTreatmentFormData({
-        type_of_treatment: '',
-        status: 'scheduled',
-        estimated_duration_months: '',
-        planned_amount: '',
-        initial_findings: '',
-        treatment_plan: '',
-        treatment_notes: '',
-        braces_type: '',
-        cap_type: ''
-      });
+      if (isEditingTreatment && editingTreatment) {
+        await treatmentApi.update(editingTreatment.id, payload);
+        alert('Treatment updated successfully!');
+      } else {
+        await treatmentApi.create({
+          ...payload,
+          patient: id,
+          type_of_treatment: treatmentFormData.type_of_treatment
+        });
+        alert('Treatment added successfully!');
+      }
+
+      closeTreatmentModal();
       await loadData();
-      alert('Treatment added successfully!');
     } catch (error) {
-      console.error('Error creating treatment:', error);
-      alert(error.response?.data?.detail || 'Error creating treatment');
+      console.error('Error saving treatment:', error);
+      alert(error.response?.data?.detail || 'Error saving treatment');
     } finally {
       setSubmittingTreatment(false);
     }
@@ -319,10 +336,10 @@ const PatientDetail = () => {
   useEffect(() => {
     const query = new URLSearchParams(location.search);
     const tab = query.get('tab');
-    setActiveTab(tab === 'treatments' || tab === 'visits' ? tab : 'overview');
+    setActiveTab(tab === 'treatments' || tab === 'visits' || tab === 'patient_info' ? tab : 'patient_info');
     loadData();
     fetchDoctors();
-  }, [id, location.search]);
+  }, [id]);
 
   const getVisitsForTreatment = (treatmentId) => {
     return allVisits.filter(
@@ -335,6 +352,14 @@ const PatientDetail = () => {
     const planned = Number(treatment.estimated_duration_months || 0);
     if (!planned || planned === 0) return 0;
     return Math.min(100, Math.round((visits.length / planned) * 100));
+  };
+
+  const getTreatmentPaymentTotals = (treatment) => {
+    const visits = getVisitsForTreatment(treatment.id);
+    const totalAmount = Number(treatment.planned_amount || 0);
+    const paidAmount = visits.reduce((sum, visit) => sum + Number(visit.patient_payment_amount || 0), 0);
+    const remainingAmount = Math.max(0, totalAmount - paidAmount);
+    return { totalAmount, paidAmount, remainingAmount };
   };
 
   const closeDrawer = () => {
@@ -350,6 +375,22 @@ const PatientDetail = () => {
         returnTab: 'treatments'
       }
     });
+  };
+
+  const calculateTotals = () => {
+    const totalTreatments = treatments.length;
+    const totalVisits = allVisits.length;
+    const totalPaid = allVisits.reduce(
+      (sum, visit) => sum + Number(visit.patient_payment_amount || 0),
+      0
+    );
+    const totalAmount = treatments.reduce(
+      (sum, treatment) => sum + Number(treatment.planned_amount || 0),
+      0
+    );
+    const pendingAmount = Math.max(0, totalAmount - totalPaid);
+
+    return { totalTreatments, totalVisits, totalPaid, pendingAmount };
   };
 
   const { totalTreatments, totalVisits, totalPaid, pendingAmount } = calculateTotals();
@@ -370,7 +411,14 @@ const PatientDetail = () => {
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-3 px-4 lg:px-0">
         <Link
-          to="/app/patients"
+          to={`/app/patients${
+            searchTerm || patientsPage > 1
+              ? `?${new URLSearchParams({
+                  ...(searchTerm && { search: searchTerm }),
+                  ...(patientsPage > 1 && { page: patientsPage })
+                }).toString()}`
+              : ''
+          }`}
           className="inline-flex items-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:border-blue-300 hover:text-blue-700 transition"
         >
           <ArrowLeft className="w-4 h-4" /> Back to all patients
@@ -378,22 +426,31 @@ const PatientDetail = () => {
         
       </div>
 
-      <div className="grid lg:grid-cols-[1fr_380px] gap-6 px-4 lg:px-0">
-        <main className="space-y-6 order-2 lg:order-1">
-          
-          <div className="flex justify-end px-4 lg:px-0">
-            <button
-              onClick={() => setIsAddingTreatment(true)}
-              className="w-full rounded-2xl bg-gradient-to-r from-blue-600 to-sky-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-200/50 hover:from-blue-700 hover:to-sky-700 transition"
-            >
-              <Plus className="inline w-4 h-4 mr-2" />
-              Add Treatment
-            </button>
+      <div className="px-4 lg:px-0">
+        <main className="space-y-6">
+          <div className="rounded-[20px] border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-wider text-gray-500 font-semibold">Patient</p>
+                <h1 className="text-xl font-bold text-gray-900">{patient.first_name} {patient.last_name}</h1>
+                <p className="mt-1 text-sm text-gray-600">{patient.mobile || 'N/A'}</p>
+              </div>
+              <button
+                onClick={() => {
+                  closeTreatmentModal();
+                  setIsAddingTreatment(true);
+                }}
+                className="w-full md:w-auto rounded-2xl bg-gradient-to-r from-blue-600 to-sky-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-200/50 hover:from-blue-700 hover:to-sky-700 transition"
+              >
+                <Plus className="inline w-4 h-4 mr-2" />
+                Add Treatment
+              </button>
+            </div>
           </div>
-          
+
           <div className="bg-white rounded-[20px] border border-gray-150 p-5 shadow-sm">
             <div className="flex flex-wrap gap-2 border-b border-gray-100 pb-4 mb-4">
-              {['overview', 'treatments', 'visits'].map((tab) => (
+              {['patient_info', 'treatments', 'visits'].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -403,353 +460,301 @@ const PatientDetail = () => {
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  {tab === 'patient_info' ? 'Patient Info' : tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </button>
               ))}
             </div>
           </div>
+
+          {activeTab === 'patient_info' && (
+            <section className="rounded-[20px] border border-gray-200 bg-white shadow-sm p-5" aria-labelledby="patient-info-heading">
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-3 pb-4 border-b border-gray-100">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-sky-500 text-white shadow-md">
+                    <Users className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1">
+                    <p id="patient-info-heading" className="text-xs uppercase tracking-wider text-gray-500 font-semibold">Patient Info</p>
+                    <h2 className="text-lg font-bold text-gray-900">{patient.first_name} {patient.last_name}</h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={openEditPatientModal}
+                    className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition"
+                  >
+                    <Edit className="w-4 h-4" />
+                    Edit Patient
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-2xl bg-gradient-to-br from-blue-50 to-sky-50 p-3 border border-blue-100">
+                    <p className="text-[10px] uppercase tracking-widest text-blue-600 font-semibold">Phone</p>
+                    <p className="mt-1.5 text-sm font-semibold text-gray-900">{patient.mobile || 'N/A'}</p>
+                  </div>
+                  <div className="rounded-2xl bg-gradient-to-br from-purple-50 to-pink-50 p-3 border border-purple-100">
+                    <p className="text-[10px] uppercase tracking-widest text-purple-600 font-semibold">Gender</p>
+                    <p className="mt-1.5 text-sm font-semibold text-gray-900">{patient.gender || 'N/A'}</p>
+                  </div>
+                  <div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 p-3 border border-emerald-100 col-span-2">
+                    <p className="text-[10px] uppercase tracking-widest text-emerald-600 font-semibold">Doctor</p>
+                    <p className="mt-1.5 text-sm font-semibold text-gray-900">
+                      {patient.assigned_doctor ||
+                        (patient.user && `${patient.user.first_name || ''} ${patient.user.last_name || ''}`.trim()) ||
+                        'N/A'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl bg-white border border-gray-200 p-4 space-y-3">
+                  <div className="pb-3 border-b border-gray-100">
+                    <p className="text-[10px] uppercase tracking-widest text-gray-600 font-semibold">Born</p>
+                    <p className="mt-1.5 text-sm font-semibold text-gray-900">{formatDate(patient.date_of_birth) || 'N/A'}</p>
+                  </div>
+                  <div className="pb-3 border-b border-gray-100">
+                    <p className="text-[10px] uppercase tracking-widest text-gray-600 font-semibold">Location</p>
+                    <p className="mt-1.5 text-sm font-semibold text-gray-900">{patient.address || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-widest text-gray-600 font-semibold mb-2">Clinical Overview</p>
+                    <div className="space-y-2">
+                      <div className="rounded-lg bg-gray-50 p-2.5 border border-gray-100">
+                        <p className="text-[9px] uppercase tracking-wider text-gray-500 font-semibold">Medical History</p>
+                        <p className="mt-1 text-xs text-gray-700">{patient.medical_history || 'No history'}</p>
+                      </div>
+                      <div className="rounded-lg bg-gray-50 p-2.5 border border-gray-100">
+                        <p className="text-[9px] uppercase tracking-wider text-gray-500 font-semibold">Dental History</p>
+                        <p className="mt-1 text-xs text-gray-700">{patient.dental_history || 'No history'}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
 
           <div>
-            {activeTab === 'overview' && (
-              <div className="space-y-3 px-1">
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-              {[{
-                title: 'Total Treatments',
-                value: totalTreatments,
-                icon: ClipboardList,
-                className: 'bg-indigo-50 text-indigo-700'
-              }, {
-                title: 'Total Visits',
-                value: totalVisits,
-                icon: Calendar,
-                className: 'bg-blue-50 text-blue-700'
-              }, {
-                title: 'Total Paid',
-                value: formatAmount(totalPaid),
-                icon: DollarSign,
-                className: 'bg-green-50 text-green-700'
-              }, {
-                title: 'Pending Amount',
-                value: formatAmount(pendingAmount),
-                icon: AlertCircle,
-                className: 'bg-yellow-50 text-yellow-700'
-              }].map((card) => (
-                <div key={card.title} className="p-4 rounded-lg border border-gray-100 bg-white shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <span className={`p-2 rounded-lg ${card.className}`}><card.icon className="w-4 h-4"/></span>
-                    <p className="text-xs font-semibold text-gray-500 uppercase">{card.title}</p>
+            {activeTab === 'treatments' && (
+              <div className="space-y-5">
+                {treatments.length === 0 ? (
+                  <div className="p-8 text-center bg-white border border-gray-200 rounded-2xl shadow-sm">
+                    <p className="text-gray-500">No treatments found for this patient.</p>
                   </div>
-                  <p className="mt-3 text-2xl font-bold text-gray-900">{card.value}</p>
-                </div>
-              ))}
-            </div>
+                ) : (
+                  <div className="rounded-[20px] border border-gray-200 bg-white p-4 shadow-sm max-h-[calc(100vh-300px)] overflow-y-auto">
+                    <div className="space-y-3">
+                      {treatments.map((treatment) => {
+                        const visits = getVisitsForTreatment(treatment.id);
+                        const progress = treatmentProgress(treatment);
+                        const { totalAmount, paidAmount, remainingAmount } = getTreatmentPaymentTotals(treatment);
 
-            <div className="bg-white rounded-lg border border-gray-100 p-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">Upcoming Visits</h3>
-                <span className="text-xs text-gray-500">Next 10 events</span>
-              </div>
-              {upcomingVisits.length === 0 ? (
-                <p className="mt-4 text-gray-500">No upcoming visits scheduled.</p>
-              ) : (
-                <ul className="mt-4 divide-y divide-gray-100">
-                  {upcomingVisits.map((visit) => (
-                    <li key={visit.id} className="py-3">
-                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                        <div>
-                          <p className="text-sm font-medium text-gray-800">
-                            {formatDate(visit.next_visit_date)} - {visit.treatment_name || 'Treatment'}
-                          </p>
-                          <p className="text-xs text-gray-500">{visit.patient_complaints || 'No notes'}</p>
-                        </div>
-                        <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700">{visit.patient_payment_type || 'N/A'}</span>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-        )}
+                        const statusClass =
+                          treatment.status === 'completed'
+                            ? 'bg-green-100 text-green-700'
+                            : treatment.status === 'ongoing'
+                            ? 'bg-blue-100 text-blue-700'
+                            : treatment.status === 'scheduled'
+                            ? 'bg-yellow-100 text-yellow-700'
+                            : 'bg-gray-100 text-gray-700';
 
-        {activeTab === 'treatments' && (
-          <div className="space-y-5">
-            {treatments.length === 0 ? (
-              <div className="p-8 text-center bg-white border border-gray-200 rounded-2xl shadow-sm">
-                <p className="text-gray-500">No treatments found for this patient.</p>
-              </div>
-            ) : (
-              <div className="rounded-[20px] border border-gray-200 bg-white p-4 shadow-sm max-h-[calc(100vh-300px)] overflow-y-auto">
-                <div className="space-y-3">
-                {treatments.map((treatment) => {
-                  const visits = getVisitsForTreatment(treatment.id);
-                  const progress = treatmentProgress(treatment);
-
-                  const statusClass =
-                    treatment.status === 'completed'
-                      ? 'bg-green-100 text-green-700'
-                      : treatment.status === 'ongoing'
-                      ? 'bg-blue-100 text-blue-700'
-                      : treatment.status === 'scheduled'
-                      ? 'bg-yellow-100 text-yellow-700'
-                      : 'bg-gray-100 text-gray-700';
-
-                  return (
-                    <div
-                      key={treatment.id}
-                      onClick={() => handleViewTreatment(treatment)}
-                      className="group relative rounded-xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow-md transition-all"
-                    >
-                      <div className="absolute left-0 top-0 h-full w-[3px] bg-blue-500 rounded-l-2xl"></div>
-
-                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                        <div>
-                          <h3 className="text-base md:text-lg font-semibold text-gray-900">
-                            {treatment.type_of_treatment_name || 'Untitled'}
-                          </h3>
-                          <p className="text-xs text-gray-500 mt-1">Treatment</p>
-                        </div>
-
-                        {/* STATUS */}
-                        <div className="flex items-center justify-between sm:justify-end gap-2">
-
-                          <span className={`px-2.5 py-1 rounded-full text-[11px] font-medium ${statusClass}`}>
-                            {treatment.status || 'N/A'}
-                          </span>
-
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedTreatment(treatment);
-                              setTreatmentDrawerOpen(false);
-                              setIsAddingVisit(true);
-                            }}
-                            className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition active:scale-95"
-                          >
-                            <Plus className="w-3 h-3" />
-                            Visit
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleViewTreatment(treatment);
-                            }}
-                            className="opacity-0 group-hover:opacity-100 inline-flex items-center justify-center rounded-full border border-blue-200 bg-white p-2 text-blue-600 shadow-sm transition hover:bg-blue-50"
-                           >
-                            <ArrowRight className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="mt-4 grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
-                        <div className="md:col-span-8 space-y-3">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <p className="text-[11px] text-gray-400 uppercase">Treatment Plan</p>
-                              <p className="text-sm font-medium text-gray-800">
-                                {treatment.treatment_plan || 'N/A'}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-[11px] text-gray-400 uppercase">Notes</p>
-                              <p className="text-sm font-medium text-gray-800">
-                                {treatment.treatment_notes || 'N/A'}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex flex-wrap gap-2 pt-1">
-                            {treatment.cap_type && (
-                              <span className="px-2 py-0.5 text-[11px] rounded-full bg-gray-100 text-gray-700">
-                                {treatment.cap_type}
-                              </span>
-                            )}
-                            <span className="px-2 py-0.5 text-[11px] rounded-full bg-blue-50 text-blue-700">
-                              {visits.length} visits
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="md:col-span-4">
-                          <div className="bg-gray-50 border border-gray-100 rounded-lg p-3 space-y-3">
-                            <div>
-                              <p className="text-[11px] text-gray-400 uppercase">Cost</p>
-                              <p className="text-lg font-bold text-gray-900">
-                                {formatAmount(treatment.planned_amount)}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-[11px] text-gray-400 uppercase">Duration</p>
-                              <p className="text-sm font-semibold text-gray-800">
-                                {treatment.estimated_duration_months
-                                  ? `${treatment.estimated_duration_months} months`
-                                  : 'N/A'}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="mt-4">
-                        <div className="flex justify-between text-xs text-gray-500 mb-1">
-                          <span>Progress</span>
-                          <span>{progress}%</span>
-                        </div>
-                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                        return (
                           <div
-                            className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-500"
-                            style={{ width: `${progress}%` }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+                            key={treatment.id}
+                            onClick={() => handleViewTreatment(treatment)}
+                            className="group relative rounded-xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow-md transition-all"
+                          >
+                            <div className="absolute left-0 top-0 h-full w-[3px] bg-blue-500 rounded-l-2xl"></div>
 
-        {activeTab === 'visits' && (
-          <div className="space-y-3 px-1">
-            
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                              <div>
+                                <h3 className="text-base md:text-lg font-semibold text-gray-900">
+                                  {treatment.type_of_treatment_name || 'Untitled'}
+                                </h3>
+                                <p className="text-xs text-gray-500 mt-1">Treatment</p>
+                              </div>
 
-            {allVisits.length === 0 ? (
-              <div className="p-6 text-center bg-white border border-gray-200 rounded-lg">No visits found for this patient.</div>
-            ) : (
-              
+                              <div className="flex items-center justify-between sm:justify-end gap-2">
+                                <span className={`px-2.5 py-1 rounded-full text-[11px] font-medium ${statusClass}`}>
+                                  {treatment.status || 'N/A'}
+                                </span>
 
-              <div className="space-y-3">
-                {allVisits.map((visit) => (
-                  <div
-                    key={visit.id}
-                    onClick={() => {
-                      const related = treatments.find(
-                        (t) =>
-                          String(t.id) === String(visit.treatment) ||
-                          String(t.id) === String(visit.treatment_id)
-                      );
-                      if (related) handleViewTreatment(related);
-                    }}
-                    className="group relative cursor-pointer rounded-xl border border-gray-200 bg-white p-4 transition-all duration-300 hover:shadow-lg hover:border-blue-300 hover:bg-blue-50/30"
-                  >
-                    {/* LEFT BLUE STRIP */}
-                    <div className="absolute left-0 top-0 h-full w-[3px] bg-blue-500 rounded-l-xl opacity-0 group-hover:opacity-100 transition" />
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openEditTreatmentModal(treatment);
+                                  }}
+                                  className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 transition active:scale-95"
+                                >
+                                  <Edit className="w-3 h-3" />
+                                  Edit
+                                </button>
 
-                    {/* TOP ROW */}
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="text-sm font-semibold text-gray-900 group-hover:text-blue-700 transition">
-                          {visit.treatment_name || 'Treatment'}
-                        </h3>
-                        <p className="text-xs text-gray-500">
-                          {formatDate(visit.next_visit_date)}
-                        </p>
-                      </div>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedTreatment(treatment);
+                                    setTreatmentDrawerOpen(false);
+                                    setIsAddingVisit(true);
+                                  }}
+                                  className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition active:scale-95"
+                                >
+                                  <Plus className="w-3 h-3" />
+                                  Visit
+                                </button>
 
-                      <span className="text-[11px] px-2.5 py-1 rounded-full bg-blue-100 text-blue-700 font-medium">
-                        {visit.patient_payment_type || 'N/A'}
-                      </span>
-                    </div>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleViewTreatment(treatment);
+                                  }}
+                                  className="opacity-0 group-hover:opacity-100 inline-flex items-center justify-center rounded-full border border-blue-200 bg-white p-2 text-blue-600 shadow-sm transition hover:bg-blue-50"
+                                >
+                                  <ArrowRight className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
 
-                    {/* NOTES */}
-                    <p className="mt-2 text-sm text-gray-600 line-clamp-2">
-                      {visit.treatment_notes || visit.patient_complaints || 'No notes'}
-                    </p>
+                            <div className="mt-4 grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
+                              <div className="md:col-span-8 space-y-3">
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div>
+                                    <p className="text-[11px] text-gray-400 uppercase">Treatment Plan</p>
+                                    <p className="text-sm font-medium text-gray-800">
+                                      {treatment.treatment_plan || 'N/A'}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-[11px] text-gray-400 uppercase">Notes</p>
+                                    <p className="text-sm font-medium text-gray-800">
+                                      {treatment.treatment_notes || 'N/A'}
+                                    </p>
+                                  </div>
+                                </div>
 
-                    {/* BOTTOM ROW */}
-                    <div className="mt-3 flex items-center justify-between">
-                      <p className="text-sm font-semibold text-green-600">
-                        {visit.patient_payment_amount
-                          ? formatAmount(visit.patient_payment_amount)
-                          : 'No Payment'}
-                      </p>
+                                <div className="flex flex-wrap gap-2 pt-1">
+                                  {treatment.cap_type && (
+                                    <span className="px-2 py-0.5 text-[11px] rounded-full bg-gray-100 text-gray-700">
+                                      {treatment.cap_type}
+                                    </span>
+                                  )}
+                                  <span className="px-2 py-0.5 text-[11px] rounded-full bg-blue-50 text-blue-700">
+                                    {visits.length} visits
+                                  </span>
+                                </div>
+                              </div>
 
-                      <span className="text-xs text-blue-600 font-medium opacity-0 group-hover:opacity-100 transition">
-                        View →
-                      </span>
+                              <div className="md:col-span-4">
+                                <div className="bg-gray-50 border border-gray-100 rounded-lg p-3 space-y-3">
+                                  <div>
+                                    <p className="text-[11px] text-gray-400 uppercase">Total Amount</p>
+                                    <p className="text-lg font-bold text-gray-900">
+                                      {formatAmount(totalAmount)}
+                                    </p>
+                                  </div>
+                                  <div className="grid grid-cols-3 gap-2">
+                                    <div className="rounded-lg bg-white border border-gray-100 p-3">
+                                      <p className="text-[11px] text-gray-400 uppercase">Paid</p>
+                                      <p className="text-sm font-semibold text-gray-800">
+                                        {formatAmount(paidAmount)}
+                                      </p>
+                                    </div>
+                                    <div className="rounded-lg bg-white border border-gray-100 p-3 col-span-2">
+                                      <p className="text-[11px] text-gray-400 uppercase">Remaining</p>
+                                      <p className="text-sm font-semibold text-gray-800">
+                                        {formatAmount(remainingAmount)}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <p className="text-[11px] text-gray-400 uppercase">Duration</p>
+                                    <p className="text-sm font-semibold text-gray-800">
+                                      {treatment.estimated_duration_months
+                                        ? `${treatment.estimated_duration_months} months`
+                                        : 'N/A'}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="mt-4">
+                              <div className="flex justify-between text-xs text-gray-500 mb-1">
+                                <span>Progress</span>
+                                <span>{progress}%</span>
+                              </div>
+                              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-500"
+                                  style={{ width: `${progress}%` }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
-                ))}
+                )}
               </div>
             )}
-          </div>
-        )}
+
+            {activeTab === 'visits' && (
+              <div className="space-y-3 px-1">
+                {allVisits.length === 0 ? (
+                  <div className="p-6 text-center bg-white border border-gray-200 rounded-lg">No visits found for this patient.</div>
+                ) : (
+                  <div className="space-y-3">
+                    {allVisits.map((visit) => (
+                      <div
+                        key={visit.id}
+                        onClick={() => {
+                          const related = treatments.find(
+                            (t) =>
+                              String(t.id) === String(visit.treatment) ||
+                              String(t.id) === String(visit.treatment_id)
+                          );
+                          if (related) handleViewTreatment(related);
+                        }}
+                        className="group relative cursor-pointer rounded-xl border border-gray-200 bg-white p-4 transition-all duration-300 hover:shadow-lg hover:border-blue-300 hover:bg-blue-50/30"
+                      >
+                        <div className="absolute left-0 top-0 h-full w-[3px] bg-blue-500 rounded-l-xl opacity-0 group-hover:opacity-100 transition" />
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="text-sm font-semibold text-gray-900 group-hover:text-blue-700 transition">
+                              {visit.treatment_name || 'Treatment'}
+                            </h3>
+                            <p className="text-xs text-gray-500">
+                              {formatDate(visit.next_visit_date)}
+                            </p>
+                          </div>
+                          <span className="text-[11px] px-2.5 py-1 rounded-full bg-blue-100 text-blue-700 font-medium">
+                            {visit.patient_payment_type || 'N/A'}
+                          </span>
+                        </div>
+                        <p className="mt-2 text-sm text-gray-600 line-clamp-2">
+                          {visit.treatment_notes || visit.patient_complaints || 'No notes'}
+                        </p>
+                        <div className="mt-3 flex items-center justify-between">
+                          <p className="text-sm font-semibold text-green-600">
+                            {visit.patient_payment_amount
+                              ? formatAmount(visit.patient_payment_amount)
+                              : 'No Payment'}
+                          </p>
+                          <span className="text-xs text-blue-600 font-medium opacity-0 group-hover:opacity-100 transition">
+                            View →
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </main>
-
-        <aside className="lg:sticky lg:top-24 self-start order-1 lg:order-2">
-          <div className="rounded-[20px] border border-gray-200 bg-white shadow-sm p-5">
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-3 pb-4 border-b border-gray-100">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-sky-500 text-white shadow-md">
-                  <Users className="w-5 h-5" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-xs uppercase tracking-wider text-gray-500 font-semibold">Patient Information</p>
-                  <h2 className="text-lg font-bold text-gray-900">{patient.first_name} {patient.last_name}</h2>
-                </div>
-                <button
-                  type="button"
-                  onClick={openEditPatientModal}
-                  className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition"
-                >
-                  <Edit className="w-4 h-4" />
-                  Edit Patient
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-2xl bg-gradient-to-br from-blue-50 to-sky-50 p-3 border border-blue-100">
-                  <p className="text-[10px] uppercase tracking-widest text-blue-600 font-semibold">Phone</p>
-                  <p className="mt-1.5 text-sm font-semibold text-gray-900">{patient.mobile || 'N/A'}</p>
-                </div>
-                <div className="rounded-2xl bg-gradient-to-br from-purple-50 to-pink-50 p-3 border border-purple-100">
-                  <p className="text-[10px] uppercase tracking-widest text-purple-600 font-semibold">Gender</p>
-                  <p className="mt-1.5 text-sm font-semibold text-gray-900">{patient.gender || 'N/A'}</p>
-                </div>
-                <div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 p-3 border border-emerald-100 col-span-2">
-                  <p className="text-[10px] uppercase tracking-widest text-emerald-600 font-semibold">Doctor</p>
-                  <p className="mt-1.5 text-sm font-semibold text-gray-900">
-                    {patient.assigned_doctor ||
-                      (patient.user && `${patient.user.first_name || ''} ${patient.user.last_name || ''}`.trim()) ||
-                      'N/A'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="rounded-2xl bg-white border border-gray-200 p-4 space-y-3">
-                <div className="pb-3 border-b border-gray-100">
-                  <p className="text-[10px] uppercase tracking-widest text-gray-600 font-semibold">Born</p>
-                  <p className="mt-1.5 text-sm font-semibold text-gray-900">{formatDate(patient.date_of_birth) || 'N/A'}</p>
-                </div>
-                <div className="pb-3 border-b border-gray-100">
-                  <p className="text-[10px] uppercase tracking-widest text-gray-600 font-semibold">Location</p>
-                  <p className="mt-1.5 text-sm font-semibold text-gray-900">{patient.address || 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] uppercase tracking-widest text-gray-600 font-semibold mb-2">Clinical Overview</p>
-                  <div className="space-y-2">
-                    <div className="rounded-lg bg-gray-50 p-2.5 border border-gray-100">
-                      <p className="text-[9px] uppercase tracking-wider text-gray-500 font-semibold">Medical History</p>
-                      <p className="mt-1 text-xs text-gray-700">{patient.medical_history || 'No history'}</p>
-                    </div>
-                    <div className="rounded-lg bg-gray-50 p-2.5 border border-gray-100">
-                      <p className="text-[9px] uppercase tracking-wider text-gray-500 font-semibold">Dental History</p>
-                      <p className="mt-1 text-xs text-gray-700">{patient.dental_history || 'No history'}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              
-            </div>
-          </div>
-        </aside>
       </div>
 
       {isEditingPatient && (
@@ -995,41 +1000,49 @@ const PatientDetail = () => {
         </div>
       )}
 
-      {isAddingTreatment && (
+      {(isAddingTreatment || isEditingTreatment) && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
           <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900">Add New Treatment</h3>
+              <h3 className="text-lg font-medium text-gray-900">{isEditingTreatment ? 'Edit Treatment' : 'Add New Treatment'}</h3>
               <button
-                onClick={() => setIsAddingTreatment(false)}
+                onClick={closeTreatmentModal}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
 
-            <form onSubmit={handleAddTreatment} className="space-y-4">
+            <form onSubmit={handleSaveTreatment} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">Treatment Type * <span className="text-xs text-red-600">{!treatmentFormData.type_of_treatment ? '(Required)' : ''}</span></label>
-                <select
-                  required
-                  value={treatmentFormData.type_of_treatment}
-                  onChange={(e) => setTreatmentFormData({...treatmentFormData, type_of_treatment: e.target.value})}
-                  className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-                    !treatmentFormData.type_of_treatment ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                  }`}
-                >
-                  <option value="">Select Treatment Type</option>
-                  {treatmentTypes.map(type => (
-                    <option key={type.id} value={type.id}>
-                      {type.name}
-                    </option>
-                  ))}
-                </select>
+                {isEditingTreatment ? (
+                  <div className="mt-1 block w-full rounded-md border border-gray-300 bg-gray-100 py-2 px-3 text-gray-700">
+                    {treatmentTypes.find(type => String(type.id) === String(treatmentFormData.type_of_treatment))?.name || 'Unknown'}
+                  </div>
+                ) : (
+                  <select
+                    required
+                    value={treatmentFormData.type_of_treatment}
+                    onChange={(e) => setTreatmentFormData({...treatmentFormData, type_of_treatment: e.target.value})}
+                    className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                      !treatmentFormData.type_of_treatment ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                    }`}
+                  >
+                    <option value="">Select Treatment Type</option>
+                    {treatmentTypes.map(type => (
+                      <option key={type.id} value={type.id}>
+                        {type.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
 
                 {/* conditional options based on selected type */}
-                {treatmentTypes.find(type => type.id === treatmentFormData.type_of_treatment)?.name?.toLowerCase().includes('ortho') ||
-                 treatmentTypes.find(type => type.id === treatmentFormData.type_of_treatment)?.name?.toLowerCase().includes('braces') && (
+
+                {/* conditional options based on selected type */}
+                {treatmentTypes.find(type => String(type.id) === String(treatmentFormData.type_of_treatment))?.name?.toLowerCase().includes('ortho') ||
+                 treatmentTypes.find(type => String(type.id) === String(treatmentFormData.type_of_treatment))?.name?.toLowerCase().includes('braces') && (
                   <div className="mt-3">
                     <label className="block text-sm font-medium text-gray-700">Braces Type</label>
                     <select
@@ -1043,7 +1056,7 @@ const PatientDetail = () => {
                     </select>
                   </div>
                 )}
-                {treatmentTypes.find(type => type.id === treatmentFormData.type_of_treatment)?.name?.toLowerCase().includes('root canal') && (
+                {treatmentTypes.find(type => String(type.id) === String(treatmentFormData.type_of_treatment))?.name?.toLowerCase().includes('root canal') && (
                   <div className="mt-3">
                     <label className="block text-sm font-medium text-gray-700">Cap Type</label>
                     <select
@@ -1080,7 +1093,7 @@ const PatientDetail = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
-                    {treatmentTypes.find(type => type.id === treatmentFormData.type_of_treatment)?.name?.toLowerCase().includes('root canal')
+                    {treatmentTypes.find(type => String(type.id) === String(treatmentFormData.type_of_treatment))?.name?.toLowerCase().includes('root canal')
                       ? 'Estimated Visits'
                       : 'Estimated Duration (Months)'}
                   </label>
@@ -1090,7 +1103,7 @@ const PatientDetail = () => {
                     onChange={(e) => setTreatmentFormData({...treatmentFormData, estimated_duration_months: e.target.value})}
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                     placeholder={
-                      treatmentTypes.find(type => type.id === treatmentFormData.type_of_treatment)?.name?.toLowerCase().includes('root canal')
+                      treatmentTypes.find(type => String(type.id) === String(treatmentFormData.type_of_treatment))?.name?.toLowerCase().includes('root canal')
                         ? 'e.g., 5'
                         : 'e.g., 3'
                     }
@@ -1146,7 +1159,7 @@ const PatientDetail = () => {
               <div className="flex justify-end space-x-3 pt-4">
                 <button
                   type="button"
-                  onClick={() => setIsAddingTreatment(false)}
+                  onClick={closeTreatmentModal}
                   className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
                   Cancel
@@ -1156,7 +1169,7 @@ const PatientDetail = () => {
                   disabled={submittingTreatment || !treatmentFormData.type_of_treatment}
                   className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
                 >
-                  {submittingTreatment ? 'Adding...' : 'Add Treatment'}
+                  {submittingTreatment ? (isEditingTreatment ? 'Saving...' : 'Adding...') : (isEditingTreatment ? 'Update Treatment' : 'Add Treatment')}
                 </button>
               </div>
             </form>

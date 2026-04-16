@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Search, Plus, Eye, Edit, Trash2, Phone, X } from 'lucide-react';
 import { patientApi } from '../api/patientApi';
 import { clinicApi } from '../api/clinicApi';
@@ -60,7 +60,26 @@ const Patients = () => {
   });
 
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const page = parseInt(params.get('page') || '1', 10);
+    const search = params.get('search') || '';
+
+    if (!Number.isNaN(page) && page > 0) {
+      setCurrentPage(page);
+    }
+
+    if (search !== searchTerm) {
+      setSearchTerm(search);
+    }
+
+    if (search !== debouncedSearchTerm) {
+      setDebouncedSearchTerm(search);
+    }
+  }, [location.search]);
 
   useEffect(() => {
     fetchPatients(currentPage, debouncedSearchTerm);
@@ -69,11 +88,33 @@ const Patients = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
-      setCurrentPage(1);
+
+      const params = new URLSearchParams();
+      if (searchTerm) {
+        params.set('search', searchTerm);
+        params.set('page', '1');
+      } else {
+        const currentPage = new URLSearchParams(location.search).get('page');
+        if (currentPage && currentPage !== '1') {
+          params.set('page', currentPage);
+        }
+      }
+
+      const currentParams = new URLSearchParams(location.search);
+      const currentSearch = currentParams.get('search') || '';
+      const currentPage = currentParams.get('page') || '';
+      const desiredSearch = params.get('search') || '';
+      const desiredPage = params.get('page') || '';
+
+      const urlMatches = currentSearch === desiredSearch && currentPage === desiredPage;
+      if (!urlMatches) {
+        const search = params.toString() ? `?${params.toString()}` : '';
+        navigate({ pathname: location.pathname, search }, { replace: true });
+      }
     }, 400);
 
     return () => clearTimeout(timer);
-  }, [searchTerm]);
+  }, [searchTerm, navigate, location.pathname]);
 
   // Fetch clinics, doctors, and treatment types when modal opens
   useEffect(() => {
@@ -97,12 +138,21 @@ const Patients = () => {
       setPatients(res.data.results || res.data);
       setTotalCount(res.data.count || res.data.length);
       setTotalPages(Math.ceil((res.data.count || res.data.length) / 10));
-      setCurrentPage(page);
     } catch (err) {
       console.error("Fetch error:", err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePageChange = (page) => {
+    const params = new URLSearchParams(location.search);
+    if (page > 1) {
+      params.set('page', page.toString());
+    } else {
+      params.delete('page');
+    }
+    navigate({ pathname: location.pathname, search: params.toString() ? `?${params.toString()}` : '' }, { replace: true });
   };
 
   // Fetch clinics for dropdown
@@ -439,7 +489,16 @@ const Patients = () => {
               patients.map((patient) => (
                 <tr
                   key={patient.id}
-                  onClick={() => navigate(`${patient.id}`)}
+                  onClick={() => {
+                    const params = new URLSearchParams();
+                    if (debouncedSearchTerm) params.set('search', debouncedSearchTerm);
+                    if (currentPage > 1) params.set('page', currentPage.toString());
+                    // Use Link component's 'to' property syntax or navigate with proper object
+                    navigate({ 
+                      pathname: `${patient.id}`,
+                      search: params.toString() ? `?${params.toString()}` : '' 
+                    });
+                  }}
                   className="hover:bg-blue-50 cursor-pointer transition"
                 >
 
@@ -514,7 +573,7 @@ const Patients = () => {
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}
-              onPageChange={setCurrentPage}
+              onPageChange={handlePageChange}
               itemCountText={`${((currentPage - 1) * 10) + 1} - ${Math.min(currentPage * 10, totalCount)} of ${totalCount}`}
             />
           </div>
