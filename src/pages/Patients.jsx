@@ -15,9 +15,16 @@ const Patients = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [isFirstLoad, setIsFirstLoad] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+
+  // Filter States
+  const [treatmentFilter, setTreatmentFilter] = useState('');
+  const [doctorFilter, setDoctorFilter] = useState('');
+  const [filterDoctors, setFilterDoctors] = useState([]);
+  const [filterTreatments, setFilterTreatments] = useState([]);
 
   // Add Patient Modal State
   const [showAddModal, setShowAddModal] = useState(false);
@@ -63,10 +70,19 @@ const Patients = () => {
   const location = useLocation();
   const { user } = useAuth();
 
+  // Normalize API list responses
+  const normalizeListResponse = (data) => {
+    if (Array.isArray(data)) return data;
+    if (data?.results && Array.isArray(data.results)) return data.results;
+    return [];
+  };
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const page = parseInt(params.get('page') || '1', 10);
     const search = params.get('search') || '';
+    const treatment = params.get('treatment') || '';
+    const doctor = params.get('doctor') || '';
 
     if (!Number.isNaN(page) && page > 0) {
       setCurrentPage(page);
@@ -79,42 +95,69 @@ const Patients = () => {
     if (search !== debouncedSearchTerm) {
       setDebouncedSearchTerm(search);
     }
+
+    if (treatment !== treatmentFilter) {
+      setTreatmentFilter(treatment);
+    }
+
+    if (doctor !== doctorFilter) {
+      setDoctorFilter(doctor);
+    }
   }, [location.search]);
 
   useEffect(() => {
-    fetchPatients(currentPage, debouncedSearchTerm);
-  }, [currentPage, debouncedSearchTerm]);
+    fetchPatients(currentPage, debouncedSearchTerm, treatmentFilter, doctorFilter);
+  }, [currentPage, debouncedSearchTerm, treatmentFilter, doctorFilter]);
 
+  
+
+useEffect(() => {
+  if (isFirstLoad) {
+    setIsFirstLoad(false);
+    return;
+  }
+
+  const timer = setTimeout(() => {
+    const params = new URLSearchParams(location.search);
+
+    if (searchTerm.trim()) {
+      params.set('search', searchTerm.trim());
+    } else {
+      params.delete('search');
+    }
+
+    params.delete('page');
+
+    navigate(
+      {
+        pathname: location.pathname,
+        search: params.toString() ? `?${params.toString()}` : '',
+      },
+      { replace: true }
+    );
+
+    setDebouncedSearchTerm(searchTerm);
+  }, 400);
+
+  return () => clearTimeout(timer);
+}, [searchTerm]);
+
+  // Load filter options (doctors and treatment types)
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-
-      const params = new URLSearchParams();
-      if (searchTerm) {
-        params.set('search', searchTerm);
-        params.set('page', '1');
-      } else {
-        const currentPage = new URLSearchParams(location.search).get('page');
-        if (currentPage && currentPage !== '1') {
-          params.set('page', currentPage);
-        }
+    const loadFilterOptions = async () => {
+      try {
+        const [doctorsRes, treatmentsRes] = await Promise.all([
+          userApi.getAll(),
+          treatmentApi.getTypes()
+        ]);
+        setFilterDoctors(normalizeListResponse(doctorsRes.data));
+        setFilterTreatments(normalizeListResponse(treatmentsRes.data));
+      } catch (error) {
+        console.error('Error loading filter options:', error);
       }
-
-      const currentParams = new URLSearchParams(location.search);
-      const currentSearch = currentParams.get('search') || '';
-      const currentPage = currentParams.get('page') || '';
-      const desiredSearch = params.get('search') || '';
-      const desiredPage = params.get('page') || '';
-
-      const urlMatches = currentSearch === desiredSearch && currentPage === desiredPage;
-      if (!urlMatches) {
-        const search = params.toString() ? `?${params.toString()}` : '';
-        navigate({ pathname: location.pathname, search }, { replace: true });
-      }
-    }, 400);
-
-    return () => clearTimeout(timer);
-  }, [searchTerm, navigate, location.pathname]);
+    };
+    loadFilterOptions();
+  }, []);
 
   // Fetch clinics, doctors, and treatment types when modal opens
   useEffect(() => {
@@ -127,11 +170,14 @@ const Patients = () => {
     }
   }, [showAddModal]);
 
-  const fetchPatients = async (page = 1, search = '') => {
+  const fetchPatients = async (page = 1, search = '', treatment = '', doctor = '') => {
     try {
       setLoading(true);
-      const params = { page };
+      const params = {};
+      if (page > 1) params.page = page;
       if (search) params.search = search;
+      if (treatment) params.type_of_treatment = treatment;
+      if (doctor) params.user = doctor;
 
       const res = await patientApi.getAll(params);
 
@@ -155,6 +201,26 @@ const Patients = () => {
     navigate({ pathname: location.pathname, search: params.toString() ? `?${params.toString()}` : '' }, { replace: true });
   };
 
+  const handleFilterChange = (filterType, value) => {
+  const params = new URLSearchParams(location.search);
+
+  if (value) {
+    params.set(filterType, value);
+  } else {
+    params.delete(filterType);
+  }
+
+  params.delete('page');
+
+  navigate(
+    {
+      pathname: location.pathname,
+      search: params.toString() ? `?${params.toString()}` : '',
+    },
+    { replace: true }
+  );
+};
+
   // Fetch clinics for dropdown
   const fetchClinics = async () => {
     try {
@@ -163,13 +229,6 @@ const Patients = () => {
     } catch (error) {
       console.error('Error fetching clinics:', error);
     }
-  };
-
-  // Normalize API list responses
-  const normalizeListResponse = (data) => {
-    if (Array.isArray(data)) return data;
-    if (data?.results && Array.isArray(data.results)) return data.results;
-    return [];
   };
 
   const serializePayload = (payload) => {
@@ -427,7 +486,7 @@ const Patients = () => {
 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
 
   {/* LEFT: Search */}
-  <div className="relative w-full">
+  <div className="relative w-full lg:flex-1">
     <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
 
     <input
@@ -449,6 +508,42 @@ const Patients = () => {
         ✕
       </button>
     )}
+  </div>
+
+  {/* RIGHT: Filters */}
+  <div className="flex gap-3 w-full lg:w-auto">
+    {/* Treatment Filter */}
+    <select
+      value={treatmentFilter}
+      onChange={(e) => handleFilterChange('treatment', e.target.value)}
+      className="flex-1 lg:flex-none px-4 py-3 text-sm border-2 border-gray-200 rounded-xl
+                 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100
+                 transition-all duration-200 shadow-sm bg-white"
+    >
+      <option value="">All Treatments</option>
+      {filterTreatments.map((treatment) => (
+        // console.log('Available treatments for filter:', treatment),
+        <option key={treatment.id} value={treatment.id}>
+          {treatment.name}
+        </option>
+      ))}
+    </select>
+
+    {/* Doctor Filter */}
+    <select
+      value={doctorFilter}
+      onChange={(e) => handleFilterChange('doctor', e.target.value)}
+      className="flex-1 lg:flex-none px-4 py-3 text-sm border-2 border-gray-200 rounded-xl
+                 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100
+                 transition-all duration-200 shadow-sm bg-white"
+    >
+      <option value="">All Doctors</option>
+      {filterDoctors.map((doctor) => (
+        <option key={doctor.id} value={doctor.id}>
+          {doctor.first_name} {doctor.last_name}
+        </option>
+      ))}
+    </select>
   </div>
 
 </div>

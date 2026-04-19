@@ -410,19 +410,13 @@ const PatientDetail = () => {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-3 px-4 lg:px-0">
-        <Link
-          to={`/app/patients${
-            searchTerm || patientsPage > 1
-              ? `?${new URLSearchParams({
-                  ...(searchTerm && { search: searchTerm }),
-                  ...(patientsPage > 1 && { page: patientsPage })
-                }).toString()}`
-              : ''
-          }`}
-          className="inline-flex items-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:border-blue-300 hover:text-blue-700 transition"
-        >
-          <ArrowLeft className="w-4 h-4" /> Back to all patients
-        </Link>
+        <button
+  onClick={() => navigate(-1)}
+  className="inline-flex items-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:border-blue-300 hover:text-blue-700 transition"
+>
+  <ArrowLeft className="w-4 h-4" />
+  Back to all patients
+</button>
         
       </div>
 
