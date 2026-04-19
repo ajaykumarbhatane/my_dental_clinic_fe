@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';import Pagination from '../components/Pagination';import { Users, UserCheck, Calendar, TrendingUp } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';import Pagination from '../components/Pagination';
+import { Users, UserCheck, Calendar, TrendingUp, Phone } from 'lucide-react';
 import { dashboardApi } from '../api/dashboardApi';
 import { formatDate, parseDateString } from '../utils/dateUtils';
 
@@ -375,7 +376,7 @@ const Dashboard = () => {
                     Doctor
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Visit Date
+                    Mobile
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                     Next Visit Date
@@ -401,8 +402,25 @@ const Dashboard = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
                       {visit.doctor_name || visit.doctor?.name || 'N/A'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
+                    {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
                       {formatDate(visit.created_at)}
+                    </td> */}
+                    
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-3">
+                        {visit.patient_mobile && (
+                          <a
+                            href={`tel:${visit.patient_mobile}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-8 h-8 flex items-center justify-center bg-blue-500 text-white rounded-md hover:bg-blue-600"
+                          >
+                            <Phone className="w-4 h-4" />
+                          </a>
+                        )}
+                        <span className="text-gray-600">
+                          {visit.patient_mobile || 'N/A'}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
                       {formatDate(visit.next_visit_date)}
