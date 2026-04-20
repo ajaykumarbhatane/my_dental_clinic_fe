@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   Edit,
@@ -8,11 +8,18 @@ import {
   Users,
   X,
   UploadCloud,
+  Eye,
+  Printer,
+  Trash2,
+  Check,
+  ChevronDown,
+  FileText,
 } from 'lucide-react';
 import { patientApi } from '../api/patientApi';
 import { treatmentApi } from '../api/treatmentApi';
 import { visitsApi } from '../api/visitsApi';
 import { userApi } from '../api/userApi';
+import { prescriptionApi } from '../api/prescriptionApi';
 import { formatDate, parseDateString, toISODate, toDDMMYYYY } from '../utils/dateUtils';
 
 const PatientDetail = () => {
@@ -84,6 +91,45 @@ const PatientDetail = () => {
     }
     return 'N/A';
   };
+
+  const FREQUENCY_OPTIONS = ['1-0-1', '1-1-1', '0-1-0', '0-0-1', 'SOS', 'Custom'];
+  const FOOD_TIMING_OPTIONS = [
+    { value: 'before_food', label: 'Before Food' },
+    { value: 'after_food', label: 'After Food' },
+    { value: 'with_food', label: 'With Food' },
+    { value: 'anytime', label: 'Anytime' },
+  ];
+
+  const createPrescriptionItem = (sequence = 1) => ({
+    localId: Math.random().toString(36).substr(2, 9),
+    medicine: null,
+    custom_medicine_name: '',
+    search: '',
+    dosage: '',
+    frequency: '1-0-1',
+    duration: '',
+    before_after_food: 'after_food',
+    notes: '',
+    sequence,
+  });
+
+  const [prescriptions, setPrescriptions] = useState([]);
+  const [clinicMedicines, setClinicMedicines] = useState([]);
+  const [isPrescriptionModalOpen, setIsPrescriptionModalOpen] = useState(false);
+  const [prescriptionModalMode, setPrescriptionModalMode] = useState('create');
+  const [activePrescription, setActivePrescription] = useState(null);
+  const [prescriptionFormData, setPrescriptionFormData] = useState({
+    treatment: '',
+    complaints: '',
+    diagnosis: '',
+    instructions: '',
+    next_visit_date: '',
+    x_ray: false,
+  });
+  const [prescriptionItems, setPrescriptionItems] = useState([createPrescriptionItem(1)]);
+  const [itemSearchOpenId, setItemSearchOpenId] = useState(null);
+  const [formErrors, setFormErrors] = useState({});
+  const newItemRef = useRef(null);
 
   const handleAddVisit = async (e) => {
     e.preventDefault();
@@ -234,6 +280,315 @@ const PatientDetail = () => {
     return matchedDoctor?.id ?? null;
   };
 
+  const updatePrescriptionItem = (index, changes) => {
+    setPrescriptionItems((items) =>
+      items.map((item, idx) => (idx === index ? { ...item, ...changes } : item))
+    );
+  };
+
+  const resetPrescriptionForm = () => {
+    setPrescriptionFormData({
+      treatment: '',
+      complaints: '',
+      diagnosis: '',
+      instructions: '',
+      next_visit_date: '',
+      x_ray: false,
+    });
+    setPrescriptionItems([createPrescriptionItem(1)]);
+    setFormErrors({});
+    setActivePrescription(null);
+    setPrescriptionModalMode('create');
+    setItemSearchOpenId(null);
+  };
+
+  const normalizeMedicineLabel = (medicine) => {
+    if (!medicine) return '';
+    return `${medicine.medicine_name}${medicine.strength ? ` ${medicine.strength}` : ''}${medicine.form ? ` [${medicine.form}]` : ''}`;
+  };
+
+  const getClinicMedicineOptions = (query) => {
+    if (!query) return clinicMedicines;
+    return clinicMedicines.filter((medicine) => {
+      const searchText = `${medicine.medicine_name} ${medicine.generic_name || ''} ${medicine.strength || ''} ${medicine.form || ''}`.toLowerCase();
+      return searchText.includes(query.toLowerCase());
+    });
+  };
+
+  const preparePrescriptionItemPayload = (item, index) => ({
+    medicine: item.medicine?.id ?? null,
+    custom_medicine_name: item.custom_medicine_name || null,
+    dosage: item.dosage,
+    frequency: item.frequency,
+    duration: item.duration,
+    before_after_food: item.before_after_food,
+    notes: item.notes || null,
+    sequence: index + 1,
+  });
+
+  const validatePrescriptionForm = () => {
+    const errors = {};
+    if (!prescriptionFormData.treatment) {
+      errors.treatment = 'Please select a treatment for the prescription.';
+    }
+    if (!prescriptionFormData.diagnosis && !prescriptionFormData.complaints) {
+      errors.form = 'Please provide either diagnosis or complaints.';
+    }
+
+    const itemErrors = prescriptionItems.map((item) => {
+      const rowErrors = {};
+      if (!item.medicine && !item.custom_medicine_name) {
+        rowErrors.medicine = 'Select an existing medicine or add a custom medicine name.';
+      }
+      if (!item.dosage) rowErrors.dosage = 'Dosage is required.';
+      if (!item.frequency) rowErrors.frequency = 'Frequency is required.';
+      if (!item.duration) rowErrors.duration = 'Duration is required.';
+      return rowErrors;
+    });
+
+    if (itemErrors.some((row) => Object.keys(row).length > 0)) {
+      errors.items = itemErrors;
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const openPrescriptionModal = (mode = 'create', prescription = null) => {
+    setPrescriptionModalMode(mode);
+    setItemSearchOpenId(null);
+    if (!prescription || mode === 'create') {
+      resetPrescriptionForm();
+      if (treatments.length > 0) {
+        setPrescriptionFormData((prev) => ({ ...prev, treatment: String(treatments[0].id) }));
+      }
+      setActivePrescription(null);
+    } else {
+      const existingItems = (prescription.items || []).map((item, index) => {
+        const medicine = clinicMedicines.find((m) => String(m.id) === String(item.medicine)) || null;
+        return {
+          localId: Math.random().toString(36).substr(2, 9),
+          medicine,
+          custom_medicine_name: item.custom_medicine_name || '',
+          search: medicine ? normalizeMedicineLabel(medicine) : '',
+          dosage: item.dosage || '',
+          frequency: item.frequency || '1-0-1',
+          duration: item.duration || '',
+          before_after_food: item.before_after_food || 'after_food',
+          notes: item.notes || '',
+          sequence: index + 1,
+        };
+      });
+      setActivePrescription(prescription);
+      setPrescriptionFormData({
+        treatment: String(prescription.treatment) || '',
+        complaints: prescription.complaints || '',
+        diagnosis: prescription.diagnosis || '',
+        instructions: prescription.instructions || '',
+        next_visit_date: prescription.next_visit_date || '',
+        x_ray: !!prescription.x_ray,
+      });
+      setPrescriptionItems(existingItems.length > 0 ? existingItems : [createPrescriptionItem(1)]);
+    }
+    setFormErrors({});
+    setIsPrescriptionModalOpen(true);
+  };
+
+  const closePrescriptionModal = () => {
+    setIsPrescriptionModalOpen(false);
+    resetPrescriptionForm();
+  };
+
+  const handleAddPrescriptionRow = () => {
+    setPrescriptionItems((items) => [
+      ...items,
+      createPrescriptionItem(items.length + 1),
+    ]);
+  };
+
+  const handleRemovePrescriptionRow = (index) => {
+    if (prescriptionItems.length === 1) return;
+    setPrescriptionItems((items) =>
+      items.filter((_, idx) => idx !== index).map((item, idx) => ({
+        ...item,
+        sequence: idx + 1,
+      }))
+    );
+  };
+
+  const handleMedicineSelect = (index, medicine) => {
+    updatePrescriptionItem(index, {
+      medicine,
+      custom_medicine_name: '',
+      search: normalizeMedicineLabel(medicine),
+    });
+    setItemSearchOpenId(null);
+  };
+
+  const handlePrescriptionFieldChange = (field, value) => {
+    setPrescriptionFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handlePrescriptionItemChange = (index, field, value) => {
+    updatePrescriptionItem(index, {
+      [field]: value,
+      ...(field === 'search' ? { medicine: null } : {}),
+    });
+  };
+
+  const handleViewPrescription = (prescription) => {
+    openPrescriptionModal('view', prescription);
+  };
+
+  const handleEditPrescription = (prescription) => {
+    openPrescriptionModal('edit', prescription);
+  };
+
+  const handlePrintPrescription = (prescription) => {
+    const medicines = (prescription.items || []).map((item) => {
+      const medicineLabel = item.medicine_name || '';
+      return `<li>${medicineLabel || item.custom_medicine_name || 'Custom medicine'} - ${item.dosage || ''} - ${item.frequency || ''} - ${item.duration || ''}</li>`;
+    }).join('');
+
+    const content = `
+      <html>
+        <head>
+          <title>Prescription ${prescription.id}</title>
+          <style>body{font-family:system-ui, sans-serif;padding:24px;color:#1f2937}h1{font-size:24px;margin-bottom:8px;}ul{padding-left:18px;}li{margin-bottom:6px;}</style>
+        </head>
+        <body>
+          <h1>Prescription ${prescription.id}</h1>
+          <p><strong>Patient:</strong> ${patient.first_name} ${patient.last_name}</p>
+          <p><strong>Date:</strong> ${formatDate(prescription.created_at || prescription.next_visit_date)}</p>
+          <p><strong>Diagnosis:</strong> ${prescription.diagnosis || 'N/A'}</p>
+          <p><strong>Instructions:</strong> ${prescription.instructions || 'N/A'}</p>
+          <h2>Medicines</h2>
+          <ul>${medicines}</ul>
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(content);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+    }
+  };
+
+  const handleViewPDF = (prescription) => {
+    if (prescription.pdf_url) {
+      window.open(prescription.pdf_url, '_blank');
+    }
+  };
+
+  const handleDeletePrescription = async (prescription) => {
+    if (!window.confirm('Delete this prescription? This action cannot be undone.')) return;
+    try {
+      await prescriptionApi.delete(prescription.id);
+      setPrescriptions((prev) => prev.filter((item) => item.id !== prescription.id));
+      alert('Prescription deleted successfully.');
+    } catch (error) {
+      console.error('Error deleting prescription:', error);
+      alert(error.response?.data?.detail || 'Failed to delete prescription.');
+    }
+  };
+
+  useEffect(() => {
+    if (newItemRef.current) {
+      newItemRef.current.focus();
+      newItemRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [prescriptionItems.length]);
+
+  useEffect(() => {
+    const handleEscape = (event) => {
+      if (event.key === 'Escape' && isPrescriptionModalOpen) {
+        closePrescriptionModal();
+      }
+    };
+
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [isPrescriptionModalOpen]);
+
+  const handleSavePrescription = async (e, printAfterSave = false) => {
+    if (e) {
+      e.preventDefault();
+    }
+    if (!validatePrescriptionForm()) {
+      return;
+    }
+    const payload = {
+      patient: id,
+      treatment: prescriptionFormData.treatment,
+      complaints: prescriptionFormData.complaints || null,
+      diagnosis: prescriptionFormData.diagnosis || null,
+      instructions: prescriptionFormData.instructions || null,
+      next_visit_date: prescriptionFormData.next_visit_date || null,
+      x_ray: prescriptionFormData.x_ray,
+      items: prescriptionItems.map(preparePrescriptionItemPayload),
+    };
+
+    try {
+      let savedPrescription = activePrescription;
+      if (prescriptionModalMode === 'edit' && activePrescription) {
+        const response = await prescriptionApi.update(activePrescription.id, payload);
+        savedPrescription = response.data;
+        alert('Prescription updated successfully.');
+      } else {
+        const response = await prescriptionApi.create(payload);
+        savedPrescription = response.data;
+        alert('Prescription created successfully.');
+      }
+      await loadData();
+      if (printAfterSave && savedPrescription) {
+        handlePrintPrescription(savedPrescription);
+      }
+      closePrescriptionModal();
+    } catch (error) {
+      console.error('Error saving prescription:', error);
+      alert(error.response?.data?.detail || 'Unable to save prescription.');
+    }
+  };
+
+  const loadPrescriptionData = async () => {
+    try {
+      const [presResponse, medResponse] = await Promise.all([
+        prescriptionApi.getByPatient(id, { page_size: 100 }),
+        prescriptionApi.getClinicMedicines({ page_size: 200 }),
+      ]);
+      const presList = presResponse.data?.results || presResponse.data || [];
+      const medicinesList = medResponse.data?.results || medResponse.data || [];
+      setPrescriptions(presList);
+      setClinicMedicines(medicinesList);
+      if (!prescriptionFormData.treatment && treatments.length > 0) {
+        setPrescriptionFormData((prev) => ({ ...prev, treatment: String(treatments[0].id) }));
+      }
+    } catch (error) {
+      console.error('Error loading prescriptions or medicines:', error);
+    }
+  };
+
+  const handlePrescriptionModalToggle = () => {
+    setIsPrescriptionModalOpen((open) => !open);
+  };
+
+  const handleItemSearchFocus = (index) => {
+    setItemSearchOpenId(index);
+  };
+
+  const handleItemSearchBlur = () => {
+    setTimeout(() => {
+      setItemSearchOpenId(null);
+    }, 150);
+  };
+
+  const handleSelectPrescriptionTab = (tab) => {
+    setActiveTab(tab);
+  };
+
   const openEditPatientModal = async () => {
     let doctorsList = doctors;
     if (doctorsList.length === 0) {
@@ -315,6 +670,8 @@ const PatientDetail = () => {
       const visitsFlattened = visitsResponse.data?.results || visitsResponse.data || [];
       setAllVisits(visitsFlattened);
 
+      await loadPrescriptionData();
+
       const now = new Date();
       const upcoming = visitsFlattened
         .filter((v) => {
@@ -336,7 +693,7 @@ const PatientDetail = () => {
   useEffect(() => {
     const query = new URLSearchParams(location.search);
     const tab = query.get('tab');
-    setActiveTab(tab === 'treatments' || tab === 'visits' || tab === 'patient_info' ? tab : 'patient_info');
+    setActiveTab(['patient_info', 'treatments', 'visits', 'prescription'].includes(tab) ? tab : 'patient_info');
     loadData();
     fetchDoctors();
   }, [id]);
@@ -444,17 +801,22 @@ const PatientDetail = () => {
 
           <div className="bg-white rounded-[20px] border border-gray-150 p-5 shadow-sm">
             <div className="flex flex-wrap gap-2 border-b border-gray-100 pb-4 mb-4">
-              {['patient_info', 'treatments', 'visits'].map((tab) => (
+              {[
+                { key: 'patient_info', label: 'Patient Info' },
+                { key: 'treatments', label: 'Treatments' },
+                { key: 'visits', label: 'Visits' },
+                { key: 'prescription', label: 'Prescription' },
+              ].map((tab) => (
                 <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
+                  key={tab.key}
+                  onClick={() => handleSelectPrescriptionTab(tab.key)}
                   className={`px-4 py-2 text-sm font-semibold rounded-full transition ${
-                    activeTab === tab
+                    activeTab === tab.key
                       ? 'bg-blue-600 text-white shadow-sm'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  {tab === 'patient_info' ? 'Patient Info' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  {tab.label}
                 </button>
               ))}
             </div>
@@ -747,9 +1109,425 @@ const PatientDetail = () => {
                 )}
               </div>
             )}
+
+            {activeTab === 'prescription' && (
+              <div className="space-y-5">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">Prescription history</p>
+                    <h2 className="text-2xl font-bold text-gray-900">Prescriptions</h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => openPrescriptionModal('create')}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-sky-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-200/50 hover:from-blue-700 hover:to-sky-700 transition"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Prescription
+                  </button>
+                </div>
+
+                {prescriptions.length === 0 ? (
+                  <div className="rounded-3xl border border-dashed border-gray-200 bg-white p-8 text-center shadow-sm">
+                    <p className="text-lg font-semibold text-gray-900">No prescriptions yet</p>
+                    <p className="mt-2 text-sm text-gray-500">Create the first prescription for this patient to keep records organized.</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-4">
+                    {prescriptions.map((prescription) => (
+                      <div
+                        key={prescription.id}
+                        className="group rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm transition hover:shadow-lg"
+                      >
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="space-y-2">
+                            <p className="text-xs uppercase tracking-[0.2em] text-gray-400 font-semibold">{formatDate(prescription.created_at || prescription.next_visit_date)}</p>
+                            <h3 className="text-lg font-semibold text-gray-900">Prescription #{prescription.id}</h3>
+                            <p className="text-sm text-gray-600 line-clamp-2">{prescription.diagnosis || prescription.complaints || 'No summary available'}</p>
+                          </div>
+                          <div className="flex flex-wrap gap-2 items-center">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
+                              <Check className="w-3 h-3" />
+                              {prescription.x_ray ? 'RVG' : 'No RVG'}
+                            </span>
+                            <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
+                              {prescription.items?.length ?? 0} medicines
+                            </span>
+                            <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
+                              Next: {prescription.next_visit_date ? formatDate(prescription.next_visit_date) : 'N/A'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                          <div className="rounded-3xl bg-blue-50 p-4">
+                            <p className="text-xs uppercase tracking-[0.16em] text-blue-600 font-semibold">Complaints</p>
+                            <p className="mt-2 text-sm text-gray-800">{prescription.complaints || 'None'}</p>
+                          </div>
+                          <div className="rounded-3xl bg-emerald-50 p-4">
+                            <p className="text-xs uppercase tracking-[0.16em] text-emerald-700 font-semibold">Diagnosis</p>
+                            <p className="mt-2 text-sm text-gray-800">{prescription.diagnosis || 'None'}</p>
+                          </div>
+                          <div className="rounded-3xl bg-violet-50 p-4">
+                            <p className="text-xs uppercase tracking-[0.16em] text-violet-700 font-semibold">Next Visit</p>
+                            <p className="mt-2 text-sm text-gray-800">{prescription.next_visit_date ? formatDate(prescription.next_visit_date) : 'Not scheduled'}</p>
+                          </div>
+                          <div className="rounded-3xl bg-slate-50 p-4">
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-700 font-semibold">Treatment</p>
+                            <p className="mt-2 text-sm text-gray-800">{prescription.treatment_name || 'Not assigned'}</p>
+                          </div>
+                        </div>
+
+                        <div className="mt-5 flex flex-wrap gap-3">
+                          <button
+                            type="button"
+                            onClick={() => handleViewPrescription(prescription)}
+                            className="inline-flex items-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:border-blue-300 hover:text-blue-700 transition"
+                          >
+                            <Eye className="w-4 h-4" /> View
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleEditPrescription(prescription)}
+                            className="inline-flex items-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:border-blue-300 hover:text-blue-700 transition"
+                          >
+                            <Edit className="w-4 h-4" /> Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handlePrintPrescription(prescription)}
+                            className="inline-flex items-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:border-blue-300 hover:text-blue-700 transition"
+                          >
+                            <Printer className="w-4 h-4" /> Print
+                          </button>
+                          {prescription.pdf_url && (
+                            <button
+                              type="button"
+                              onClick={() => handleViewPDF(prescription)}
+                              className="inline-flex items-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:border-blue-300 hover:text-blue-700 transition"
+                            >
+                              <FileText className="w-4 h-4" /> PDF
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleDeletePrescription(prescription)}
+                            className="inline-flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 transition"
+                          >
+                            <Trash2 className="w-4 h-4" /> Delete
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </main>
       </div>
+
+      {isPrescriptionModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto px-4 py-8 sm:px-6 lg:px-8">
+          <div className="fixed inset-0 bg-slate-900/40 transition-opacity" onClick={closePrescriptionModal} />
+          <div className="relative w-full max-w-5xl overflow-hidden rounded-[28px] bg-white shadow-2xl ring-1 ring-black/5">
+            <div className="sticky top-0 z-20 border-b border-gray-200 bg-white px-6 py-5">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.25em] text-slate-500 font-semibold">{prescriptionModalMode === 'view' ? 'Prescription Details' : prescriptionModalMode === 'edit' ? 'Edit Prescription' : 'Create Prescription'}</p>
+                  <h2 className="mt-2 text-2xl font-semibold text-slate-900">{patient.first_name} {patient.last_name}</h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={closePrescriptionModal}
+                  className="rounded-full border border-slate-200 bg-white p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <form onSubmit={handleSavePrescription} className="max-h-[calc(100vh-10rem)] overflow-y-auto px-6 py-6 sm:px-8">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700">Treatment</label>
+                  <select
+                    disabled={prescriptionModalMode === 'view'}
+                    value={prescriptionFormData.treatment}
+                    onChange={(e) => handlePrescriptionFieldChange('treatment', e.target.value)}
+                    className={`mt-2 block w-full rounded-3xl border px-4 py-3 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 ${formErrors.treatment ? 'border-red-400 bg-red-50' : 'border-slate-200 bg-white'}`}
+                  >
+                    <option value="">Select treatment</option>
+                    {treatments.map((treatment) => (
+                      <option key={treatment.id} value={treatment.id}>
+                        {treatment.type_of_treatment_name || treatment.type_of_treatment?.name || 'Untitled Treatment'}
+                      </option>
+                    ))}
+                  </select>
+                  {formErrors.treatment && <p className="mt-2 text-sm text-red-600">{formErrors.treatment}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700">Next Visit Date</label>
+                  <input
+                    disabled={prescriptionModalMode === 'view'}
+                    type="date"
+                    value={prescriptionFormData.next_visit_date}
+                    onChange={(e) => handlePrescriptionFieldChange('next_visit_date', e.target.value)}
+                    className="mt-2 block w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2 mt-4">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700">Complaints</label>
+                  <textarea
+                    disabled={prescriptionModalMode === 'view'}
+                    rows={4}
+                    value={prescriptionFormData.complaints}
+                    onChange={(e) => handlePrescriptionFieldChange('complaints', e.target.value)}
+                    className="mt-2 block w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    placeholder="Enter complaints"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700">Diagnosis</label>
+                  <textarea
+                    disabled={prescriptionModalMode === 'view'}
+                    rows={4}
+                    value={prescriptionFormData.diagnosis}
+                    onChange={(e) => handlePrescriptionFieldChange('diagnosis', e.target.value)}
+                    className="mt-2 block w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    placeholder="Enter diagnosis"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2 mt-4">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700">Instructions</label>
+                  <textarea
+                    disabled={prescriptionModalMode === 'view'}
+                    rows={4}
+                    value={prescriptionFormData.instructions}
+                    onChange={(e) => handlePrescriptionFieldChange('instructions', e.target.value)}
+                    className="mt-2 block w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    placeholder="Enter instructions"
+                  />
+                </div>
+                <div className="flex items-end justify-between gap-4">
+                  <div className="w-full">
+                    <label className="block text-sm font-semibold text-slate-700">RVG Taken</label>
+                    <div className="mt-3 flex items-center gap-3 rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3">
+                      <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+                        <input
+                          disabled={prescriptionModalMode === 'view'}
+                          type="checkbox"
+                          checked={prescriptionFormData.x_ray}
+                          onChange={(e) => handlePrescriptionFieldChange('x_ray', e.target.checked)}
+                          className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        RVG Taken
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 rounded-[28px] border border-slate-200 bg-slate-50 p-5">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-900">Medicines</h3>
+                    <p className="text-sm text-slate-500">Add one or more prescription items below.</p>
+                  </div>
+                  {prescriptionModalMode !== 'view' && (
+                    <button
+                      type="button"
+                      onClick={handleAddPrescriptionRow}
+                      className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100 transition"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Row
+                    </button>
+                  )}
+                </div>
+
+                <div className="mt-5 space-y-4">
+                  {prescriptionItems.map((item, index) => {
+                    const rowError = formErrors.items?.[index] || {};
+                    return (
+                      <div
+                        key={item.localId}
+                        className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm transition hover:border-blue-200"
+                      >
+                        <div className="grid gap-4 lg:grid-cols-[2.5fr_1.2fr_1.2fr_1.2fr_1.2fr]">
+                          <div className="relative">
+                            <label className="block text-sm font-semibold text-slate-700">Medicine</label>
+                            <input
+                              disabled={prescriptionModalMode === 'view'}
+                              type="text"
+                              value={item.medicine ? normalizeMedicineLabel(item.medicine) : item.search}
+                              onChange={(e) => handlePrescriptionItemChange(index, 'search', e.target.value)}
+                              onFocus={() => handleItemSearchFocus(index)}
+                              onBlur={handleItemSearchBlur}
+                              placeholder="Search medicine..."
+                              className={`mt-2 block w-full rounded-3xl border px-4 py-3 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 ${rowError.medicine ? 'border-red-400 bg-red-50' : 'border-slate-200 bg-white'}`}
+                            />
+                            {itemSearchOpenId === index && prescriptionModalMode !== 'view' && (
+                              <div className="absolute left-0 top-full z-20 mt-2 max-h-72 w-full overflow-auto rounded-3xl border border-slate-200 bg-white shadow-lg">
+                                {getClinicMedicineOptions(item.search).length > 0 ? (
+                                  getClinicMedicineOptions(item.search).map((medicine) => (
+                                    <button
+                                      key={medicine.id}
+                                      type="button"
+                                      onMouseDown={(event) => {
+                                        event.preventDefault();
+                                        handleMedicineSelect(index, medicine);
+                                      }}
+                                      className="w-full px-4 py-3 text-left text-sm text-slate-800 hover:bg-slate-100"
+                                    >
+                                      <div className="font-semibold">{medicine.medicine_name}</div>
+                                      <div className="mt-1 text-xs text-slate-500">{medicine.strength || 'Standard'} · {medicine.form}</div>
+                                    </button>
+                                  ))
+                                ) : (
+                                  <div className="px-4 py-3 text-sm text-slate-500">No matching medicine found</div>
+                                )}
+                              </div>
+                            )}
+                            {rowError.medicine && <p className="mt-2 text-sm text-red-600">{rowError.medicine}</p>}
+
+                            <div className="mt-3">
+                              <label className="block text-sm font-semibold text-slate-700">Custom Medicine Name</label>
+                              <input
+                                disabled={prescriptionModalMode === 'view'}
+                                value={item.custom_medicine_name}
+                                onChange={(e) => handlePrescriptionItemChange(index, 'custom_medicine_name', e.target.value)}
+                                placeholder="Enter custom medicine if not listed"
+                                className="mt-2 block w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-semibold text-slate-700">Dosage</label>
+                            <input
+                              disabled={prescriptionModalMode === 'view'}
+                              ref={index === prescriptionItems.length - 1 ? newItemRef : null}
+                              value={item.dosage}
+                              onChange={(e) => handlePrescriptionItemChange(index, 'dosage', e.target.value)}
+                              className={`mt-2 block w-full rounded-3xl border px-4 py-3 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 ${rowError.dosage ? 'border-red-400 bg-red-50' : 'border-slate-200 bg-white'}`}
+                              placeholder="e.g. 1 tablet"
+                            />
+                            {rowError.dosage && <p className="mt-2 text-sm text-red-600">{rowError.dosage}</p>}
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-semibold text-slate-700">Frequency</label>
+                            <select
+                              disabled={prescriptionModalMode === 'view'}
+                              value={item.frequency}
+                              onChange={(e) => handlePrescriptionItemChange(index, 'frequency', e.target.value)}
+                              className={`mt-2 block w-full rounded-3xl border px-4 py-3 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 ${rowError.frequency ? 'border-red-400 bg-red-50' : 'border-slate-200 bg-white'}`}
+                            >
+                              {FREQUENCY_OPTIONS.map((option) => (
+                                <option key={option} value={option}>
+                                  {option}
+                                </option>
+                              ))}
+                            </select>
+                            {rowError.frequency && <p className="mt-2 text-sm text-red-600">{rowError.frequency}</p>}
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-semibold text-slate-700">Duration</label>
+                            <input
+                              disabled={prescriptionModalMode === 'view'}
+                              value={item.duration}
+                              onChange={(e) => handlePrescriptionItemChange(index, 'duration', e.target.value)}
+                              className={`mt-2 block w-full rounded-3xl border px-4 py-3 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 ${rowError.duration ? 'border-red-400 bg-red-50' : 'border-slate-200 bg-white'}`}
+                              placeholder="e.g. 5 days"
+                            />
+                            {rowError.duration && <p className="mt-2 text-sm text-red-600">{rowError.duration}</p>}
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-semibold text-slate-700">Food Timing</label>
+                            <select
+                              disabled={prescriptionModalMode === 'view'}
+                              value={item.before_after_food}
+                              onChange={(e) => handlePrescriptionItemChange(index, 'before_after_food', e.target.value)}
+                              className="mt-2 block w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                            >
+                              {FOOD_TIMING_OPTIONS.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 grid gap-4 md:grid-cols-[1fr_auto] items-end">
+                          <div>
+                            <label className="block text-sm font-semibold text-slate-700">Notes</label>
+                            <input
+                              disabled={prescriptionModalMode === 'view'}
+                              value={item.notes}
+                              onChange={(e) => handlePrescriptionItemChange(index, 'notes', e.target.value)}
+                              className="mt-2 block w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                              placeholder="Additional notes"
+                            />
+                          </div>
+                          {prescriptionModalMode !== 'view' && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemovePrescriptionRow(index)}
+                              className="inline-flex items-center justify-center rounded-3xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 hover:bg-red-100 transition"
+                            >
+                              <Trash2 className="w-4 h-4" /> Remove
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="sticky bottom-0 z-10 mt-6 border-t border-slate-200 bg-white/95 py-4 backdrop-blur">
+                <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
+                  <button
+                    type="button"
+                    onClick={closePrescriptionModal}
+                    className="rounded-3xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      disabled={prescriptionModalMode === 'view'}
+                      onClick={(e) => handleSavePrescription(e, false)}
+                      className="rounded-3xl bg-slate-100 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-200 transition disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Save Draft
+                    </button>
+                    <button
+                      type="button"
+                      disabled={prescriptionModalMode === 'view'}
+                      onClick={(e) => handleSavePrescription(e, true)}
+                      className="rounded-3xl bg-gradient-to-r from-blue-600 to-sky-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-200/50 hover:from-blue-700 hover:to-sky-700 transition disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Save & Print
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {isEditingPatient && (
         <div className="fixed inset-0 z-50 flex items-start justify-center px-4 py-8 sm:px-6 lg:px-8">
