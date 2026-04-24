@@ -8,4 +8,7 @@ export const prescriptionApi = {
   delete: (id) => apiClient.delete(`/prescriptions/${id}/`),
   getByPatient: (patientId, params = {}) => apiClient.get('/prescriptions/', { params: { patient: patientId, ...params } }),
   getClinicMedicines: (params = {}) => apiClient.get('/clinic-medicines/', { params }),
+  createClinicMedicine: (data) => apiClient.post('/clinic-medicines/', data),
+  updateClinicMedicine: (id, data) => apiClient.put(`/clinic-medicines/${id}/`, data),
+  deleteClinicMedicine: (id) => apiClient.delete(`/clinic-medicines/${id}/`),
 };

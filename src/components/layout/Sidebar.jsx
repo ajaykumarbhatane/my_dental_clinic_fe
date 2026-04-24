@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Stethoscope,
-  Settings, Film, Phone, X
+  Settings, Film, Phone, X, Building
 } from 'lucide-react';
 import { useRef } from 'react';
 
@@ -26,6 +26,7 @@ const Sidebar = ({ isOpen, onClose, isExpanded, setIsExpanded }) => {
     { path: '/app/patients', icon: Users, label: 'Patients' },
     { path: '/app/treatments', icon: Stethoscope, label: 'Treatments' },
     { path: '/app/treatment-videos', icon: Film, label: 'Videos' },
+    { path: '/app/clinic-settings', icon: Building, label: 'Clinic Settings' },
     { path: '/app/customer-care', icon: Phone, label: 'Support' },
     { path: '/app/settings', icon: Settings, label: 'Settings' },
   ];

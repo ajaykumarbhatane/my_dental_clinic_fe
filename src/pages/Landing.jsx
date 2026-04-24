@@ -496,7 +496,10 @@ const Landing = () => {
 
               {/* USER DETAILS */}
               <div>
-                <h4 className="text-sm font-bold text-gray-700 mb-2">User Details *</h4>
+                <h4 className="text-sm font-bold text-gray-700 mb-2">User Details </h4>
+                <hr style={{ border: 'none', borderTop: '2px dotted orange', width: '100%' }} />
+
+
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
@@ -626,7 +629,8 @@ const Landing = () => {
 
               {/* CLINIC DETAILS */}
               <div>
-                <h4 className="text-sm font-bold text-gray-700 mb-2">Clinic Details *</h4>
+                <h4 className="text-sm font-bold text-gray-700 mb-2">Clinic Details </h4>
+                <hr style={{ border: 'none', borderTop: '2px dotted orange', width: '100%' }} />
 
                 <div>
                   <label className="label">Clinic Name *</label>
