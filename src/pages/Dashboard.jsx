@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';import Pagination from '../components/Pagination';
 import { Users, UserCheck, Calendar, TrendingUp, Phone } from 'lucide-react';
 import { dashboardApi } from '../api/dashboardApi';
@@ -17,7 +17,7 @@ import {
   Legend,
   ArcElement,
 } from 'chart.js';
-import { Bar, Doughnut } from 'react-chartjs-2';
+import { Doughnut, Line } from 'react-chartjs-2';
 
 // register required chart components
 ChartJS.register(
@@ -69,100 +69,234 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   // chart data states
-  const [visitChartData, setVisitChartData] = useState(null); // bar chart data (visits per month)
+  const today = new Date();
+  const [visitChartData, setVisitChartData] = useState(null); // line chart data (visits per month)
   const [treatmentChartData, setTreatmentChartData] = useState(null);
   const [visitChartLabels, setVisitChartLabels] = useState([]);
-  const [visitChartSeries, setVisitChartSeries] = useState({});
-  const [visitFilter, setVisitFilter] = useState('all');
+  const [visitChartSeries, setVisitChartSeries] = useState({ all: [] });
+  const [selectedTreatment, setSelectedTreatment] = useState('all');
+  const [selectedInterval, setSelectedInterval] = useState('daily');
   const [treatmentFilterOptions, setTreatmentFilterOptions] = useState([]);
-  const hasFetchedDashboard = useRef(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [dateError, setDateError] = useState('');
 
-  // helper utilities
+  const toDateInputValue = (date) => {
+    const year = date.getFullYear();
+    const monthValue = String(date.getMonth() + 1).padStart(2, '0');
+    const dayValue = String(date.getDate()).padStart(2, '0');
+    return `${year}-${monthValue}-${dayValue}`;
+  };
+
+  const todayString = toDateInputValue(today);
+  const initialStartDate = toDateInputValue(new Date(today.getFullYear(), today.getMonth(), 1));
+  const initialEndDate = todayString;
+
+  const [startDate, setStartDate] = useState(initialStartDate);
+  const [endDate, setEndDate] = useState(initialEndDate);
+  const [draftStartDate, setDraftStartDate] = useState(initialStartDate);
+  const [draftEndDate, setDraftEndDate] = useState(initialEndDate);
+  const [pickerMonth, setPickerMonth] = useState(today.getMonth());
+  const [pickerYear, setPickerYear] = useState(today.getFullYear());
+
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+  const buildMonthGrid = (year, month) => {
+    const firstDayOfMonth = new Date(year, month, 1);
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const startIndex = ((firstDayOfMonth.getDay() + 6) % 7);
+    const totalCells = Math.max(35, startIndex + daysInMonth);
+    const cells = [];
+
+    for (let i = 0; i < totalCells; i += 1) {
+      const dayNumber = i - startIndex + 1;
+      if (dayNumber < 1 || dayNumber > daysInMonth) {
+        cells.push(null);
+      } else {
+        cells.push(new Date(year, month, dayNumber));
+      }
+    }
+    return cells;
+  };
+
+  const formatDay = (date) => {
+    if (!date) return '';
+    return toDateInputValue(date);
+  };
+
+  const isInDraftRange = (dateString) => {
+    if (!draftStartDate || !draftEndDate) return false;
+    return dateString >= draftStartDate && dateString <= draftEndDate;
+  };
+
+  const handlePickerDayClick = (dayDate) => {
+    if (!dayDate) return;
+
+    const dateString = formatDay(dayDate);
+    if (dateString > todayString) return;
+    const isSingleSelection = draftStartDate === draftEndDate;
+
+    if (!draftStartDate || isSingleSelection) {
+      if (!draftStartDate) {
+        setDraftStartDate(dateString);
+        setDraftEndDate(dateString);
+        return;
+      }
+      if (dateString < draftStartDate) {
+        setDraftStartDate(dateString);
+        setDraftEndDate(draftStartDate);
+        return;
+      }
+      setDraftStartDate(draftStartDate);
+      setDraftEndDate(dateString);
+      return;
+    }
+
+    if (dateString < draftStartDate) {
+      setDraftEndDate(draftStartDate);
+      setDraftStartDate(dateString);
+      return;
+    }
+
+    if (dateString > draftEndDate) {
+      setDraftEndDate(dateString);
+      return;
+    }
+
+    setDraftStartDate(dateString);
+    setDraftEndDate(dateString);
+  };
+
+  const previousPickerMonth = () => {
+    const nextMonth = pickerMonth - 1;
+    if (nextMonth < 0) {
+      setPickerMonth(11);
+      setPickerYear(pickerYear - 1);
+    } else {
+      setPickerMonth(nextMonth);
+    }
+  };
+
+  const nextPickerMonth = () => {
+    const nextMonth = pickerMonth + 1;
+    if (nextMonth > 11) {
+      setPickerMonth(0);
+      setPickerYear(pickerYear + 1);
+    } else {
+      setPickerMonth(nextMonth);
+    }
+  };
+
   useEffect(() => {
-    if (hasFetchedDashboard.current) return;
-    hasFetchedDashboard.current = true;
+    const valid = !startDate || !endDate || startDate <= endDate;
+    if (!valid) {
+      setDateError('Start date must be before end date.');
+      return;
+    }
+    setDateError('');
     fetchDashboardData();
-  }, []);
+  }, [selectedTreatment, selectedInterval, startDate, endDate]);
+
+  useEffect(() => {
+    if (showDatePicker) {
+      setDraftStartDate(startDate);
+      setDraftEndDate(endDate);
+    }
+  }, [showDatePicker, startDate, endDate]);
 
   const fetchDashboardData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+      if (dateError) return;
+      try {
+        setLoading(true);
+        setError(null);
 
-      const response = await dashboardApi.get();
-      const data = response.data || {};
-      const summary = data.summary || {};
+        const params = {
+          treatment: selectedTreatment,
+          interval: selectedInterval,
+          start_date: startDate,
+          end_date: endDate,
+        };
 
-      const totalPatients = summary.total_patients ?? 0;
-      const totalVisits = summary.total_visits ?? 0;
-      const activeTreatments = summary.active_treatments ?? 0;
-      const totalTreatments = summary.total_treatments ?? 0;
+        const response = await dashboardApi.get(params);
+        const data = response.data || {};
+        const summary = data.summary || {};
 
-      setTreatmentFilterOptions(summary.treatment_filter_options || ['all']);
+        const totalPatients = summary.total_patients ?? 0;
+        const totalVisits = summary.total_visits ?? 0;
+        const activeTreatments = summary.active_treatments ?? 0;
+        const totalTreatments = summary.total_treatments ?? 0;
 
-      setStats([
-        {
-          title: 'Total Patients',
-          value: totalPatients.toString(),
-          icon: Users,
-          color: 'bg-blue-500',
-        },
-        {
-          title: 'Total Visits',
-          value: totalVisits.toString(),
-          icon: Calendar,
-          color: 'bg-green-500',
-        },
-        {
-          title: 'Active Treatments',
-          value: activeTreatments.toString(),
-          icon: UserCheck,
-          color: 'bg-yellow-500',
-        },
-        {
-          title: 'Total Treatments',
-          value: totalTreatments.toString(),
-          icon: TrendingUp,
-          color: 'bg-purple-500',
-        },
-      ]);
+        setTreatmentFilterOptions(summary.treatment_filter_options || ['all']);
+        if (!summary.treatment_filter_options?.includes(selectedTreatment)) {
+          setSelectedTreatment('all');
+        }
 
-      setUpcomingVisits(summary.upcoming_visits || []);
-      setVisitChartLabels(summary.visit_chart?.labels || []);
-      setVisitChartSeries(summary.visit_chart?.series || {});
-      setVisitChartData({
-        labels: summary.visit_chart?.labels || [],
-        datasets: [
+        setStats([
           {
-            label: 'Visits (per month)',
-            data: summary.visit_chart?.series?.all || [],
-            backgroundColor: 'rgba(59, 130, 246, 0.75)',
-            borderColor: 'rgba(37, 99, 235, 1)',
-            borderWidth: 1,
+            title: 'Total Patients',
+            value: totalPatients.toString(),
+            icon: Users,
+            color: 'bg-blue-500',
           },
-        ],
-      });
-      setTreatmentChartData({
-        labels: summary.treatment_chart?.labels || [],
-        datasets: [
           {
-            data: summary.treatment_chart?.data || [],
-            backgroundColor: [
-              '#3b82f6',
-              '#10b981',
-              '#f59e0b',
-              '#ef4444',
-              '#8b5cf6',
-            ],
+            title: 'Total Visits',
+            value: totalVisits.toString(),
+            icon: Calendar,
+            color: 'bg-green-500',
           },
-        ],
-      });
-    } catch (err) {
-      console.error('Error fetching dashboard data:', err);
-      setError('Failed to load dashboard data');
-    } finally {
-      setLoading(false);
-    }
+          {
+            title: 'Active Treatments',
+            value: activeTreatments.toString(),
+            icon: UserCheck,
+            color: 'bg-yellow-500',
+          },
+          {
+            title: 'Total Treatments',
+            value: totalTreatments.toString(),
+            icon: TrendingUp,
+            color: 'bg-purple-500',
+          },
+        ]);
+
+        setUpcomingVisits(summary.upcoming_visits || []);
+        setVisitChartLabels(summary.visit_chart?.labels || []);
+        setVisitChartSeries(summary.visit_chart?.series || {});
+        setVisitChartData({
+          labels: summary.visit_chart?.labels || [],
+          datasets: [
+            {
+              label: selectedTreatment === 'all' ? 'All Visits' : `${selectedTreatment} Visits`,
+              data: summary.visit_chart?.series?.[selectedTreatment] || summary.visit_chart?.series?.all || [],
+              fill: false,
+              backgroundColor: 'rgba(59, 130, 246, 0.75)',
+              borderColor: 'rgba(37, 99, 235, 1)',
+              borderWidth: 2,
+              tension: 0.35,
+              pointRadius: 4,
+              pointHoverRadius: 6,
+            },
+          ],
+        });
+        setTreatmentChartData({
+          labels: summary.treatment_chart?.labels || [],
+          datasets: [
+            {
+              data: summary.treatment_chart?.data || [],
+              backgroundColor: [
+                '#3b82f6',
+                '#10b981',
+                '#f59e0b',
+                '#ef4444',
+                '#8b5cf6',
+              ],
+            },
+          ],
+        });
+      } catch (err) {
+        console.error('Error fetching dashboard data:', err);
+        setError('Failed to load dashboard data');
+      } finally {
+        setLoading(false);
+      }
   };
 
   const upcomingTotalPages = Math.max(1, Math.ceil(upcomingVisits.length / upcomingPerPage));
@@ -207,46 +341,167 @@ const Dashboard = () => {
       </div>
 
       {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-lg transition-shadow">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-3">
             <div>
-              <h3 className="text-lg font-bold text-gray-900">Patient Visits per Month</h3>
-              <p className="text-sm text-gray-500">Filter by treatment type and see monthly visit trends</p>
+              <h3 className="text-lg font-bold text-gray-900">Patient Visits Trend</h3>
+              <p className="text-sm text-gray-500">Filter by treatment and date range to compare visit trends.</p>
             </div>
-            <div className="flex items-center gap-2">
-              <label htmlFor="visitFilter" className="text-sm font-medium text-gray-700">Treatment:</label>
-              <select
-                id="visitFilter"
-                className="border border-gray-300 rounded-lg px-2 py-1 text-sm"
-                value={visitFilter}
-                onChange={(e) => {
-                  const selected = e.target.value;
-                  setVisitFilter(selected);
-                  setVisitChartData({
-                    labels: visitChartLabels,
-                    datasets: [
-                      {
-                        label: 'Visits (per month)',
-                        data: visitChartSeries[selected] || [],
-                        backgroundColor: 'rgba(59, 130, 246, 0.75)',
-                        borderColor: 'rgba(37, 99, 235, 1)',
-                        borderWidth: 1,
-                      },
-                    ],
-                  });
-                }}
-              >
-                {treatmentFilterOptions.map((option) => (
-                  <option key={option} value={option}>{option === 'all' ? 'All' : option}</option>
-                ))}
-              </select>
+            <div className="flex flex-wrap gap-3 items-end">
+              <div className="flex items-center gap-2">
+                <label htmlFor="visitFilter" className="text-sm font-medium text-gray-700">Treatment:</label>
+                <select
+                  id="visitFilter"
+                  className="border border-gray-300 rounded-lg px-2 py-1 text-sm"
+                  value={selectedTreatment}
+                  onChange={(e) => setSelectedTreatment(e.target.value)}
+                >
+                  {treatmentFilterOptions.map((option) => (
+                    <option key={option} value={option}>{option === 'all' ? 'All Treatments' : option}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-700">Interval:</label>
+                <div className="inline-flex rounded-full border border-gray-200 bg-gray-50 overflow-hidden">
+                  {['daily', 'weekly', 'monthly'].map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => setSelectedInterval(option)}
+                      className={`px-3 py-1 text-sm font-medium transition ${selectedInterval === option ? 'bg-white text-slate-900 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}
+                    >
+                      {option.charAt(0).toUpperCase() + option.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowDatePicker(true)}
+                  className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100"
+                >
+                  Date range trend
+                </button>
+              </div>
+              <div className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-medium">
+                {formatDate(startDate)} - {formatDate(endDate)}
+              </div>
             </div>
-            <div className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-medium">Monthly Trend</div>
           </div>
+          {dateError && (
+            <div className="mb-4 text-sm text-red-600">{dateError}</div>
+          )}
+          {showDatePicker && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+              <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl ring-1 ring-black/5">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-sm uppercase tracking-[0.2em] text-slate-400">Select Date Range</p>
+                    <h2 className="text-xl font-semibold text-slate-900">Date range trend</h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowDatePicker(false)}
+                    className="text-slate-500 hover:text-slate-900"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="flex items-center justify-center gap-4 mb-5">
+                  <button
+                    type="button"
+                    onClick={previousPickerMonth}
+                    className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-slate-600 hover:bg-slate-100"
+                  >
+                    ←
+                  </button>
+                  <div className="flex items-center gap-3 rounded-2xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">
+                    <span>{monthNames[pickerMonth]}</span>
+                    <span>{pickerYear}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={nextPickerMonth}
+                    className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-slate-600 hover:bg-slate-100"
+                  >
+                    →
+                  </button>
+                </div>
+                <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 mb-3">
+                  {['M','T','W','T','F','S','S'].map((day) => (
+                    <div key={day}>{day}</div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-7 gap-2 mb-6">
+                  {buildMonthGrid(pickerYear, pickerMonth).map((dateValue, index) => {
+                    const dateString = dateValue ? formatDay(dateValue) : '';
+                    const isSelected = dateValue && (dateString === draftStartDate || dateString === draftEndDate);
+                    const isRangeSelected = dateValue && draftStartDate && draftEndDate && dateString >= draftStartDate && dateString <= draftEndDate;
+                    const isRangeStart = dateValue && dateString === draftStartDate;
+                    const isRangeEnd = dateValue && dateString === draftEndDate;
+                    const rangeClass = isRangeSelected ? 'bg-orange-100 text-slate-900' : 'bg-slate-100 text-slate-700 hover:bg-slate-200';
+                    const selectedClass = isSelected ? 'bg-orange-500 text-white shadow-lg' : rangeClass;
+                    const roundedClass = isSelected
+                      ? 'rounded-full'
+                      : isRangeStart && !isRangeEnd
+                      ? 'rounded-l-full'
+                      : isRangeEnd && !isRangeStart
+                      ? 'rounded-r-full'
+                      : isRangeSelected
+                      ? 'rounded-none'
+                      : 'rounded-2xl';
+                    return (
+                      <button
+                        key={`${pickerYear}-${pickerMonth}-${index}`}
+                        type="button"
+                        disabled={!dateValue || (dateValue && formatDay(dateValue) > todayString)}
+                        onClick={() => dateValue && handlePickerDayClick(dateValue)}
+                        className={`h-10 text-sm transition ${!dateValue ? 'cursor-default bg-transparent' : formatDay(dateValue) > todayString ? 'cursor-not-allowed opacity-40 bg-slate-100 text-slate-400' : `cursor-pointer ${selectedClass} ${roundedClass}`}`}
+                      >
+                        {dateValue ? dateValue.getDate() : ''}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm text-slate-500">Selected range</p>
+                    <p className="text-sm font-medium text-slate-900">
+                      {formatDate(draftStartDate)} – {formatDate(draftEndDate)}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowDatePicker(false)}
+                      className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStartDate(draftStartDate);
+                        setEndDate(draftEndDate);
+                        setPickerMonth(new Date(draftStartDate).getMonth());
+                        setPickerYear(new Date(draftStartDate).getFullYear());
+                        setShowDatePicker(false);
+                      }}
+                      className="rounded-2xl bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           <div className="h-64">
             {visitChartData ? (
-              <Bar
+              <Line
                 data={visitChartData}
                 options={{
                   responsive: true,
