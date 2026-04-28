@@ -25,7 +25,6 @@ const ClinicSettings = () => {
   const [showAddMedicine, setShowAddMedicine] = useState(false);
   const [newMedicine, setNewMedicine] = useState({
     medicine_name: '',
-    generic_name: '',
     strength: '',
     form: 'tablet',
     description: ''
@@ -120,7 +119,6 @@ const ClinicSettings = () => {
       await prescriptionApi.createClinicMedicine(newMedicine);
       setNewMedicine({
         medicine_name: '',
-        generic_name: '',
         strength: '',
         form: 'tablet',
         description: ''
@@ -362,9 +360,6 @@ const ClinicSettings = () => {
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <h3 className="text-lg font-bold text-gray-900">{medicine.medicine_name}</h3>
-                        {medicine.generic_name && (
-                          <p className="text-sm text-gray-600">Generic: {medicine.generic_name}</p>
-                        )}
                         <div className="flex gap-4 mt-2 text-sm text-gray-600">
                           {medicine.strength && <span>Strength: {medicine.strength}</span>}
                           <span>Form: {medicine.form}</span>
@@ -404,15 +399,6 @@ const ClinicSettings = () => {
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2">Generic Name</label>
-                      <input
-                        type="text"
-                        value={newMedicine.generic_name}
-                        onChange={(e) => setNewMedicine(prev => ({ ...prev, generic_name: e.target.value }))}
-                        className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
-                      />
-                    </div>
 
                     <div>
                       <label className="block text-sm font-bold text-gray-700 mb-2">Strength</label>

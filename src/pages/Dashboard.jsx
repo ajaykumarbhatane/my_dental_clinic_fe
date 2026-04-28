@@ -97,6 +97,7 @@ const Dashboard = () => {
   const [draftEndDate, setDraftEndDate] = useState(initialEndDate);
   const [pickerMonth, setPickerMonth] = useState(today.getMonth());
   const [pickerYear, setPickerYear] = useState(today.getFullYear());
+  const chartKey = `${selectedTreatment}-${selectedInterval}-${startDate}-${endDate}`;
 
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -225,8 +226,12 @@ const Dashboard = () => {
         const activeTreatments = summary.active_treatments ?? 0;
         const totalTreatments = summary.total_treatments ?? 0;
 
-        setTreatmentFilterOptions(summary.treatment_filter_options || ['all']);
-        if (!summary.treatment_filter_options?.includes(selectedTreatment)) {
+        const options = [...new Set(['all', ...(summary.treatment_filter_options || [])])];
+        if (selectedTreatment !== 'all' && !options.includes(selectedTreatment)) {
+          options.push(selectedTreatment);
+        }
+        setTreatmentFilterOptions(options);
+        if (!options.includes(selectedTreatment)) {
           setSelectedTreatment('all');
         }
 
@@ -395,8 +400,14 @@ const Dashboard = () => {
             <div className="mb-4 text-sm text-red-600">{dateError}</div>
           )}
           {showDatePicker && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
-              <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl ring-1 ring-black/5">
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
+              onClick={() => setShowDatePicker(false)}
+            >
+              <div
+                className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl ring-1 ring-black/5 max-h-[calc(100vh-4rem)] overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <p className="text-sm uppercase tracking-[0.2em] text-slate-400">Select Date Range</p>
@@ -502,6 +513,7 @@ const Dashboard = () => {
           <div className="h-64">
             {visitChartData ? (
               <Line
+                key={chartKey}
                 data={visitChartData}
                 options={{
                   responsive: true,
@@ -550,6 +562,7 @@ const Dashboard = () => {
           <div className="h-64">
             {treatmentChartData ? (
               <Doughnut
+                key={chartKey}
                 data={treatmentChartData}
                 options={{
                   responsive: true,

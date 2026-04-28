@@ -275,7 +275,7 @@ return medicine.medicine_name || '';
 const getClinicMedicineOptions = (query) => {
 if (!query) return clinicMedicines;
 return clinicMedicines.filter((medicine) => {
-const searchText = `${medicine.medicine_name} ${medicine.generic_name || ''} ${medicine.strength || ''} ${medicine.form || ''}`.toLowerCase();
+const searchText = `${medicine.medicine_name} ${medicine.strength || ''} ${medicine.form || ''}`.toLowerCase();
 return searchText.includes(query.toLowerCase());
 });
 };
@@ -1341,7 +1341,7 @@ return (
                      </div>
                      )}
                   </div>
-                  <input placeholder="Dosage" className="input-ui" 
+                  <input placeholder="Quantity" className="input-ui" 
                      value={item.dosage}
                      onChange={(e) => handlePrescriptionItemChange(index, 'dosage', e.target.value)}
                   />
