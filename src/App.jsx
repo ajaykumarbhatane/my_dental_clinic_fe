@@ -1,5 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { NotificationProvider } from './context/NotificationContext';
+import NotificationContainer from './components/NotificationContainer';
 import DashboardLayout from './components/layout/DashboardLayout';
 import Login from './pages/Login';
 import Landing from './pages/Landing';
@@ -80,9 +82,12 @@ const AppRoutes = () => {
 function App() {
   console.log('App rendering');
   return (
-    <AuthProvider>
-      <AppRoutes />
-    </AuthProvider>
+    <NotificationProvider>
+      <AuthProvider>
+        <AppRoutes />
+        <NotificationContainer />
+      </AuthProvider>
+    </NotificationProvider>
   );
 }
 

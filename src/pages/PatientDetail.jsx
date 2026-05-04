@@ -8,6 +8,8 @@ import { treatmentApi } from '../api/treatmentApi';
 import { visitsApi } from '../api/visitsApi';
 import { userApi } from '../api/userApi';
 import { prescriptionApi } from '../api/prescriptionApi';
+import { useApiWithErrorHandling } from '../utils/apiUtils';
+import { useNotification } from '../context/NotificationContext';
 import { formatDate, parseDateString, toISODate, toDDMMYYYY } from '../utils/dateUtils';
 const PatientDetail = () => {
 const { id } = useParams();
@@ -30,6 +32,8 @@ const [isAddingTreatment, setIsAddingTreatment] = useState(false);
 const [isAddingVisit, setIsAddingVisit] = useState(false);
 const [submittingVisit, setSubmittingVisit] = useState(false);
 const [treatmentTypes, setTreatmentTypes] = useState([]);
+const { handleApiCall } = useApiWithErrorHandling();
+const { showError, showSuccess } = useNotification();
 const [treatmentFormData, setTreatmentFormData] = useState({
 type_of_treatment: '',
 status: 'scheduled',
@@ -117,7 +121,7 @@ e.preventDefault();
 setSubmittingVisit(true);
 try {
 if (!visitFormData.next_visit_date) {
-alert('Please select a visit date');
+showError('Please select a visit date');
 setSubmittingVisit(false);
 return;
 }
@@ -130,7 +134,10 @@ patient_payment_amount: visitFormData.patient_payment_amount ? parseInt(visitFor
 patient_payment_type: visitFormData.patient_payment_type || null,
 payment_note: visitFormData.payment_note || null
 };
-await visitsApi.create(payload);
+await handleApiCall(() => visitsApi.create(payload), {
+  successMessage: 'Visit added successfully!',
+  showSuccessNotification: true
+});
 setIsAddingVisit(false);
 setVisitFormData({
 next_visit_date: '',
@@ -141,10 +148,9 @@ patient_payment_type: 'cash',
 payment_note: ''
 });
 await loadData();
-alert('Visit added successfully!');
 } catch (error) {
 console.error('Error creating visit:', error);
-alert(error.response?.data?.detail || 'Error creating visit');
+// Error notification is handled by handleApiCall
 } finally {
 setSubmittingVisit(false);
 }
@@ -186,7 +192,7 @@ e.preventDefault();
 setSubmittingTreatment(true);
 try {
 if (!treatmentFormData.type_of_treatment) {
-alert('Please select a treatment type');
+showError('Please select a treatment type');
 setSubmittingTreatment(false);
 return;
 }
@@ -201,21 +207,25 @@ braces_type: treatmentFormData.braces_type || null,
 cap_type: treatmentFormData.cap_type || null
 };
 if (isEditingTreatment && editingTreatment) {
-await treatmentApi.update(editingTreatment.id, payload);
-alert('Treatment updated successfully!');
+await handleApiCall(() => treatmentApi.update(editingTreatment.id, payload), {
+  successMessage: 'Treatment updated successfully!',
+  showSuccessNotification: true
+});
 } else {
-await treatmentApi.create({
+await handleApiCall(() => treatmentApi.create({
 ...payload,
 patient: id,
 type_of_treatment: treatmentFormData.type_of_treatment
+}), {
+  successMessage: 'Treatment added successfully!',
+  showSuccessNotification: true
 });
-alert('Treatment added successfully!');
 }
 closeTreatmentModal();
 await loadData();
 } catch (error) {
 console.error('Error saving treatment:', error);
-alert(error.response?.data?.detail || 'Error saving treatment');
+// Error notification is handled by handleApiCall
 } finally {
 setSubmittingTreatment(false);
 }
@@ -434,12 +444,14 @@ window.open(prescription.pdf_url, '_blank');
 const handleDeletePrescription = async (prescription) => {
 if (!window.confirm('Delete this prescription? This action cannot be undone.')) return;
 try {
-await prescriptionApi.delete(prescription.id);
+await handleApiCall(() => prescriptionApi.delete(prescription.id), {
+  successMessage: 'Prescription deleted successfully.',
+  showSuccessNotification: true
+});
 setPrescriptions((prev) => prev.filter((item) => item.id !== prescription.id));
-alert('Prescription deleted successfully.');
 } catch (error) {
 console.error('Error deleting prescription:', error);
-alert(error.response?.data?.detail || 'Failed to delete prescription.');
+// Error notification is handled by handleApiCall
 }
 };
 useEffect(() => {
@@ -477,13 +489,17 @@ items: prescriptionItems.map(preparePrescriptionItemPayload),
 try {
 let savedPrescription = activePrescription;
 if (prescriptionModalMode === 'edit' && activePrescription) {
-const response = await prescriptionApi.update(activePrescription.id, payload);
+const response = await handleApiCall(() => prescriptionApi.update(activePrescription.id, payload), {
+  successMessage: 'Prescription updated successfully.',
+  showSuccessNotification: true
+});
 savedPrescription = response.data;
-alert('Prescription updated successfully.');
 } else {
-const response = await prescriptionApi.create(payload);
+const response = await handleApiCall(() => prescriptionApi.create(payload), {
+  successMessage: 'Prescription created successfully.',
+  showSuccessNotification: true
+});
 savedPrescription = response.data;
-alert('Prescription created successfully.');
 }
 await loadData();
 if (printAfterSave && savedPrescription) {
@@ -492,7 +508,7 @@ handlePrintPrescription(savedPrescription);
 closePrescriptionModal();
 } catch (error) {
 console.error('Error saving prescription:', error);
-alert(error.response?.data?.detail || 'Unable to save prescription.');
+// Error notification is handled by handleApiCall
 }
 };
 const loadPrescriptionData = async () => {
@@ -567,13 +583,15 @@ dental_history: patientFormData.dental_history || null,
 if (selectedUserId !== null) {
 payload.user = selectedUserId;
 }
-await patientApi.update(id, payload);
+await handleApiCall(() => patientApi.update(id, payload), {
+  successMessage: 'Patient updated successfully!',
+  showSuccessNotification: true
+});
 setIsEditingPatient(false);
 await loadData();
-alert('Patient updated successfully!');
 } catch (error) {
 console.error('Error updating patient:', error);
-alert(error.response?.data?.detail || 'Error updating patient');
+// Error notification is handled by handleApiCall
 } finally {
 setSubmittingPatient(false);
 }
@@ -1641,7 +1659,7 @@ return (
                         Add Visit
                      </button>
                      <button type="button" onClick={() =>
-                        alert('Upload images flow TBD')} className="inline-flex items-center gap-1 text-sm px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-100">
+                        showInfo('Upload images flow coming soon')} className="inline-flex items-center gap-1 text-sm px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-100">
                         <UploadCloud className="w-3.5 h-3.5" />
                         Upload Images
                      </button>

@@ -1,8 +1,112 @@
 import axios from 'axios';
-baseURL: import.meta.env.VITE_API_BASE_URL,
 
-console.log('check host url::-->>', import.meta.env.VITE_API_BASE_URL);
+// Error categorization helper
+const categorizeError = (error) => {
+  if (!error.response) {
+    return {
+      category: 'network',
+      message: 'Network error - please check your connection',
+      isRetryable: true
+    };
+  }
 
+  const status = error.response.status;
+  const data = error.response.data;
+
+  if (status === 401) {
+    return {
+      category: 'auth',
+      message: data?.detail || 'Authentication required',
+      isRetryable: false
+    };
+  }
+
+  if (status === 403) {
+    return {
+      category: 'permission',
+      message: data?.detail || 'Permission denied',
+      isRetryable: false
+    };
+  }
+
+  if (status === 400) {
+    return {
+      category: 'validation',
+      message: data?.detail || data?.error?.message || 'Invalid request data',
+      details: data?.error?.details,
+      isRetryable: false
+    };
+  }
+
+  if (status === 404) {
+    return {
+      category: 'not_found',
+      message: data?.detail || 'Resource not found',
+      isRetryable: false
+    };
+  }
+
+  if (status === 409) {
+    return {
+      category: 'conflict',
+      message: data?.detail || 'Resource conflict',
+      isRetryable: false
+    };
+  }
+
+  if (status === 413) {
+    return {
+      category: 'payload_too_large',
+      message: 'File too large',
+      isRetryable: false
+    };
+  }
+
+  if (status === 422) {
+    return {
+      category: 'unprocessable',
+      message: data?.detail || 'Unprocessable request',
+      isRetryable: false
+    };
+  }
+
+  if (status >= 500) {
+    return {
+      category: 'server',
+      message: 'Server error - please try again later',
+      isRetryable: true
+    };
+  }
+
+  return {
+    category: 'unknown',
+    message: data?.detail || 'An unexpected error occurred',
+    isRetryable: false
+  };
+};
+
+// Retry helper function
+const retryAsync = async (fn, maxRetries = 3, delay = 1000, backoff = 2) => {
+  let lastError;
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      const errorInfo = categorizeError(error);
+      
+      if (!errorInfo.isRetryable || attempt === maxRetries) {
+        throw error;
+      }
+      
+      // Wait before retrying with exponential backoff
+      await new Promise(resolve => setTimeout(resolve, delay * Math.pow(backoff, attempt)));
+    }
+  }
+  
+  throw lastError;
+};
 
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL, // 'http://127.0.0.1:8000/api' for local development
@@ -54,6 +158,13 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Attach error category to the error object
+    const errorInfo = categorizeError(error);
+    error.category = errorInfo.category;
+    error.userMessage = errorInfo.message;
+    error.details = errorInfo.details;
+    error.isRetryable = errorInfo.isRetryable;
+    
     // Check for CORS errors or network issues common on mobile
     if (error.code === 'ECONNABORTED' || error.message === 'Network Error') {
       console.error('Network error - check mobile connectivity and CORS settings');
@@ -77,5 +188,11 @@ apiClient.interceptors.response.use(
   }
 );
 
+// Enhanced API client with retry support
+export const apiClientWithRetry = (config) => {
+  const request = () => apiClient(config);
+  return retryAsync(request, 3, 1000, 2);
+};
 
+export { categorizeError, retryAsync };
 export default apiClient;
