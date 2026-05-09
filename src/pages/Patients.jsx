@@ -603,6 +603,12 @@ useEffect(() => {
     setItemSearchOpenId(null);
   };
 
+  const updatePrescriptionItem = (index, changes) => {
+    setPrescriptionItems((items) =>
+      items.map((item, idx) => (idx === index ? { ...item, ...changes } : item))
+    );
+  };
+
   const handleAddPrescriptionRow = () => {
     setPrescriptionItems(items => [
       ...items,
@@ -1173,18 +1179,6 @@ useEffect(() => {
                       placeholder="Describe treatment plan..."
                     />
                   </div>
-
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Treatment Notes</label>
-                    <textarea
-                      name="treatment_notes"
-                      value={treatmentFormData.treatment_notes}
-                      onChange={handleTreatmentChange}
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Add any additional notes..."
-                    />
-                  </div>
                 </div>
               )}
 
@@ -1334,83 +1328,157 @@ useEffect(() => {
                   </div>
 
                   {/* Medicines */}
-                  <div className="border-t pt-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-3">Medicines</label>
+                  <div className="bg-white rounded-2xl border p-4 space-y-4">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-semibold">Medicines</h3>
+                    </div>
                     <div className="space-y-3">
                       {prescriptionItems.map((item, index) => (
-                        <div key={item.localId} className="grid grid-cols-1 md:grid-cols-5 gap-2 border p-3 rounded-md bg-gray-50">
-                          {/* Medicine Search */}
+                        <div
+                          key={item.localId}
+                          className="grid md:grid-cols-6 gap-3 border rounded-2xl p-3 bg-slate-50"
+                        >
+                          {/* ===== MODERN MEDICINE DROPDOWN ===== */}
                           <div className="relative md:col-span-2">
                             <input
+                              ref={itemSearchOpenId === index ? newItemRef : null}
                               type="text"
                               placeholder="Search Medicine..."
-                              className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium shadow-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition"
                               value={item.search}
-                              onChange={(e) => handlePrescriptionItemChange(index, 'search', e.target.value)}
+                              onChange={(e) => {
+                                handlePrescriptionItemChange(index, 'search', e.target.value);
+                                setItemSearchOpenId(index);
+                              }}
                               onFocus={() => setItemSearchOpenId(index)}
+                              onKeyDown={(e) => {
+                                const filtered = getClinicMedicineOptions(item.search);
+                                if (!filtered.length) return;
+                                let current = filtered.findIndex(
+                                  (m) => String(m.id) === String(item.highlightedId)
+                                );
+                                if (e.key === 'ArrowDown') {
+                                  e.preventDefault();
+                                  const next = filtered[current + 1] || filtered[0];
+                                  updatePrescriptionItem(index, { highlightedId: next.id });
+                                }
+                                if (e.key === 'ArrowUp') {
+                                  e.preventDefault();
+                                  const prev = filtered[current - 1] || filtered[filtered.length - 1];
+                                  updatePrescriptionItem(index, { highlightedId: prev.id });
+                                }
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  const selected = filtered.find(
+                                    (m) => String(m.id) === String(item.highlightedId)
+                                  ) || filtered[0];
+                                  handleMedicineSelect(index, selected);
+                                }
+                                if (e.key === 'Escape') {
+                                  setItemSearchOpenId(null);
+                                }
+                              }}
                             />
+                            {/* Dropdown */}
                             {itemSearchOpenId === index && (
-                              <div className="absolute z-50 mt-1 w-full border border-gray-300 bg-white rounded-md shadow-lg max-h-32 overflow-y-auto">
-                                {getClinicMedicineOptions(item.search).length > 0 ? (
-                                  getClinicMedicineOptions(item.search).map((medicine) => (
-                                    <button
-                                      key={medicine.id}
-                                      type="button"
-                                      onMouseDown={(e) => {
-                                        e.preventDefault();
-                                        handleMedicineSelect(index, medicine);
-                                      }}
-                                      className="w-full px-3 py-2 text-left text-sm hover:bg-blue-50"
-                                    >
-                                      {medicine.medicine_name} ({medicine.strength || 'N/A'})
-                                    </button>
-                                  ))
-                                ) : (
-                                  <div className="px-3 py-2 text-sm text-gray-500">No medicine found</div>
-                                )}
+                              <div className="absolute z-50 mt-2 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl animate-in fade-in zoom-in-95">
+                                <div className="h-48 overflow-y-scroll py-2 custom-scrollbar">
+                                  {getClinicMedicineOptions(item.search).length > 0 ? (
+                                    getClinicMedicineOptions(item.search).map((medicine) => {
+                                      const active = String(item.highlightedId) === String(medicine.id);
+                                      return (
+                                        <button
+                                          key={medicine.id}
+                                          type="button"
+                                          onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            handleMedicineSelect(index, medicine);
+                                          }}
+                                          onMouseEnter={() =>
+                                            updatePrescriptionItem(index, {
+                                              highlightedId: medicine.id,
+                                            })
+                                          }
+                                          className={`w-full px-4 py-3 text-left transition ${
+                                            active
+                                              ? 'bg-blue-600 text-white'
+                                              : 'hover:bg-slate-50 text-slate-800'
+                                          }`}
+                                        >
+                                          <div className="font-semibold">
+                                            {medicine.medicine_name}
+                                          </div>
+                                          <div
+                                            className={`text-xs mt-1 ${
+                                              active
+                                                ? 'text-blue-100'
+                                                : 'text-slate-500'
+                                            }`}
+                                          >
+                                            {medicine.strength || 'Standard'} •{' '}
+                                            {medicine.form || 'Tablet'}
+                                          </div>
+                                        </button>
+                                      );
+                                    })
+                                  ) : (
+                                    <div className="px-4 py-4 text-sm text-slate-500 text-center">
+                                      No medicine found
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             )}
                           </div>
 
-                          {/* Quantity */}
                           <input
-                            type="text"
-                            placeholder="Qty"
+                            placeholder="Enter Quantity"
+                            className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium shadow-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition"
                             value={item.dosage}
                             onChange={(e) => handlePrescriptionItemChange(index, 'dosage', e.target.value)}
-                            className="px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                           />
 
-                          {/* Frequency */}
                           <select
+                            className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium shadow-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition"
                             value={item.frequency}
-                            onChange={(e) => handlePrescriptionItemChange(index, 'frequency', e.target.value)}
-                            className="px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            onChange={(e) =>
+                              handlePrescriptionItemChange(index, 'frequency', e.target.value)
+                            }
                           >
                             <option>1-0-1</option>
-                            <option>1-1-1</option>
                             <option>0-1-0</option>
+                            <option>1-0-0</option>
                             <option>0-0-1</option>
+                            <option>1-1-1</option>
+                            <option>1-1-0</option>
+                            <option>0-1-1</option>
                           </select>
 
-                          {/* Duration */}
                           <select
+                            className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium shadow-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition"
                             value={item.duration}
-                            onChange={(e) => handlePrescriptionItemChange(index, 'duration', e.target.value)}
-                            className="px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            onChange={(e) =>
+                              handlePrescriptionItemChange(index, 'duration', e.target.value)
+                            }
                           >
-                            {Array.from({ length: 15 }, (_, i) => i + 1).map((day) => (
-                              <option key={day} value={`${day} Day${day > 1 ? 's' : ''}`}>
-                                {day} Day{day > 1 ? 's' : ''}
-                              </option>
-                            ))}
+                            <option>1 Day</option>
+                            <option>2 Days</option>
+                            <option>3 Days</option>
+                            <option>4 Days</option>
+                            <option>5 Days</option>
+                            <option>6 Days</option>
+                            <option>7 Days</option>
+                            <option>10 Days</option>
+                            <option>14 Days</option>
+                            <option>21 Days</option>
+                            <option>30 Days</option>
                           </select>
 
                           {/* Remove Button */}
                           <button
                             type="button"
                             onClick={() => handleRemovePrescriptionRow(index)}
-                            className="px-2 py-1 bg-red-50 text-red-600 rounded-md hover:bg-red-100 text-sm"
+                            className="px-3 py-2 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 text-sm font-medium transition"
                           >
                             Remove
                           </button>
@@ -1420,7 +1488,7 @@ useEffect(() => {
                     <button
                       type="button"
                       onClick={handleAddPrescriptionRow}
-                      className="mt-3 px-3 py-2 bg-blue-100 text-blue-600 rounded-md text-sm font-medium hover:bg-blue-200"
+                      className="mt-3 px-4 py-2 bg-blue-100 text-blue-600 rounded-xl text-sm font-medium hover:bg-blue-200 transition"
                     >
                       + Add Medicine
                     </button>
