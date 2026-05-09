@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Search, Plus, Eye, Edit, Trash2, Phone, X } from 'lucide-react';
 import { patientApi } from '../api/patientApi';
@@ -6,7 +6,9 @@ import { clinicApi } from '../api/clinicApi';
 import { userApi } from '../api/userApi';
 import { treatmentApi } from '../api/treatmentApi';
 import { visitsApi } from '../api/visitsApi';
+import { prescriptionApi } from '../api/prescriptionApi';
 import { useAuth } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext';
 import Pagination from '../components/Pagination';
 import { formatDate } from '../utils/dateUtils';
 
@@ -55,7 +57,9 @@ const Patients = () => {
     planned_amount: '',
     initial_findings: '',
     treatment_plan: '',
-    treatment_notes: ''
+    treatment_notes: '',
+    braces_type: '',
+    cap_type: ''
   });
   const [visitFormData, setVisitFormData] = useState({
     next_visit_date: '',
@@ -66,9 +70,27 @@ const Patients = () => {
     payment_note: ''
   });
 
+  // Prescription State
+  const [prescriptionFormData, setPrescriptionFormData] = useState({
+    treatment: '',
+    complaints: '',
+    diagnosis: '',
+    instructions: '',
+    next_visit_date: '',
+    x_ray: false,
+  });
+  const [prescriptionItems, setPrescriptionItems] = useState([]);
+  const [clinicMedicines, setClinicMedicines] = useState([]);
+  const [itemSearchOpenId, setItemSearchOpenId] = useState(null);
+  const [createdPatientId, setCreatedPatientId] = useState(null);
+  const [createdTreatmentId, setCreatedTreatmentId] = useState(null);
+  const dropdownRef = useRef(null);
+  const newItemRef = useRef(null);
+
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const { showError, showSuccess } = useNotification();
 
   // Normalize API list responses
   const normalizeListResponse = (data) => {
@@ -165,6 +187,7 @@ useEffect(() => {
       fetchClinics();
       fetchDoctors();
       fetchTreatmentTypes();
+      fetchClinicMedicines();
       setCurrentStep(1);
       setStepError('');
     }
@@ -240,16 +263,25 @@ useEffect(() => {
   };
 
   const extractErrorMessage = (error) => {
-    const data = error?.response?.data;
-    if (!data) return error?.message || 'Unknown error';
+    const data = error?.response?.data || error;
+    if (!data) return 'Unknown error';
     if (typeof data === 'string') return data;
+    if (data?.error?.message) return data.error.message;
+    if (data?.message) return data.message;
     if (Array.isArray(data)) return data.join(', ');
-    return Object.entries(data)
-      .map(([field, value]) => {
-        const message = Array.isArray(value) ? value.join(', ') : value;
-        return `${field}: ${message}`;
-      })
-      .join(' | ');
+    if (typeof data === 'object') {
+      const nested = data.error || data.detail || data;
+      if (typeof nested === 'string') return nested;
+      if (nested?.message) return nested.message;
+      return Object.entries(nested)
+        .map(([field, value]) => {
+          if (Array.isArray(value)) return `${field}: ${value.join(', ')}`;
+          if (typeof value === 'object') return `${field}: ${JSON.stringify(value)}`;
+          return `${field}: ${value}`;
+        })
+        .join(' | ');
+    }
+    return String(data);
   };
 
   // Fetch doctors for dropdown
@@ -296,7 +328,9 @@ useEffect(() => {
       planned_amount: '',
       initial_findings: '',
       treatment_plan: '',
-      treatment_notes: ''
+      treatment_notes: '',
+      braces_type: '',
+      cap_type: ''
     });
     setVisitFormData({
       next_visit_date: '',
@@ -306,6 +340,18 @@ useEffect(() => {
       patient_payment_type: 'cash',
       payment_note: ''
     });
+    setPrescriptionFormData({
+      treatment: '',
+      complaints: '',
+      diagnosis: '',
+      instructions: '',
+      next_visit_date: '',
+      x_ray: false,
+    });
+    setPrescriptionItems([]);
+    setCreatedPatientId(null);
+    setCreatedTreatmentId(null);
+    setItemSearchOpenId(null);
   };
 
   const validateStep = (step) => {
@@ -324,8 +370,15 @@ useEffect(() => {
         return 'Please select the initial visit date.';
       }
     }
+    if (step === 4) {
+      if (prescriptionItems.length === 0) {
+        return 'Please add at least one medicine to the prescription.';
+      }
+    }
     return '';
   };
+
+  const selectedTreatmentTypeName = treatmentTypes.find((type) => String(type.id) === String(treatmentFormData.type_of_treatment))?.name || '';
 
   const handleNext = () => {
     const error = validateStep(currentStep);
@@ -334,7 +387,7 @@ useEffect(() => {
       return;
     }
     setStepError('');
-    setCurrentStep((prev) => Math.min(prev + 1, 3));
+    setCurrentStep((prev) => Math.min(prev + 1, 4));
   };
 
   const handlePrevious = () => {
@@ -344,70 +397,151 @@ useEffect(() => {
 
   const handleAddPatient = async (e) => {
     e.preventDefault();
-    if (currentStep < 3) {
-      handleNext();
-      return;
-    }
+    
+    // Handle step navigation
+    if (currentStep < 4) {
+      if (currentStep === 3) {
+        // At step 3, validate and create patient/treatment/visit, then go to step 4
+        const error = validateStep(currentStep);
+        if (error) {
+          setStepError(error);
+          return;
+        }
 
-    const error = validateStep(currentStep);
-    if (error) {
-      setStepError(error);
-      return;
-    }
+        setIsSubmitting(true);
+        try {
+          // Create patient
+          const patientPayload = serializePayload({
+            first_name: formData.first_name,
+            last_name: formData.last_name,
+            mobile: formData.mobile,
+            gender: formData.gender,
+            date_of_birth: formData.date_of_birth,
+            address: formData.address,
+            medical_history: formData.medical_history,
+            dental_history: formData.dental_history,
+            user: formData.user
+          });
 
-    setIsSubmitting(true);
+          const patientResponse = await patientApi.create(patientPayload);
+          const patientId = patientResponse.data.id;
+          setCreatedPatientId(patientId);
 
-    try {
-      const patientPayload = serializePayload({
-        first_name: formData.first_name,
-        last_name: formData.last_name,
-        mobile: formData.mobile,
-        gender: formData.gender,
-        date_of_birth: formData.date_of_birth,
-        address: formData.address,
-        medical_history: formData.medical_history,
-        dental_history: formData.dental_history,
-        user: formData.user
-      });
+          // Create treatment
+          const treatmentPayload = {
+            patient: patientId,
+            type_of_treatment: treatmentFormData.type_of_treatment,
+            status: treatmentFormData.status,
+            estimated_duration_months: treatmentFormData.estimated_duration_months || null,
+            planned_amount: treatmentFormData.planned_amount || null,
+            initial_findings: treatmentFormData.initial_findings,
+            treatment_plan: treatmentFormData.treatment_plan,
+            treatment_notes: treatmentFormData.treatment_notes,
+            braces_type: treatmentFormData.braces_type || null,
+            cap_type: treatmentFormData.cap_type || null
+          };
 
-      const patientResponse = await patientApi.create(patientPayload);
-      const patientId = patientResponse.data.id;
+          const treatmentResponse = await treatmentApi.create(serializePayload(treatmentPayload));
+          const treatmentId = treatmentResponse.data.id;
+          setCreatedTreatmentId(treatmentId);
 
-      const treatmentPayload = {
-        patient: patientId,
-        type_of_treatment: treatmentFormData.type_of_treatment,
-        status: treatmentFormData.status,
-        estimated_duration_months: treatmentFormData.estimated_duration_months || null,
-        planned_amount: treatmentFormData.planned_amount || null,
-        initial_findings: treatmentFormData.initial_findings,
-        treatment_plan: treatmentFormData.treatment_plan,
-        treatment_notes: treatmentFormData.treatment_notes
-      };
+          // Create visit
+          const visitPayload = serializePayload({
+            treatment: treatmentId,
+            next_visit_date: visitFormData.next_visit_date,
+            treatment_notes: visitFormData.treatment_notes,
+            patient_complaints: visitFormData.patient_complaints,
+            patient_payment_amount: visitFormData.patient_payment_amount || null,
+            patient_payment_type: visitFormData.patient_payment_type,
+            payment_note: visitFormData.payment_note
+          });
 
-      const treatmentResponse = await treatmentApi.create(serializePayload(treatmentPayload));
-      const treatmentId = treatmentResponse.data.id;
+          await visitsApi.create(visitPayload);
 
-      const visitPayload = serializePayload({
-        treatment: treatmentId,
-        next_visit_date: visitFormData.next_visit_date,
-        treatment_notes: visitFormData.treatment_notes,
-        patient_complaints: visitFormData.patient_complaints,
-        patient_payment_amount: visitFormData.patient_payment_amount || null,
-        patient_payment_type: visitFormData.patient_payment_type,
-        payment_note: visitFormData.payment_note
-      });
+          // Initialize prescription form with auto-filled data
+          setPrescriptionFormData(prev => ({
+            ...prev,
+            treatment: treatmentId,
+            complaints: visitFormData.patient_complaints || '',
+            next_visit_date: visitFormData.next_visit_date || ''
+          }));
 
-      await visitsApi.create(visitPayload);
+          // Initialize prescription items with one empty row
+          setPrescriptionItems([{
+            localId: Math.random().toString(36).substr(2, 9),
+            medicine: null,
+            custom_medicine_name: '',
+            search: '',
+            dosage: '',
+            frequency: '1-0-1',
+            duration: '7 Days',
+            before_after_food: 'after_food',
+            notes: '',
+            sequence: 1,
+            highlightedId: null
+          }]);
 
-      resetModal();
-      setShowAddModal(false);
-      fetchPatients(currentPage, searchTerm);
-    } catch (error) {
-      console.error('Error creating patient/treatment/visit:', error);
-      const message = extractErrorMessage(error);
-      setStepError(message);
-    } finally {
-      setIsSubmitting(false);
+          // Move to step 4
+          setCurrentStep(4);
+          setStepError('');
+        } catch (error) {
+          console.error('Error creating patient/treatment/visit:', error);
+          const message = extractErrorMessage(error);
+          setStepError(message);
+        } finally {
+          setIsSubmitting(false);
+        }
+      } else {
+        // Steps 1-2: just navigate
+        handleNext();
+      }
+    } else {
+      // Step 4: Create prescription
+      const error = validateStep(currentStep);
+      if (error) {
+        setStepError(error);
+        return;
+      }
+
+      setIsSubmitting(true);
+      try {
+        // Prepare prescription items
+        const prescriptionItemsPayload = prescriptionItems.map((item, index) => ({
+          medicine: item.medicine?.id ?? null,
+          custom_medicine_name: item.custom_medicine_name || null,
+          dosage: item.dosage,
+          frequency: item.frequency,
+          duration: item.duration,
+          before_after_food: item.before_after_food,
+          notes: item.notes || null,
+          sequence: index + 1
+        }));
+
+        // Create prescription
+        const prescriptionPayload = {
+          patient: createdPatientId,
+          treatment: createdTreatmentId || prescriptionFormData.treatment,
+          complaints: prescriptionFormData.complaints || null,
+          diagnosis: prescriptionFormData.diagnosis || null,
+          instructions: prescriptionFormData.instructions || null,
+          next_visit_date: prescriptionFormData.next_visit_date || visitFormData.next_visit_date,
+          x_ray: prescriptionFormData.x_ray || false,
+          items: prescriptionItemsPayload
+        };
+
+        await prescriptionApi.create(prescriptionPayload);
+        
+        showSuccess('Patient, treatment, visit, and prescription created successfully!');
+        resetModal();
+        setShowAddModal(false);
+        fetchPatients(currentPage, searchTerm);
+      } catch (error) {
+        console.error('Error creating prescription:', error);
+        const message = extractErrorMessage(error);
+        setStepError(message);
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -434,6 +568,72 @@ useEffect(() => {
       ...prev,
       [name]: value
     }));
+  };
+
+  // Prescription Helper Functions
+  const getClinicMedicineOptions = (query) => {
+    if (!query) return clinicMedicines;
+    return clinicMedicines.filter((medicine) => {
+      const searchText = `${medicine.medicine_name} ${medicine.strength || ''} ${medicine.form || ''}`.toLowerCase();
+      return searchText.includes(query.toLowerCase());
+    });
+  };
+
+  const handlePrescriptionItemChange = (index, field, value) => {
+    setPrescriptionItems(items =>
+      items.map((item, idx) =>
+        idx === index ? { ...item, [field]: value } : item
+      )
+    );
+  };
+
+  const handleMedicineSelect = (index, medicine) => {
+    setPrescriptionItems(items =>
+      items.map((item, idx) =>
+        idx === index
+          ? {
+              ...item,
+              medicine,
+              search: medicine.medicine_name,
+              highlightedId: null
+            }
+          : item
+      )
+    );
+    setItemSearchOpenId(null);
+  };
+
+  const handleAddPrescriptionRow = () => {
+    setPrescriptionItems(items => [
+      ...items,
+      {
+        localId: Math.random().toString(36).substr(2, 9),
+        medicine: null,
+        custom_medicine_name: '',
+        search: '',
+        dosage: '',
+        frequency: '1-0-1',
+        duration: '7 Days',
+        before_after_food: 'after_food',
+        notes: '',
+        sequence: items.length + 1,
+        highlightedId: null
+      }
+    ]);
+  };
+
+  const handleRemovePrescriptionRow = (index) => {
+    setPrescriptionItems(items => items.filter((_, idx) => idx !== index));
+  };
+
+  // Fetch clinic medicines when modal opens
+  const fetchClinicMedicines = async () => {
+    try {
+      const response = await prescriptionApi.getClinicMedicines();
+      setClinicMedicines(response.data?.results || response.data || []);
+    } catch (error) {
+      console.error('Error fetching clinic medicines:', error);
+    }
   };
 
   // ✅ DELETE FUNCTION
@@ -681,13 +881,15 @@ useEffect(() => {
           <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <div>
-                <h3 className="text-lg font-medium text-gray-900">Step {currentStep}: {currentStep === 1 ? 'Patient Information' : currentStep === 2 ? 'Treatment Details' : 'Initial Visit'}</h3>
+                <h3 className="text-lg font-medium text-gray-900">Step {currentStep}: {currentStep === 1 ? 'Patient Information' : currentStep === 2 ? 'Treatment Details' : currentStep === 3 ? 'Initial Visit' : 'Create Prescription'}</h3>
                 <p className="text-sm text-gray-500 mt-1">
                   {currentStep === 1
                     ? 'Fill in the patient information'
                     : currentStep === 2
                       ? 'Add treatment details'
-                      : 'Schedule the initial visit'}
+                      : currentStep === 3
+                        ? 'Schedule the initial visit'
+                        : 'Add medicines for the patient'}
                 </p>
               </div>
               <button
@@ -699,14 +901,14 @@ useEffect(() => {
             </div>
 
             <div className="mb-6">
-              <div className="grid grid-cols-3 gap-3 items-center">
-                {[1, 2, 3].map((step) => (
+              <div className="grid grid-cols-4 gap-3 items-center">
+                {[1, 2, 3, 4].map((step) => (
                   <div key={step} className="flex flex-col items-center text-center gap-2">
                     <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold ${currentStep >= step ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}`}>
                       {step}
                     </div>
                     <span className="text-xs text-gray-500">
-                      {step === 1 ? 'Patient' : step === 2 ? 'Treatment' : 'Visit'}
+                      {step === 1 ? 'Patient' : step === 2 ? 'Treatment' : step === 3 ? 'Visit' : 'Rx'}
                     </span>
                   </div>
                 ))}
@@ -714,7 +916,7 @@ useEffect(() => {
               <div className="mt-3 h-1 bg-gray-200 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-blue-600 rounded-full transition-all duration-300"
-                  style={{ width: `${((currentStep - 1) / 2) * 100}%` }}
+                  style={{ width: `${((currentStep - 1) / 3) * 100}%` }}
                 />
               </div>
             </div>
@@ -858,7 +1060,7 @@ useEffect(() => {
                       value={treatmentFormData.type_of_treatment}
                       onChange={handleTreatmentChange}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                     >
                       <option value="">Select Treatment Type</option>
                       {treatmentTypes.map((type) => (
@@ -875,7 +1077,7 @@ useEffect(() => {
                       name="status"
                       value={treatmentFormData.status}
                       onChange={handleTreatmentChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                     >
                       <option value="scheduled">Scheduled</option>
                       <option value="ongoing">Ongoing</option>
@@ -885,15 +1087,54 @@ useEffect(() => {
                     </select>
                   </div>
 
+                  {(selectedTreatmentTypeName.toLowerCase().includes('ortho') || selectedTreatmentTypeName.toLowerCase().includes('braces')) && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Braces Type</label>
+                      <select
+                        name="braces_type"
+                        value={treatmentFormData.braces_type}
+                        onChange={handleTreatmentChange}
+                        className="mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Select Type</option>
+                        <option value="metal">Metal</option>
+                        <option value="ceramic">Ceramic</option>
+                      </select>
+                    </div>
+                  )}
+
+                  {selectedTreatmentTypeName.toLowerCase().includes('root canal') && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Cap Type</label>
+                      <select
+                        name="cap_type"
+                        value={treatmentFormData.cap_type}
+                        onChange={handleTreatmentChange}
+                        className="mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Select Type</option>
+                        <option value="metal">Metal</option>
+                        <option value="ceramic">Ceramic</option>
+                        <option value="cadcam">CAD/CAM</option>
+                        <option value="zirconia">Zirconia</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                  )}
+
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Estimated Duration (Months)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {selectedTreatmentTypeName.toLowerCase().includes('root canal')
+                        ? 'Estimated Visits'
+                        : 'Estimated Duration (Months)'}
+                    </label>
                     <input
                       type="number"
                       name="estimated_duration_months"
                       value={treatmentFormData.estimated_duration_months}
                       onChange={handleTreatmentChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="e.g., 3"
+                      className="mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      placeholder={selectedTreatmentTypeName.toLowerCase().includes('root canal') ? 'e.g., 5' : 'e.g., 3'}
                     />
                   </div>
 
@@ -1026,6 +1267,167 @@ useEffect(() => {
                 </div>
               )}
 
+              {currentStep === 4 && (
+                <div className="space-y-4 max-h-[50vh] overflow-y-auto">
+                  {/* Prescription Form Header */}
+                  <div className="bg-blue-50 p-3 rounded-lg mb-4">
+                    <p className="text-sm text-gray-700"><strong>Patient:</strong> {formData.first_name} {formData.last_name}</p>
+                    <p className="text-sm text-gray-700"><strong>Treatment:</strong> {treatmentTypes.find(t => String(t.id) === String(treatmentFormData.type_of_treatment))?.name || 'N/A'}</p>
+                  </div>
+
+                  {/* Treatment Dropdown */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Treatment (Auto-filled)</label>
+                    <input
+                      type="text"
+                      disabled
+                      value={treatmentTypes.find(t => String(t.id) === String(treatmentFormData.type_of_treatment))?.name || ''}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-600"
+                    />
+                  </div>
+
+                  {/* Patient Complaints */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Patient Complaints</label>
+                    <textarea
+                      value={prescriptionFormData.complaints}
+                      onChange={(e) => setPrescriptionFormData(prev => ({...prev, complaints: e.target.value}))}
+                      rows={2}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter patient complaints..."
+                    />
+                  </div>
+
+                  {/* Diagnosis */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Diagnosis</label>
+                    <textarea
+                      value={prescriptionFormData.diagnosis}
+                      onChange={(e) => setPrescriptionFormData(prev => ({...prev, diagnosis: e.target.value}))}
+                      rows={2}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter diagnosis..."
+                    />
+                  </div>
+
+                  {/* Instructions */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Instructions</label>
+                    <textarea
+                      value={prescriptionFormData.instructions}
+                      onChange={(e) => setPrescriptionFormData(prev => ({...prev, instructions: e.target.value}))}
+                      rows={2}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter instructions..."
+                    />
+                  </div>
+
+                  {/* Next Visit Date */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Next Visit Date</label>
+                    <input
+                      type="date"
+                      value={prescriptionFormData.next_visit_date || visitFormData.next_visit_date}
+                      onChange={(e) => setPrescriptionFormData(prev => ({...prev, next_visit_date: e.target.value}))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  {/* Medicines */}
+                  <div className="border-t pt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-3">Medicines</label>
+                    <div className="space-y-3">
+                      {prescriptionItems.map((item, index) => (
+                        <div key={item.localId} className="grid grid-cols-1 md:grid-cols-5 gap-2 border p-3 rounded-md bg-gray-50">
+                          {/* Medicine Search */}
+                          <div className="relative md:col-span-2">
+                            <input
+                              type="text"
+                              placeholder="Search Medicine..."
+                              className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              value={item.search}
+                              onChange={(e) => handlePrescriptionItemChange(index, 'search', e.target.value)}
+                              onFocus={() => setItemSearchOpenId(index)}
+                            />
+                            {itemSearchOpenId === index && (
+                              <div className="absolute z-50 mt-1 w-full border border-gray-300 bg-white rounded-md shadow-lg max-h-32 overflow-y-auto">
+                                {getClinicMedicineOptions(item.search).length > 0 ? (
+                                  getClinicMedicineOptions(item.search).map((medicine) => (
+                                    <button
+                                      key={medicine.id}
+                                      type="button"
+                                      onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        handleMedicineSelect(index, medicine);
+                                      }}
+                                      className="w-full px-3 py-2 text-left text-sm hover:bg-blue-50"
+                                    >
+                                      {medicine.medicine_name} ({medicine.strength || 'N/A'})
+                                    </button>
+                                  ))
+                                ) : (
+                                  <div className="px-3 py-2 text-sm text-gray-500">No medicine found</div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Quantity */}
+                          <input
+                            type="text"
+                            placeholder="Qty"
+                            value={item.dosage}
+                            onChange={(e) => handlePrescriptionItemChange(index, 'dosage', e.target.value)}
+                            className="px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+
+                          {/* Frequency */}
+                          <select
+                            value={item.frequency}
+                            onChange={(e) => handlePrescriptionItemChange(index, 'frequency', e.target.value)}
+                            className="px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option>1-0-1</option>
+                            <option>1-1-1</option>
+                            <option>0-1-0</option>
+                            <option>0-0-1</option>
+                          </select>
+
+                          {/* Duration */}
+                          <select
+                            value={item.duration}
+                            onChange={(e) => handlePrescriptionItemChange(index, 'duration', e.target.value)}
+                            className="px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            {Array.from({ length: 15 }, (_, i) => i + 1).map((day) => (
+                              <option key={day} value={`${day} Day${day > 1 ? 's' : ''}`}>
+                                {day} Day{day > 1 ? 's' : ''}
+                              </option>
+                            ))}
+                          </select>
+
+                          {/* Remove Button */}
+                          <button
+                            type="button"
+                            onClick={() => handleRemovePrescriptionRow(index)}
+                            className="px-2 py-1 bg-red-50 text-red-600 rounded-md hover:bg-red-100 text-sm"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAddPrescriptionRow}
+                      className="mt-3 px-3 py-2 bg-blue-100 text-blue-600 rounded-md text-sm font-medium hover:bg-blue-200"
+                    >
+                      + Add Medicine
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="flex justify-between gap-3 pt-4 border-t">
                 <button
                   type="button"
@@ -1050,7 +1452,9 @@ useEffect(() => {
                     ? 'Saving...'
                     : currentStep < 3
                       ? 'Next'
-                      : 'Create Patient, Treatment & Visit'}
+                      : currentStep === 3
+                        ? 'Create & Continue for Prescription'
+                        : 'Create Prescription'}
                 </button>
               </div>
             </form>
