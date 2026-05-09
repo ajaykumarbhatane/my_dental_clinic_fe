@@ -8,6 +8,7 @@ const Settings = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [originalUserData, setOriginalUserData] = useState({});
   const [userData, setUserData] = useState({
     first_name: '',
     last_name: '',
@@ -15,6 +16,8 @@ const Settings = () => {
     phone_number: '',
     role: '',
     joining_date: '',
+    qualification: '',
+    registration_number: '',
   });
 
   useEffect(() => {
@@ -34,14 +37,18 @@ const Settings = () => {
       if (users.length > 0) {
         // Use the first user (current logged-in user)
         const user = users[0];
-        setUserData({
+        const userData = {
           first_name: user.first_name || '',
           last_name: user.last_name || '',
           email: user.email || '',
           phone_number: user.phone_number || '',
           role: user.role || '',
           joining_date: user.joining_date || '',
-        });
+          qualification: user.qualification || '',
+          registration_number: user.registration_number || '',
+        };
+        setUserData(userData);
+        setOriginalUserData(userData);
       }
     } catch (err) {
       console.error('Error fetching user profile:', err);
@@ -56,22 +63,29 @@ const Settings = () => {
       setLoading(true);
       setError(null);
       
-      // Update user profile
       // Get user ID - in a real app, store this from login
       const allUsers = await userApi.getAll();
       const users = allUsers.data?.results || allUsers.data || [];
       const currentUser = users[0];
       
       if (currentUser?.id) {
-        await userApi.update(currentUser.id, {
-          first_name: userData.first_name,
-          last_name: userData.last_name,
-          email: userData.email,
-          phone_number: userData.phone_number,
+        // Only send fields that have changed
+        const changedFields = {};
+        Object.keys(userData).forEach(key => {
+          if (userData[key] !== originalUserData[key]) {
+            changedFields[key] = userData[key];
+          }
         });
-        setIsEditing(false);
-        setSuccess(true);
-        setTimeout(() => setSuccess(false), 3000);
+        
+        if (Object.keys(changedFields).length > 0) {
+          await userApi.update(currentUser.id, changedFields);
+          setOriginalUserData(userData); // Update original data with new values
+          setIsEditing(false);
+          setSuccess(true);
+          setTimeout(() => setSuccess(false), 3000);
+        } else {
+          setIsEditing(false); // No changes made
+        }
       }
     } catch (err) {
       console.error('Error saving profile:', err);
@@ -217,6 +231,42 @@ const Settings = () => {
                 ) : (
                   <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 font-medium">
                     {userData.phone_number || 'Not Set'}
+                  </div>
+                )}
+              </div>
+
+              {/* Qualification */}
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Qualification</label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={userData.qualification}
+                    onChange={(e) => handleInputChange('qualification', e.target.value)}
+                    placeholder="e.g., BDS, MDS Orthodontics"
+                    className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
+                  />
+                ) : (
+                  <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 font-medium">
+                    {userData.qualification || 'Not Set'}
+                  </div>
+                )}
+              </div>
+
+              {/* Registration Number */}
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Registration Number</label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={userData.registration_number}
+                    onChange={(e) => handleInputChange('registration_number', e.target.value)}
+                    placeholder="Dental/Medical registration number"
+                    className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
+                  />
+                ) : (
+                  <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 font-medium">
+                    {userData.registration_number || 'Not Set'}
                   </div>
                 )}
               </div>
