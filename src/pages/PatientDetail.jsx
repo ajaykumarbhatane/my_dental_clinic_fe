@@ -405,13 +405,24 @@ const handleEditPrescription = (prescription) => {
 openPrescriptionModal('edit', prescription);
 };
 const handlePrintPrescription = (prescription) => {
-const medicines = (prescription.items || []).map((item) => {
-const medicineLabel = item.medicine_name || '';
-return `
+  if (prescription.pdf_url) {
+    // Open PDF in new window and trigger print
+    const printWindow = window.open(prescription.pdf_url, '_blank');
+    if (printWindow) {
+      // Wait for PDF to load then print
+      printWindow.onload = () => {
+        printWindow.print();
+      };
+    }
+  } else {
+    // Fallback to HTML print if PDF not available
+    const medicines = (prescription.items || []).map((item) => {
+      const medicineLabel = item.medicine_name || '';
+      return `
 <li>${medicineLabel || item.custom_medicine_name || 'Custom medicine'} - ${item.dosage || ''} - ${item.frequency || ''} - ${item.duration || ''}</li>
 `;
-}).join('');
-const content = `
+    }).join('');
+    const content = `
 <html>
    <head>
       <title>Prescription ${prescription.id}</title>
@@ -428,13 +439,14 @@ const content = `
    </body>
 </html>
 `;
-const printWindow = window.open('', '_blank');
-if (printWindow) {
-printWindow.document.write(content);
-printWindow.document.close();
-printWindow.focus();
-printWindow.print();
-}
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(content);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+    }
+  }
 };
 const handleViewPDF = (prescription) => {
 if (prescription.pdf_url) {
@@ -489,13 +501,13 @@ items: prescriptionItems.map(preparePrescriptionItemPayload),
 try {
 let savedPrescription = activePrescription;
 if (prescriptionModalMode === 'edit' && activePrescription) {
-const response = await handleApiCall(() => prescriptionApi.update(activePrescription.id, payload), {
+const response = await handleApiCall(() => prescriptionApi.update(activePrescription.id, payload, printAfterSave), {
   successMessage: 'Prescription updated successfully.',
   showSuccessNotification: true
 });
 savedPrescription = response.data;
 } else {
-const response = await handleApiCall(() => prescriptionApi.create(payload), {
+const response = await handleApiCall(() => prescriptionApi.create(payload, printAfterSave), {
   successMessage: 'Prescription created successfully.',
   showSuccessNotification: true
 });
@@ -1225,29 +1237,29 @@ return (
             {/* TEXT AREA GRID */}
             <div className="grid md:grid-cols-2 gap-5">
                <div>
-                  <label className="label-ui">Complaints</label>
+                  {/* <label className="label-ui">Complaints</label> */}
                   <textarea rows="4"
                      className="input-ui resize-none"
-                     placeholder="Patient complaints"
+                     placeholder="Enter Patient complaints"
                      value={prescriptionFormData.complaints}
                      onChange={(e)=>handlePrescriptionFieldChange('complaints',e.target.value)}
                   />
                </div>
                <div>
-                  <label className="label-ui">Diagnosis</label>
+                  {/* <label className="label-ui">Diagnosis</label> */}
                   <textarea rows="4"
                      className="input-ui resize-none"
-                     placeholder="Diagnosis"
+                     placeholder="Enter Diagnosis"
                      value={prescriptionFormData.diagnosis}
                      onChange={(e)=>handlePrescriptionFieldChange('diagnosis',e.target.value)}
                   />
                </div>
             </div>
             <div>
-               <label className="label-ui">Instructions</label>
+               {/* <label className="label-ui">Instructions</label> */}
                <textarea rows="3"
                   className="input-ui resize-none"
-                  placeholder="Instructions"
+                  placeholder="Enter Instructions"
                   value={prescriptionFormData.instructions}
                   onChange={(e)=>handlePrescriptionFieldChange('instructions',e.target.value)}
                />
@@ -1359,7 +1371,7 @@ return (
                      </div>
                      )}
                   </div>
-                  <input placeholder="Quantity" className="input-ui" 
+                  <input placeholder="Enter Quantity" className="input-ui" 
                      value={item.dosage}
                      onChange={(e) => handlePrescriptionItemChange(index, 'dosage', e.target.value)}
                   />
@@ -1376,10 +1388,30 @@ return (
                      <option>1-1-0</option>
                      <option>0-1-1</option>
                   </select>
-                  <input placeholder="5 Days" className="input-ui" 
+
+
+                  <select className="input-ui"
                      value={item.duration}
-                     onChange={(e) => handlePrescriptionItemChange(index, 'duration', e.target.value)}
-                  />
+                     onChange={(e) =>
+                     handlePrescriptionItemChange(index, 'duration', e.target.value)}
+                     >
+                     <option>1 Day</option>
+                     <option>2 Days</option>
+                     <option>3 Days</option>
+                     <option>4 Days</option>
+                     <option>5 Days</option>
+                     <option>6 Days</option>
+                     <option>7 Days</option>
+                     <option>8 Days</option>
+                     <option>9 Days</option>
+                     <option>10 Days</option>
+                     <option>11 Days</option>
+                     <option>12 Days</option>
+                     <option>13 Days</option>
+                     <option>14 Days</option>
+                     <option>15 Days</option>
+                  </select>
+
                   <select className="input-ui"
                      value={item.before_after_food}
                      onChange={(e) =>
@@ -1392,10 +1424,10 @@ return (
                   </select>
                   <button
                      type="button"
-                     onClick={()=>handleRemovePrescriptionRow(index)}
-                  className="bg-red-50 text-red-600 rounded-xl px-3"
-                  >
-                  Delete
+                     onClick={() => handleRemovePrescriptionRow(index)}
+                     className="flex items-center justify-center h-10 w-10 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition"
+                     >
+                     <Trash2 className="w-4 h-4" />
                   </button>
                </div>
                ))}
@@ -1432,12 +1464,14 @@ return (
          </button>
          <div className="flex gap-3">
             <button
+               type="button"
                className="px-5 py-3 rounded-xl bg-gray-100"
                onClick={(e) => handleSavePrescription(e, false)}
             >
             Save Draft
             </button>
             <button
+               type="button"
                className="px-6 py-3 rounded-xl bg-blue-600 text-white font-semibold"
                onClick={(e) => handleSavePrescription(e, true)}
             >
