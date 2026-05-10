@@ -529,8 +529,20 @@ useEffect(() => {
           items: prescriptionItemsPayload
         };
 
-        await prescriptionApi.create(prescriptionPayload);
-        
+        const printWindow = window.open('', '_blank');
+        const response = await prescriptionApi.create(prescriptionPayload, true);
+        const createdPrescription = response.data;
+
+        if (createdPrescription?.pdf_url) {
+          if (printWindow) {
+            printWindow.location.href = createdPrescription.pdf_url;
+          } else {
+            window.open(createdPrescription.pdf_url, '_blank');
+          }
+        } else if (printWindow) {
+          printWindow.close();
+        }
+
         showSuccess('Patient, treatment, visit, and prescription created successfully!');
         resetModal();
         setShowAddModal(false);
@@ -1336,7 +1348,7 @@ useEffect(() => {
                       {prescriptionItems.map((item, index) => (
                         <div
                           key={item.localId}
-                          className="grid md:grid-cols-6 gap-3 border rounded-2xl p-3 bg-slate-50"
+                          className="grid grid-cols-1 md:grid-cols-[2fr,1fr,1fr,1fr,1fr,auto] gap-3 border rounded-2xl p-3 bg-slate-50 items-center"
                         >
                           {/* ===== MODERN MEDICINE DROPDOWN ===== */}
                           <div className="relative md:col-span-2">
@@ -1433,13 +1445,13 @@ useEffect(() => {
 
                           <input
                             placeholder="Enter Quantity"
-                            className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium shadow-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition"
+                            className="input-ui min-w-0"
                             value={item.dosage}
                             onChange={(e) => handlePrescriptionItemChange(index, 'dosage', e.target.value)}
                           />
 
                           <select
-                            className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium shadow-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition"
+                            className="input-ui min-w-0"
                             value={item.frequency}
                             onChange={(e) =>
                               handlePrescriptionItemChange(index, 'frequency', e.target.value)
@@ -1455,7 +1467,7 @@ useEffect(() => {
                           </select>
 
                           <select
-                            className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium shadow-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition"
+                            className="input-ui min-w-0"
                             value={item.duration}
                             onChange={(e) =>
                               handlePrescriptionItemChange(index, 'duration', e.target.value)
@@ -1468,19 +1480,35 @@ useEffect(() => {
                             <option>5 Days</option>
                             <option>6 Days</option>
                             <option>7 Days</option>
+                            <option>8 Days</option>
+                            <option>9 Days</option>
                             <option>10 Days</option>
+                            <option>11 Days</option>
+                            <option>12 Days</option>
+                            <option>13 Days</option>
                             <option>14 Days</option>
-                            <option>21 Days</option>
-                            <option>30 Days</option>
+                            <option>15 Days</option>
                           </select>
 
-                          {/* Remove Button */}
+                          <select
+                            className="input-ui min-w-0"
+                            value={item.before_after_food}
+                            onChange={(e) =>
+                              handlePrescriptionItemChange(index, 'before_after_food', e.target.value)
+                            }
+                          >
+                            <option value="after_food">After Food</option>
+                            <option value="before_food">Before Food</option>
+                            <option value="with_food">With Food</option>
+                            <option value="anytime">Anytime</option>
+                          </select>
+
                           <button
                             type="button"
                             onClick={() => handleRemovePrescriptionRow(index)}
-                            className="px-3 py-2 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 text-sm font-medium transition"
+                            className="flex items-center justify-center h-10 w-10 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition"
                           >
-                            Remove
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       ))}
@@ -1488,7 +1516,7 @@ useEffect(() => {
                     <button
                       type="button"
                       onClick={handleAddPrescriptionRow}
-                      className="mt-3 px-4 py-2 bg-blue-100 text-blue-600 rounded-xl text-sm font-medium hover:bg-blue-200 transition"
+                      className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm"
                     >
                       + Add Medicine
                     </button>
