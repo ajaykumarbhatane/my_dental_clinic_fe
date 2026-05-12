@@ -690,21 +690,10 @@ useEffect(() => {
     <div className="h-[calc(100vh-80px)] flex flex-col space-y-4">
 
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-5 py-2.5 rounded-lg flex items-center gap-2 text-sm shadow hover:shadow-lg transition-shadow"
-        >
-          <Plus className="w-4 h-4" />
-          Add Patient
-        </button>
-      </div>
-
-      {/* 🔥 FULL WIDTH SEARCH + HEADER */}
-<div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-
-  {/* LEFT: Search */}
-  <div className="relative w-full lg:flex-1">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-4 w-full">
+          {/* LEFT: Search */}
+          <div className="relative w-full lg:flex-1">
     <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
 
     <input
@@ -740,7 +729,6 @@ useEffect(() => {
     >
       <option value="">All Treatments</option>
       {filterTreatments.map((treatment) => (
-        // console.log('Available treatments for filter:', treatment),
         <option key={treatment.id} value={treatment.id}>
           {treatment.name}
         </option>
@@ -764,6 +752,14 @@ useEffect(() => {
     </select>
   </div>
 
+  <button
+    onClick={() => setShowAddModal(true)}
+    className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-5 py-2.5 rounded-lg flex items-center gap-2 text-sm shadow hover:shadow-lg transition-shadow w-full lg:w-auto"
+  >
+    <Plus className="w-4 h-4" />
+    Add Patient
+  </button>
+  </div>
 </div>
 
       {/* Table Container */}
@@ -779,6 +775,7 @@ useEffect(() => {
                 <th className="px-5 py-3 text-left font-semibold">Patient</th>
                 <th className="px-5 py-3 text-left font-semibold">Mobile</th>
                 <th className="px-5 py-3 text-left font-semibold">Doctor</th>
+                <th className="px-5 py-3 text-left font-semibold">Treatments</th>
                 <th className="px-5 py-3 text-left font-semibold">Date</th>
                 <th className="px-5 py-3 text-left font-semibold">Actions</th>
               </tr>
@@ -788,13 +785,13 @@ useEffect(() => {
             <tbody className="divide-y">
               {loading ? (
                 <tr>
-                  <td colSpan="5" className="text-center py-6 text-gray-500">
+                  <td colSpan="6" className="text-center py-6 text-gray-500">
                     Loading patients...
                   </td>
                 </tr>
               ) : patients.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="text-center py-6 text-gray-400">
+                  <td colSpan="6" className="text-center py-6 text-gray-400">
                     No patients found
                   </td>
                 </tr>
@@ -843,6 +840,11 @@ useEffect(() => {
                   {/* Doctor */}
                   <td className="px-5 py-3 text-gray-600">
                     {patient.assigned_doctor || 'N/A'}
+                  </td>
+
+                  {/* Treatments */}
+                  <td className="px-5 py-3 text-gray-600">
+                    {patient.treatment_summary || (patient.treatment_count > 0 ? `${patient.treatment_count} treatments` : 'No treatments')}
                   </td>
 
                   {/* Date */}
