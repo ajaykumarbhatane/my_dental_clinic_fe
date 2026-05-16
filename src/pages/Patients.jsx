@@ -557,6 +557,19 @@ useEffect(() => {
     }
   };
 
+  const handleSkipPrescription = () => {
+    if (!createdPatientId) {
+      setStepError('Cannot skip prescription before the patient and visit are created.');
+      return;
+    }
+
+    setStepError('');
+    showSuccess('Patient, treatment, and visit created successfully without a prescription.');
+    resetModal();
+    setShowAddModal(false);
+    fetchPatients(currentPage, searchTerm);
+  };
+
   // Handle form input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -1277,12 +1290,6 @@ useEffect(() => {
 
               {currentStep === 4 && (
                 <div className="space-y-4 max-h-[50vh] overflow-y-auto">
-                  {/* Prescription Form Header */}
-                  <div className="bg-blue-50 p-3 rounded-lg mb-4">
-                    <p className="text-sm text-gray-700"><strong>Patient:</strong> {formData.first_name} {formData.last_name}</p>
-                    <p className="text-sm text-gray-700"><strong>Treatment:</strong> {treatmentTypes.find(t => String(t.id) === String(treatmentFormData.type_of_treatment))?.name || 'N/A'}</p>
-                  </div>
-
                   {/* Treatment Dropdown */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Treatment (Auto-filled)</label>
@@ -1526,7 +1533,7 @@ useEffect(() => {
                 </div>
               )}
 
-              <div className="flex justify-between gap-3 pt-4 border-t">
+              <div className="flex flex-col sm:flex-row justify-between gap-3 pt-4 border-t">
                 <button
                   type="button"
                   onClick={() => {
@@ -1541,19 +1548,31 @@ useEffect(() => {
                 >
                   {currentStep === 1 ? 'Cancel' : 'Previous'}
                 </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isSubmitting
-                    ? 'Saving...'
-                    : currentStep < 3
-                      ? 'Next'
-                      : currentStep === 3
-                        ? 'Create & Continue for Prescription'
-                        : 'Create Prescription'}
-                </button>
+                <div className="flex items-center gap-3 justify-end">
+                  {currentStep === 4 && (
+                    <button
+                      type="button"
+                      onClick={handleSkipPrescription}
+                      disabled={isSubmitting}
+                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Skip Prescription
+                    </button>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting
+                      ? 'Saving...'
+                      : currentStep < 3
+                        ? 'Next'
+                        : currentStep === 3
+                          ? 'Create & Continue for Prescription'
+                          : 'Create Prescription'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
