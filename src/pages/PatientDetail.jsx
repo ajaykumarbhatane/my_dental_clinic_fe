@@ -80,10 +80,10 @@ return 'N/A';
 };
 const FREQUENCY_OPTIONS = ['1-0-1', '1-1-1', '0-1-0', '0-0-1', 'SOS', 'Custom'];
 const FOOD_TIMING_OPTIONS = [
-{ value: 'before_food', label: 'Before Food' },
-{ value: 'after_food', label: 'After Food' },
-{ value: 'with_food', label: 'With Food' },
-{ value: 'anytime', label: 'Anytime' },
+   { value: 'before_food', label: 'जेवणापूर्वी' },
+   { value: 'after_food', label: 'जेवणानंतर' },
+   { value: 'with_food', label: 'जेवणासोबत' },
+  { value: 'anytime', label: 'कधीही' },
 ];
 const createPrescriptionItem = (sequence = 1) => ({
 localId: Math.random().toString(36).substr(2, 9),
@@ -278,6 +278,15 @@ setActivePrescription(null);
 setPrescriptionModalMode('create');
 setItemSearchOpenId(null);
 };
+const getTreatmentInstruction = (treatmentId) => {
+  if (!treatmentId) return '';
+  const treatment = treatments.find((t) => String(t.id) === String(treatmentId));
+  return (
+    treatment?.type_of_treatment_instruction ||
+    treatment?.type_of_treatment?.treatment_instruction ||
+    ''
+  );
+};
 const normalizeMedicineLabel = (medicine) => {
 if (!medicine) return '';
 return medicine.medicine_name || '';
@@ -329,7 +338,12 @@ setItemSearchOpenId(null);
 if (!prescription || mode === 'create') {
 resetPrescriptionForm();
 if (treatments.length > 0) {
-setPrescriptionFormData((prev) => ({ ...prev, treatment: String(treatments[0].id) }));
+const defaultTreatmentId = String(treatments[0].id);
+setPrescriptionFormData((prev) => ({
+...prev,
+treatment: defaultTreatmentId,
+instructions: getTreatmentInstruction(defaultTreatmentId),
+}));
 }
 setActivePrescription(null);
 } else {
@@ -390,7 +404,17 @@ search: normalizeMedicineLabel(medicine),
 setItemSearchOpenId(null);
 };
 const handlePrescriptionFieldChange = (field, value) => {
-setPrescriptionFormData((prev) => ({ ...prev, [field]: value }));
+   if (field === 'treatment') {
+      // When treatment changes, update instructions to the treatment's default instruction.
+      // This will overwrite previous instructions so the user can still edit afterwards.
+      setPrescriptionFormData((prev) => ({
+         ...prev,
+         treatment: value,
+         instructions: getTreatmentInstruction(value),
+      }));
+      return;
+   }
+   setPrescriptionFormData((prev) => ({ ...prev, [field]: value }));
 };
 const handlePrescriptionItemChange = (index, field, value) => {
 updatePrescriptionItem(index, {
@@ -1417,10 +1441,10 @@ return (
                      onChange={(e) =>
                      handlePrescriptionItemChange(index, 'before_after_food', e.target.value)}
                      >
-                     <option value="after_food">After Food</option>
-                     <option value="before_food">Before Food</option>
-                     <option value="with_food">With Food</option>
-                     <option value="anytime">Anytime</option>
+                     <option value="after_food">जेवणानंतर</option>
+                     <option value="before_food">जेवणापूर्वी</option>
+                     <option value="with_food">जेवणासोबत</option>
+                     <option value="anytime">कधीही</option>
                   </select>
                   <button
                      type="button"

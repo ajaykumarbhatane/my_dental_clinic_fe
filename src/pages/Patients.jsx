@@ -458,12 +458,14 @@ useEffect(() => {
 
           await visitsApi.create(visitPayload);
 
-          // Initialize prescription form with auto-filled data
+          // Initialize prescription form with auto-filled data (including treatment instruction)
+          const treatmentInstruction = treatmentResponse?.data?.type_of_treatment_instruction || treatmentResponse?.data?.type_of_treatment?.treatment_instruction || '';
           setPrescriptionFormData(prev => ({
             ...prev,
             treatment: treatmentId,
             complaints: visitFormData.patient_complaints || '',
-            next_visit_date: visitFormData.next_visit_date || ''
+            next_visit_date: visitFormData.next_visit_date || '',
+            instructions: treatmentInstruction,
           }));
 
           // Initialize prescription items with one empty row
@@ -472,9 +474,9 @@ useEffect(() => {
             medicine: null,
             custom_medicine_name: '',
             search: '',
-            dosage: '',
+            dosage: '3',
             frequency: '1-0-1',
-            duration: '7 Days',
+            duration: '3 Days',
             before_after_food: 'after_food',
             notes: '',
             sequence: 1,
@@ -642,9 +644,9 @@ useEffect(() => {
         medicine: null,
         custom_medicine_name: '',
         search: '',
-        dosage: '',
+        dosage: '3',
         frequency: '1-0-1',
-        duration: '7 Days',
+        duration: '3 Days',
         before_after_food: 'after_food',
         notes: '',
         sequence: items.length + 1,
@@ -1453,7 +1455,7 @@ useEffect(() => {
                           </div>
 
                           <input
-                            placeholder="Enter Quantity"
+                            placeholder="Enter Qty"
                             className="input-ui min-w-0"
                             value={item.dosage}
                             onChange={(e) => handlePrescriptionItemChange(index, 'dosage', e.target.value)}
@@ -1506,10 +1508,10 @@ useEffect(() => {
                               handlePrescriptionItemChange(index, 'before_after_food', e.target.value)
                             }
                           >
-                            <option value="after_food">After Food</option>
-                            <option value="before_food">Before Food</option>
-                            <option value="with_food">With Food</option>
-                            <option value="anytime">Anytime</option>
+                            <option value="after_food">जेवणानंतर</option>
+                            <option value="before_food">जेवणापूर्वी</option>
+                            <option value="with_food">जेवणासोबत</option>
+                            <option value="anytime">कधीही</option>
                           </select>
 
                           <button
