@@ -108,6 +108,8 @@ const retryAsync = async (fn, maxRetries = 3, delay = 1000, backoff = 2) => {
   throw lastError;
 };
 
+console.log("API BASE URL:", import.meta.env.VITE_API_BASE_URL);
+
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL, // 'http://127.0.0.1:8000/api' for local development
   headers: {
@@ -128,6 +130,11 @@ apiClient.interceptors.request.use(
     let token = null;
     try {
       token = localStorage.getItem('token');
+      console.log("TOKEN:", token);
+      console.log("REQUEST URL:", config.url);
+      console.log("FULL API URL:", config.baseURL + config.url);
+
+
     } catch (e) {
       // localStorage might not be available in some mobile/private browse modes
       // Token may be in sessionStorage as fallback
