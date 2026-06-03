@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Stethoscope, Mail, Lock, LogIn, AlertCircle, Wifi, Eye, EyeOff } from 'lucide-react';
-import logo from '../assets/logo.png';
+import logo from '../assets/mydentalclinicpro_logo.png';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -64,13 +64,12 @@ const Login = () => {
 
           {/* 🔷 Logo Circle */}
           <div className="flex justify-center">
-            <div className="p-4 rounded-full bg-white/10 backdrop-blur-xl shadow-2xl border border-white/20">
-              <img
-                src={logo}
-                alt="Dental Logo"
-                className="h-12 w-12 object-contain brightness-0 invert"
-              />
-            </div>
+            <img
+              src={logo}
+              alt="Dental Logo"
+              className="h-20 w-20 object-contain"
+              style={{ background: 'linear-gradient(135deg, #ffffff, #ffffff)', borderRadius: '100%', padding: '1px' }}
+            />
           </div>
 
           {/* 🔷 Title */}
@@ -183,16 +182,6 @@ const Login = () => {
               )}
             </button>
 
-            {/* Demo Credentials */}
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <div className="text-sm text-gray-600 text-center">
-                <p className="font-semibold text-gray-700 mb-2">Demo Credentials:</p>
-                <div className="bg-gray-50 rounded-lg p-3 space-y-1 font-mono text-xs">
-                  <p><span className="text-gray-600">Email:</span> <span className="text-gray-900">admin@example.com</span></p>
-                  <p><span className="text-gray-600">Password:</span> <span className="text-gray-900">admin123</span></p>
-                </div>
-              </div>
-            </div>
           </form>
         </div>
       </div>

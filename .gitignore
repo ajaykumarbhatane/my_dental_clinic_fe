@@ -89,3 +89,8 @@ temp/
 # Environment variables (if not already covered by .env*)
 # ========================
 .env*
+
+android/
+resources/
+*.jks
+*.keystore

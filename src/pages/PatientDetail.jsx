@@ -80,9 +80,9 @@ return 'N/A';
 };
 const FREQUENCY_OPTIONS = ['1-0-1', '1-1-1', '0-1-0', '0-0-1', 'SOS', 'Custom'];
 const FOOD_TIMING_OPTIONS = [
-   { value: 'before_food', label: 'जेवणापूर्वी' },
+   { value: 'before_food', label: 'जेवणाआगोदर' },
+   { value: 'afternoon', label: 'दुपारी' },
    { value: 'after_food', label: 'जेवणानंतर' },
-   { value: 'with_food', label: 'जेवणासोबत' },
   { value: 'anytime', label: 'कधीही' },
 ];
 const createPrescriptionItem = (sequence = 1) => ({
@@ -430,13 +430,17 @@ openPrescriptionModal('edit', prescription);
 };
 const handlePrintPrescription = (prescription) => {
   if (prescription.pdf_url) {
-    // Open PDF in new window and trigger print
+    // Open PDF in new window and trigger print after delay
     const printWindow = window.open(prescription.pdf_url, '_blank');
     if (printWindow) {
-      // Wait for PDF to load then print
-      printWindow.onload = () => {
-        printWindow.print();
-      };
+      // Wait for PDF to load then print - use timeout as PDF load is async
+      setTimeout(() => {
+        try {
+          printWindow.print();
+        } catch (error) {
+          console.error('Error triggering print:', error);
+        }
+      }, 1500);
     }
   } else {
     // Fallback to HTML print if PDF not available
@@ -446,6 +450,7 @@ const handlePrintPrescription = (prescription) => {
 <li>${medicineLabel || item.custom_medicine_name || 'Custom medicine'} - ${item.dosage || ''} - ${item.frequency || ''} - ${item.duration || ''}</li>
 `;
     }).join('');
+    const patientName = `${patient.first_name} ${patient.last_name || ''}`.trim();
     const content = `
 <html>
    <head>
@@ -454,7 +459,7 @@ const handlePrintPrescription = (prescription) => {
    </head>
    <body>
       <h1>Prescription ${prescription.id}</h1>
-      <p><strong>Patient:</strong> ${patient.first_name} ${patient.last_name}</p>
+      <p><strong>Patient:</strong> ${patientName}</p>
       <p><strong>Date:</strong> ${formatDate(prescription.created_at || prescription.next_visit_date)}</p>
       <p><strong>Diagnosis:</strong> ${prescription.diagnosis || 'N/A'}</p>
       <p><strong>Instructions:</strong> ${prescription.instructions || 'N/A'}</p>
@@ -468,7 +473,13 @@ const handlePrintPrescription = (prescription) => {
       printWindow.document.write(content);
       printWindow.document.close();
       printWindow.focus();
-      printWindow.print();
+      setTimeout(() => {
+        try {
+          printWindow.print();
+        } catch (error) {
+          console.error('Error triggering print:', error);
+        }
+      }, 500);
     }
   }
 };
@@ -540,8 +551,13 @@ savedPrescription = response.data;
 await loadData();
 if (printAfterSave && savedPrescription) {
 handlePrintPrescription(savedPrescription);
-}
+// Delay closing modal to allow print dialog to appear
+setTimeout(() => {
+  closePrescriptionModal();
+}, 500);
+} else {
 closePrescriptionModal();
+}
 } catch (error) {
 console.error('Error saving prescription:', error);
 // Error notification is handled by handleApiCall
@@ -1441,9 +1457,9 @@ return (
                      onChange={(e) =>
                      handlePrescriptionItemChange(index, 'before_after_food', e.target.value)}
                      >
+                     <option value="before_food">जेवणाआगोदर</option>
+                     <option value="afternoon">दुपारी</option>
                      <option value="after_food">जेवणानंतर</option>
-                     <option value="before_food">जेवणापूर्वी</option>
-                     <option value="with_food">जेवणासोबत</option>
                      <option value="anytime">कधीही</option>
                   </select>
                   <button
@@ -1990,9 +2006,7 @@ return (
                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                      >
                      <option value="cash">Cash</option>
-                     <option value="card">Card</option>
                      <option value="online">Online</option>
-                     <option value="cheque">Cheque</option>
                   </select>
                </div>
             </div>

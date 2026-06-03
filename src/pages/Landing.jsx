@@ -15,6 +15,7 @@ import { clinicApi } from "../api/clinicApi";
 import { toISODate, toDDMMYYYY } from '../utils/dateUtils';
 import dashboardimg from "../assets/dashboard.png";
 import treatmentsimg from "../assets/treatments.png";
+import logo from "../assets/mydentalclinicpro_logo.png";
 
 const features = [
   {
@@ -256,9 +257,12 @@ const Landing = () => {
       {/* HEADER */}
       <header className="bg-white/80 backdrop-blur border-b border-slate-200 sticky top-0 z-50">
         <div className="max-w-7xl w-full mx-auto flex justify-between items-center px-4 sm:px-6 py-4">
-          <h1 className="text-xl font-bold">
-            <span className="text-blue-600">MyDental</span>ClinicPro
-          </h1>
+          <div className="flex items-center gap-3">
+            <img src={logo} alt="Logo" className="h-8 w-8 object-contain" />
+            <h1 className="text-xl font-bold">
+              <span className="text-blue-600">MyDental</span>ClinicPro
+            </h1>
+          </div>
 
           <Link
             to="/login"

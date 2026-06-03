@@ -474,7 +474,7 @@ useEffect(() => {
             medicine: null,
             custom_medicine_name: '',
             search: '',
-            dosage: '3',
+            dosage: '6',
             frequency: '1-0-1',
             duration: '3 Days',
             before_after_food: 'after_food',
@@ -644,7 +644,7 @@ useEffect(() => {
         medicine: null,
         custom_medicine_name: '',
         search: '',
-        dosage: '3',
+        dosage: '6',
         frequency: '1-0-1',
         duration: '3 Days',
         before_after_food: 'after_food',
@@ -1270,9 +1270,7 @@ useEffect(() => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="cash">Cash</option>
-                      <option value="card">Card</option>
                       <option value="online">Online</option>
-                      <option value="cheque">Cheque</option>
                     </select>
                   </div>
 
@@ -1508,9 +1506,9 @@ useEffect(() => {
                               handlePrescriptionItemChange(index, 'before_after_food', e.target.value)
                             }
                           >
+                            <option value="before_food">जेवणाआगोदर</option>
+                            <option value="afternoon">दुपारी</option>
                             <option value="after_food">जेवणानंतर</option>
-                            <option value="before_food">जेवणापूर्वी</option>
-                            <option value="with_food">जेवणासोबत</option>
                             <option value="anytime">कधीही</option>
                           </select>
 
