@@ -344,8 +344,14 @@ const TreatmentDetail = () => {
       <div className="flex justify-between items-center">
         <button
           onClick={() => {
-            const { fromPatientDetail, patientId, returnTab } = location.state || {};
-            if (fromPatientDetail && patientId) {
+            const { from, fromPatientDetail, patientId, returnTab } = location.state || {};
+            const params = new URLSearchParams(location.search);
+            const returnTo = params.get('returnTo');
+            if (from) {
+              navigate(from);
+            } else if (returnTo) {
+              navigate(returnTo);
+            } else if (fromPatientDetail && patientId) {
               const query = returnTab ? `?tab=${returnTab}` : '';
               navigate(`/app/patients/${patientId}${query}`);
             } else {
@@ -574,9 +580,7 @@ const TreatmentDetail = () => {
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="cash">Cash</option>
-                    <option value="card">Card</option>
                     <option value="online">Online</option>
-                    <option value="cheque">Cheque</option>
                   </select>
                 </div>
               </div>

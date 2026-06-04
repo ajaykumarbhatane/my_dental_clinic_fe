@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Filter, Eye, Plus, X, Trash2 } from 'lucide-react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Search, Filter, Eye, Edit3, Plus, X, Trash2 } from 'lucide-react';
 import { treatmentApi } from '../api/treatmentApi';
 import { patientApi } from '../api/patientApi';
 import { visitsApi } from '../api/visitsApi';
@@ -11,6 +11,9 @@ const Treatments = () => {
   const navigate = useNavigate();
   const [treatments, setTreatments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [isFirstLoad, setIsFirstLoad] = useState(true);
   const [filterType, setFilterType] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -52,9 +55,26 @@ const Treatments = () => {
   const [visitToDelete, setVisitToDelete] = useState(null);
   const [isDeletingVisit, setIsDeletingVisit] = useState(false);
 
+  const location = useLocation();
+
   useEffect(() => {
-    fetchTreatments(currentPage);
-  }, [currentPage, filterType, filterStatus]);
+    const params = new URLSearchParams(location.search);
+    const page = parseInt(params.get('page') || '1', 10);
+    const search = params.get('search') || '';
+    const type = params.get('type') || 'all';
+    const status = params.get('status') || 'all';
+
+    if (!Number.isNaN(page) && page > 0) setCurrentPage(page);
+    if (search !== searchTerm) setSearchTerm(search);
+    if (type !== filterType) setFilterType(type);
+    if (status !== filterStatus) setFilterStatus(status);
+    // ensure the initial search from URL is applied for the first fetch
+    setDebouncedSearchTerm(search);
+  }, [location.search]);
+
+  useEffect(() => {
+    fetchTreatments(currentPage, debouncedSearchTerm, filterType, filterStatus);
+  }, [currentPage, debouncedSearchTerm, filterType, filterStatus]);
 
   useEffect(() => {
     fetchTreatmentTypes();
@@ -66,20 +86,22 @@ const Treatments = () => {
     : null;
   const selectedTypeName = selectedType?.name || '';
 
-  const fetchTreatments = async (page = 1) => {
+  const normalize = (data) => (Array.isArray(data) ? data : (data?.results || data || []));
+
+  const fetchTreatments = async (page = 1, search = '', type = 'all', status = 'all') => {
     try {
       setLoading(true);
-      const params = { page };
-      if (filterType !== 'all') {
-        params.type_of_treatment = filterType;
-      }
-      if (filterStatus !== 'all') {
-        params.status = filterStatus;
-      }
+      const params = {};
+      if (page > 1) params.page = page;
+      if (search) params.search = search;
+      if (type && type !== 'all') params.type_of_treatment = type;
+      if (status && status !== 'all') params.status = status;
+
       const response = await treatmentApi.getAll(params);
-      setTreatments(response.data.results || response.data);
-      setTotalCount(response.data.count || response.data.length);
-      setTotalPages(Math.ceil((response.data.count || response.data.length) / 10));
+      const list = normalize(response.data);
+      setTreatments(list);
+      setTotalCount(response.data.count || list.length);
+      setTotalPages(Math.max(1, Math.ceil((response.data.count || list.length) / 10)));
       setCurrentPage(page);
     } catch (error) {
       console.error('Error fetching treatments:', error);
@@ -107,6 +129,33 @@ const Treatments = () => {
       console.error('Error fetching patients:', error);
     }
   };
+
+  useEffect(() => {
+    if (isFirstLoad) {
+      setIsFirstLoad(false);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      const params = new URLSearchParams(location.search);
+
+      if (searchTerm.trim()) {
+        params.set('search', searchTerm.trim());
+      } else {
+        params.delete('search');
+      }
+
+      params.delete('page');
+
+      if (filterType && filterType !== 'all') params.set('type', filterType); else params.delete('type');
+      if (filterStatus && filterStatus !== 'all') params.set('status', filterStatus); else params.delete('status');
+
+      window.history.replaceState({}, '', `${location.pathname}${params.toString() ? `?${params.toString()}` : ''}`);
+      setDebouncedSearchTerm(searchTerm);
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm, filterType, filterStatus]);
 
   const fetchVisitsForTreatment = async (treatmentId) => {
     try {
@@ -173,7 +222,11 @@ const Treatments = () => {
   };
 
   const handleViewTreatment = (treatment) => {
-    navigate(`/app/treatments/${treatment.id}`);
+    const returnTo = encodeURIComponent(`${location.pathname}${location.search}`);
+    navigate(
+      `/app/treatments/${treatment.id}?returnTo=${returnTo}`,
+      { state: { from: `${location.pathname}${location.search}` } }
+    );
   };
 
   const handleViewVisits = async (treatment) => {
@@ -265,6 +318,26 @@ const Treatments = () => {
     }
   };
 
+  const handlePageChange = (page) => {
+    const params = new URLSearchParams(location.search);
+    if (page > 1) params.set('page', page.toString()); else params.delete('page');
+    window.history.replaceState({}, '', `${location.pathname}${params.toString() ? `?${params.toString()}` : ''}`);
+    setCurrentPage(page);
+  };
+
+  const handleFilterChange = (filterType, value) => {
+    const params = new URLSearchParams(location.search);
+    if (value && value !== 'all') {
+      params.set(filterType, value);
+    } else {
+      params.delete(filterType);
+    }
+    params.delete('page');
+    window.history.replaceState({}, '', `${location.pathname}${params.toString() ? `?${params.toString()}` : ''}`);
+    if (filterType === 'type') setFilterType(value || 'all');
+    if (filterType === 'status') setFilterStatus(value || 'all');
+  };
+
   const formatAmount = (amount) => {
     if (!amount) return 'N/A';
     return new Intl.NumberFormat('en-IN', {
@@ -280,155 +353,180 @@ const Treatments = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="h-[calc(100vh-80px)] flex flex-col space-y-4">
+
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Treatments</h1>
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-4 w-full">
+          <div className="relative w-full lg:flex-1">
+            <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search treatments by patient name or mobile..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-12 pr-10 py-3 text-sm border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200 shadow-sm"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          <div className="flex gap-3 w-full lg:w-auto">
+            <select
+              value={filterType}
+              onChange={(e) => handleFilterChange('type', e.target.value)}
+              className="flex-1 lg:flex-none px-4 py-3 text-sm border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200 shadow-sm bg-white"
+            >
+              <option value="all">All Treatment Types</option>
+              {treatmentTypes.map((type) => (
+                <option key={type.id} value={type.id}>{type.name}</option>
+              ))}
+            </select>
+
+            <select
+              value={filterStatus}
+              onChange={(e) => handleFilterChange('status', e.target.value)}
+              className="flex-1 lg:flex-none px-4 py-3 text-sm border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200 shadow-sm bg-white"
+            >
+              <option value="all">All Status</option>
+              <option value="scheduled">Scheduled</option>
+              <option value="ongoing">Ongoing</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+              <option value="on_hold">On Hold</option>
+            </select>
+          </div>
+        </div>
+
         <button
           onClick={() => setShowAddModal(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+          className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-5 py-2.5 rounded-lg flex items-center gap-2 text-sm shadow hover:shadow-lg transition-shadow w-full lg:w-auto"
         >
-          <Plus className="w-5 h-5" />
-          <span>Add Treatment</span>
+          <Plus className="w-4 h-4" />
+          Add Treatment
         </button>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex items-center space-x-2 min-w-0">
-          <Filter className="w-5 h-5 text-gray-400" />
-          <select
-            className="flex-1 min-w-0 form-select"
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
-          >
-            <option value="all">All Treatment Types</option>
-            {treatmentTypes.map(type => (
-              <option key={type.id} value={type.id}>{type.name}</option>
-            ))}
-          </select>
-        </div>
-        <div className="flex items-center space-x-2 min-w-0">
-          <select
-            className="flex-1 min-w-0 form-select"
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-          >
-            <option value="all">All Status</option>
-            <option value="scheduled">Scheduled</option>
-            <option value="ongoing">Ongoing</option>
-            <option value="completed">Completed</option>
-            <option value="cancelled">Cancelled</option>
-            <option value="on_hold">On Hold</option>
-          </select>
-        </div>
-      </div>
+      {/* Table Container */}
+      <div className="flex flex-col flex-1 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
 
-      {/* Treatments Table */}
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Patient Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Treatment Type
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Option
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Estimated Duration / Visits
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Planned Amount
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
+        {/* Scrollable Table */}
+        <div className="flex-1 overflow-auto">
+          <table className="min-w-full">
+
+            {/* Header */}
+            <thead className="bg-gray-50 sticky top-0 z-10">
+              <tr className="text-sm text-gray-600">
+                <th className="px-5 py-3 text-left font-semibold">Patient Name</th>
+                <th className="px-5 py-3 text-left font-semibold">Treatment Type</th>
+                <th className="px-5 py-3 text-left font-semibold">Status</th>
+                <th className="px-5 py-3 text-left font-semibold">Option</th>
+                <th className="px-5 py-3 text-left font-semibold">Estimated Duration / Visits</th>
+                <th className="px-5 py-3 text-left font-semibold">Planned Amount</th>
+                <th className="px-5 py-3 text-left font-semibold">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {treatments.map((treatment) => (
-                <tr
-                  key={treatment.id}
-                  onClick={() => handleViewTreatment(treatment)}
-                  className="hover:bg-gray-50 cursor-pointer"
-                >
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {treatment.patient_name}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {treatment.type_of_treatment_name}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      treatment.status === 'completed' ? 'bg-green-100 text-green-800' :
-                      treatment.status === 'ongoing' ? 'bg-blue-100 text-blue-800' :
-                      treatment.status === 'scheduled' ? 'bg-yellow-100 text-yellow-800' :
-                      treatment.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {treatment.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {treatment.braces_type || treatment.cap_type || 'N/A'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {treatment.estimated_duration_months ? (
-                      treatment.type_of_treatment_name?.toLowerCase().includes('root canal')
-                        ? `${treatment.estimated_duration_months} visits`
-                        : `${treatment.estimated_duration_months} months`
-                    ) : 'N/A'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {formatAmount(treatment.planned_amount)}
-                  </td>
-                  <td
-                    className="px-6 py-4 whitespace-nowrap text-sm font-medium"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                  <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => handleViewTreatment(treatment)}
-                        className="text-blue-600 hover:text-blue-900 flex items-center space-x-1"
-                      >
-                        <Eye className="w-4 h-4" />
-                        <span>View</span>
-                      </button>
-                      <button
-                        onClick={() => handleDeleteTreatment(treatment)}
-                        className="text-red-600 hover:text-red-900 flex items-center space-x-1"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        <span>Delete</span>
-                      </button>
-                    </div>
+
+            {/* Body */}
+            <tbody className="divide-y">
+              {treatments.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="text-center py-6 text-gray-400">
+                    No treatments found
                   </td>
                 </tr>
-              ))}
+              ) : (
+                treatments.map((treatment) => (
+                  <tr
+                    key={treatment.id}
+                    onClick={() => handleViewTreatment(treatment)}
+                    className="hover:bg-blue-50 cursor-pointer transition"
+                  >
+                    <td className="px-5 py-3">
+                      <span className="font-medium text-gray-900">
+                        {treatment.patient_first_name || treatment.patient?.first_name || treatment.patient_name || 'N/A'}
+                        {treatment.patient_last_name || treatment.patient?.last_name ? (
+                          <><br />{treatment.patient_last_name || treatment.patient?.last_name}</>
+                        ) : null}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 text-gray-600">
+                      {treatment.type_of_treatment_name}
+                    </td>
+                    <td className="px-5 py-3">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        treatment.status === 'completed' ? 'bg-green-100 text-green-800' :
+                        treatment.status === 'ongoing' ? 'bg-blue-100 text-blue-800' :
+                        treatment.status === 'scheduled' ? 'bg-yellow-100 text-yellow-800' :
+                        treatment.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {treatment.status}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 text-gray-600">
+                      {treatment.braces_type || treatment.cap_type || 'N/A'}
+                    </td>
+                    <td className="px-5 py-3 text-gray-600">
+                      {treatment.estimated_duration_months ? (
+                        treatment.type_of_treatment_name?.toLowerCase().includes('root canal')
+                          ? `${treatment.estimated_duration_months} visits`
+                          : `${treatment.estimated_duration_months} months`
+                      ) : 'N/A'}
+                    </td>
+                    <td className="px-5 py-3 text-gray-600">
+                      {formatAmount(treatment.planned_amount)}
+                    </td>
+                    <td
+                      className="px-5 py-3"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => handleViewTreatment(treatment)}
+                          className="text-blue-600 hover:text-blue-900"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleViewTreatment(treatment)}
+                          className="text-yellow-600 hover:text-yellow-900"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteTreatment(treatment)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
-      </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="mt-4">
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-            itemCountText={`Showing ${((currentPage - 1) * 10) + 1} to ${Math.min(currentPage * 10, totalCount)} of ${totalCount} treatments`}
-          />
-        </div>
-      )}
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="px-5 py-3 border-t bg-white">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+              itemCountText={`${((currentPage - 1) * 10) + 1} - ${Math.min(currentPage * 10, totalCount)} of ${totalCount}`}
+            />
+          </div>
+        )}
+      </div>
 
       {/* Add Treatment Modal */}
       {showAddModal && (
