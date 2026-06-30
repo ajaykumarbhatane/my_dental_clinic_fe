@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { Search, Filter, Eye, Edit3, Plus, X, Trash2 } from 'lucide-react';
 import { treatmentApi } from '../api/treatmentApi';
 import { patientApi } from '../api/patientApi';
@@ -9,14 +9,18 @@ import { formatDate, toISODate, toDDMMYYYY } from '../utils/dateUtils';
 
 const Treatments = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const urlPage = parseInt(searchParams.get('page') || '1', 10);
+  const currentPage = !Number.isNaN(urlPage) && urlPage > 0 ? urlPage : 1;
+  const currentSearch = searchParams.get('search') || '';
+  const currentType = searchParams.get('type') || 'all';
+  const currentStatus = searchParams.get('status') || 'all';
+
   const [treatments, setTreatments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-  const [isFirstLoad, setIsFirstLoad] = useState(true);
-  const [filterType, setFilterType] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState(currentSearch);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [treatmentTypes, setTreatmentTypes] = useState([]);
@@ -55,26 +59,41 @@ const Treatments = () => {
   const [visitToDelete, setVisitToDelete] = useState(null);
   const [isDeletingVisit, setIsDeletingVisit] = useState(false);
 
-  const location = useLocation();
+  useEffect(() => {
+    if (currentSearch !== searchTerm) {
+      setSearchTerm(currentSearch);
+    }
+  }, [currentSearch, searchTerm]);
 
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const page = parseInt(params.get('page') || '1', 10);
-    const search = params.get('search') || '';
-    const type = params.get('type') || 'all';
-    const status = params.get('status') || 'all';
-
-    if (!Number.isNaN(page) && page > 0) setCurrentPage(page);
-    if (search !== searchTerm) setSearchTerm(search);
-    if (type !== filterType) setFilterType(type);
-    if (status !== filterStatus) setFilterStatus(status);
-    // ensure the initial search from URL is applied for the first fetch
-    setDebouncedSearchTerm(search);
-  }, [location.search]);
+    fetchTreatments(currentPage, currentSearch, currentType, currentStatus);
+  }, [currentPage, currentSearch, currentType, currentStatus]);
 
   useEffect(() => {
-    fetchTreatments(currentPage, debouncedSearchTerm, filterType, filterStatus);
-  }, [currentPage, debouncedSearchTerm, filterType, filterStatus]);
+    const trimmedSearch = searchTerm.trim();
+    if (trimmedSearch === currentSearch) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      const params = new URLSearchParams(searchParams);
+      if (trimmedSearch) {
+        params.set('search', trimmedSearch);
+      } else {
+        params.delete('search');
+      }
+
+      if (currentPage > 1) {
+        params.delete('page');
+      }
+
+      if (params.toString() !== searchParams.toString()) {
+        setSearchParams(params, { replace: true });
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm, currentSearch, currentPage, searchParams, setSearchParams]);
 
   useEffect(() => {
     fetchTreatmentTypes();
@@ -102,7 +121,6 @@ const Treatments = () => {
       setTreatments(list);
       setTotalCount(response.data.count || list.length);
       setTotalPages(Math.max(1, Math.ceil((response.data.count || list.length) / 10)));
-      setCurrentPage(page);
     } catch (error) {
       console.error('Error fetching treatments:', error);
     } finally {
@@ -129,33 +147,6 @@ const Treatments = () => {
       console.error('Error fetching patients:', error);
     }
   };
-
-  useEffect(() => {
-    if (isFirstLoad) {
-      setIsFirstLoad(false);
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      const params = new URLSearchParams(location.search);
-
-      if (searchTerm.trim()) {
-        params.set('search', searchTerm.trim());
-      } else {
-        params.delete('search');
-      }
-
-      params.delete('page');
-
-      if (filterType && filterType !== 'all') params.set('type', filterType); else params.delete('type');
-      if (filterStatus && filterStatus !== 'all') params.set('status', filterStatus); else params.delete('status');
-
-      window.history.replaceState({}, '', `${location.pathname}${params.toString() ? `?${params.toString()}` : ''}`);
-      setDebouncedSearchTerm(searchTerm);
-    }, 350);
-
-    return () => clearTimeout(timer);
-  }, [searchTerm, filterType, filterStatus]);
 
   const fetchVisitsForTreatment = async (treatmentId) => {
     try {
@@ -212,7 +203,7 @@ const Treatments = () => {
         braces_type: '',
         cap_type: ''
       });
-      fetchTreatments();
+      fetchTreatments(currentPage, currentSearch, currentType, currentStatus);
     } catch (error) {
       console.error('Error creating treatment:', error);
       alert(error.response?.data?.detail || 'Error creating treatment');
@@ -222,10 +213,10 @@ const Treatments = () => {
   };
 
   const handleViewTreatment = (treatment) => {
-    const returnTo = encodeURIComponent(`${location.pathname}${location.search}`);
+    const currentPageUrl = `${location.pathname}${location.search}`;
     navigate(
-      `/app/treatments/${treatment.id}?returnTo=${returnTo}`,
-      { state: { from: `${location.pathname}${location.search}` } }
+      `/app/treatments/${treatment.id}?returnTo=${encodeURIComponent(currentPageUrl)}`,
+      { state: { from: currentPageUrl, returnTo: currentPageUrl } }
     );
   };
 
@@ -309,7 +300,7 @@ const Treatments = () => {
       setShowDeleteModal(false);
       setTreatmentToDelete(null);
       alert('Treatment deleted successfully!');
-      await fetchTreatments(currentPage);
+      await fetchTreatments(currentPage, currentSearch, currentType, currentStatus);
     } catch (error) {
       console.error('Error deleting treatment:', error);
       alert(error.response?.data?.detail || 'Error deleting treatment');
@@ -319,23 +310,24 @@ const Treatments = () => {
   };
 
   const handlePageChange = (page) => {
-    const params = new URLSearchParams(location.search);
-    if (page > 1) params.set('page', page.toString()); else params.delete('page');
-    window.history.replaceState({}, '', `${location.pathname}${params.toString() ? `?${params.toString()}` : ''}`);
-    setCurrentPage(page);
+    const params = new URLSearchParams(searchParams);
+    if (page > 1) {
+      params.set('page', page.toString());
+    } else {
+      params.delete('page');
+    }
+    setSearchParams(params, { replace: true });
   };
 
-  const handleFilterChange = (filterType, value) => {
-    const params = new URLSearchParams(location.search);
+  const handleFilterChange = (filterKey, value) => {
+    const params = new URLSearchParams(searchParams);
     if (value && value !== 'all') {
-      params.set(filterType, value);
+      params.set(filterKey, value);
     } else {
-      params.delete(filterType);
+      params.delete(filterKey);
     }
     params.delete('page');
-    window.history.replaceState({}, '', `${location.pathname}${params.toString() ? `?${params.toString()}` : ''}`);
-    if (filterType === 'type') setFilterType(value || 'all');
-    if (filterType === 'status') setFilterStatus(value || 'all');
+    setSearchParams(params, { replace: true });
   };
 
   const formatAmount = (amount) => {
@@ -379,7 +371,7 @@ const Treatments = () => {
 
           <div className="flex gap-3 w-full lg:w-auto">
             <select
-              value={filterType}
+              value={currentType}
               onChange={(e) => handleFilterChange('type', e.target.value)}
               className="flex-1 lg:flex-none px-4 py-3 text-sm border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200 shadow-sm bg-white"
             >
@@ -390,7 +382,7 @@ const Treatments = () => {
             </select>
 
             <select
-              value={filterStatus}
+              value={currentStatus}
               onChange={(e) => handleFilterChange('status', e.target.value)}
               className="flex-1 lg:flex-none px-4 py-3 text-sm border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200 shadow-sm bg-white"
             >

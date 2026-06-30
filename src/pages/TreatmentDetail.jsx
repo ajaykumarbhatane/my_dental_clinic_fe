@@ -6,6 +6,8 @@ import { visitsApi, visitImagesApi } from '../api/visitsApi';
 import { compressImage } from '../utils/imageOptimizer';
 import { formatDate } from '../utils/dateUtils';
 
+const treatmentDetailRequestCache = new Map();
+
 const TreatmentDetail = () => {
   const galleryInputRef = useRef(null);
   const cameraInputRef = useRef(null);
@@ -52,15 +54,25 @@ const TreatmentDetail = () => {
   }, [id]);
 
   const fetchTreatmentDetail = async () => {
-    try {
-      const res = await treatmentApi.getById(id);
-      setTreatment(res.data);
-      setVisits(res.data.treatment_visits || []);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
+    if (treatmentDetailRequestCache.has(id)) {
+      return treatmentDetailRequestCache.get(id);
     }
+
+    const requestPromise = (async () => {
+      try {
+        const res = await treatmentApi.getById(id);
+        setTreatment(res.data);
+        setVisits(res.data.treatment_visits || []);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+        treatmentDetailRequestCache.delete(id);
+      }
+    })();
+
+    treatmentDetailRequestCache.set(id, requestPromise);
+    return requestPromise;
   };
 
   const fetchVisits = async () => {
@@ -119,7 +131,7 @@ const TreatmentDetail = () => {
     try {
       await treatmentApi.delete(id);
       alert('Treatment deleted successfully!');
-      navigate('/treatments');
+      navigate('/app/treatments');
     } catch (error) {
       console.error('Error deleting treatment:', error);
       alert(error.response?.data?.detail || 'Error deleting treatment');
@@ -344,19 +356,32 @@ const TreatmentDetail = () => {
       <div className="flex justify-between items-center">
         <button
           onClick={() => {
-            const { from, fromPatientDetail, patientId, returnTab } = location.state || {};
             const params = new URLSearchParams(location.search);
-            const returnTo = params.get('returnTo');
-            if (from) {
-              navigate(from);
-            } else if (returnTo) {
-              navigate(returnTo);
-            } else if (fromPatientDetail && patientId) {
-              const query = returnTab ? `?tab=${returnTab}` : '';
-              navigate(`/app/patients/${patientId}${query}`);
-            } else {
-              navigate('/app/treatments');
+            const returnToRaw = params.get('returnTo') || location.state?.returnTo || location.state?.from;
+
+            const normalizeReturnTo = (value) => {
+              if (!value) return null;
+              try {
+                return decodeURIComponent(value);
+              } catch {
+                return value;
+              }
+            };
+
+            const returnTo = normalizeReturnTo(returnToRaw);
+
+            if (returnTo) {
+              navigate(returnTo, { replace: true });
+              return;
             }
+
+            if (location.state?.fromPatientDetail && location.state?.patientId) {
+              const query = location.state?.returnTab ? `?tab=${location.state.returnTab}` : '';
+              navigate(`/app/patients/${location.state.patientId}${query}`, { replace: true });
+              return;
+            }
+
+            navigate('/app/treatments', { replace: true });
           }}
           className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
         >
