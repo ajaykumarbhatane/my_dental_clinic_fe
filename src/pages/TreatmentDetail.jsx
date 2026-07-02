@@ -4,7 +4,7 @@ import { ArrowLeft, Plus, Trash2, Calendar, X } from 'lucide-react';
 import { treatmentApi } from '../api/treatmentApi';
 import { visitsApi, visitImagesApi } from '../api/visitsApi';
 import { compressImage } from '../utils/imageOptimizer';
-import { formatDate } from '../utils/dateUtils';
+import { formatDate, toISODate } from '../utils/dateUtils';
 
 const treatmentDetailRequestCache = new Map();
 
@@ -48,6 +48,8 @@ const TreatmentDetail = () => {
     patient_payment_type: 'cash',
     payment_note: ''
   });
+  const [showEditVisitModal, setShowEditVisitModal] = useState(false);
+  const [visitToEdit, setVisitToEdit] = useState(null);
 
   useEffect(() => {
     fetchTreatmentDetail();
@@ -83,6 +85,65 @@ const TreatmentDetail = () => {
   const handleDeleteVisit = (visit) => {
     setVisitToDelete(visit);
     setShowDeleteVisitModal(true);
+  };
+
+  const resetVisitFormData = () => {
+    setVisitFormData({
+      next_visit_date: '',
+      treatment_notes: '',
+      patient_complaints: '',
+      patient_payment_amount: '',
+      patient_payment_type: 'cash',
+      payment_note: ''
+    });
+  };
+
+  const openEditVisitModal = (visit) => {
+    setVisitToEdit(visit);
+    setVisitFormData({
+      next_visit_date: toISODate(visit.next_visit_date) || '',
+      treatment_notes: visit.treatment_notes || '',
+      patient_complaints: visit.patient_complaints || '',
+      patient_payment_amount: visit.patient_payment_amount != null ? String(visit.patient_payment_amount) : '',
+      patient_payment_type: visit.patient_payment_type || 'cash',
+      payment_note: visit.payment_note || ''
+    });
+    setShowEditVisitModal(true);
+  };
+
+  const handleEditVisit = async (e) => {
+    e.preventDefault();
+    setSubmittingVisit(true);
+
+    try {
+      if (!visitFormData.next_visit_date) {
+        alert('Please select a visit date');
+        setSubmittingVisit(false);
+        return;
+      }
+
+      const payload = {
+        treatment: treatment.id,
+        next_visit_date: visitFormData.next_visit_date,
+        treatment_notes: visitFormData.treatment_notes || null,
+        patient_complaints: visitFormData.patient_complaints || null,
+        patient_payment_amount: visitFormData.patient_payment_amount ? parseInt(visitFormData.patient_payment_amount, 10) : null,
+        patient_payment_type: visitFormData.patient_payment_type || null,
+        payment_note: visitFormData.payment_note || null
+      };
+
+      await visitsApi.update(visitToEdit.id, payload);
+      setShowEditVisitModal(false);
+      setVisitToEdit(null);
+      resetVisitFormData();
+      await fetchVisits();
+      alert('Visit updated successfully!');
+    } catch (error) {
+      console.error('Error updating visit:', error);
+      alert(error.response?.data?.detail || 'Error updating visit');
+    } finally {
+      setSubmittingVisit(false);
+    }
   };
 
   const handleConfirmDeleteVisit = async () => {
@@ -353,7 +414,7 @@ const TreatmentDetail = () => {
     <div className="space-y-6">
 
       {/* 🔷 Back */}
-      <div className="flex justify-between items-center">
+      {/* <div className="flex justify-between items-center">
         <button
           onClick={() => {
             const params = new URLSearchParams(location.search);
@@ -395,7 +456,7 @@ const TreatmentDetail = () => {
           <Trash2 className="w-5 h-5" />
           Delete Treatment
         </button>
-      </div>
+      </div> */}
 
       {/* 🔷 Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -514,20 +575,27 @@ const TreatmentDetail = () => {
                     ))}
                   </div>
 
-                  <button
-                    onClick={() => openUploadModal(visit)}
-                    className="mt-3 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm flex gap-2 items-center"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Upload Image
-                  </button>
-
-                  <button
-                    onClick={() => handleDeleteVisit(visit)}
-                    className="mt-3 text-red-600 text-sm"
-                  >
-                    Delete Visit
-                  </button>
+                  <div className="mt-3 flex flex-wrap gap-3">
+                    <button
+                      onClick={() => openUploadModal(visit)}
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm flex gap-2 items-center"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Upload Image
+                    </button>
+                    <button
+                      onClick={() => openEditVisitModal(visit)}
+                      className="bg-yellow-100 text-yellow-700 px-4 py-2 rounded-lg text-sm flex gap-2 items-center"
+                    >
+                      Edit Visit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteVisit(visit)}
+                      className="text-red-600 text-sm mt-2"
+                    >
+                      Delete Visit
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -635,6 +703,119 @@ const TreatmentDetail = () => {
                   className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
                 >
                   {submittingVisit ? 'Adding...' : 'Add Visit'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showEditVisitModal && treatment && visitToEdit && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-[60]">
+          <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Edit Visit</h3>
+              <button
+                onClick={() => {
+                  setShowEditVisitModal(false);
+                  setVisitToEdit(null);
+                  resetVisitFormData();
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditVisit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Next Visit Date * <span className="text-xs text-red-600">{!visitFormData.next_visit_date ? '(Required)' : ''}</span></label>
+                <input
+                  type="date"
+                  required
+                  value={visitFormData.next_visit_date}
+                  onChange={(e) => setVisitFormData({...visitFormData, next_visit_date: e.target.value})}
+                  className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                    !visitFormData.next_visit_date ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                  }`}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Treatment Notes</label>
+                <textarea
+                  value={visitFormData.treatment_notes}
+                  onChange={(e) => setVisitFormData({...visitFormData, treatment_notes: e.target.value})}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Add treatment notes..."
+                  rows="3"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Patient Complaints</label>
+                <textarea
+                  value={visitFormData.patient_complaints}
+                  onChange={(e) => setVisitFormData({...visitFormData, patient_complaints: e.target.value})}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Document patient complaints..."
+                  rows="3"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Payment Amount (₹)</label>
+                  <input
+                    type="number"
+                    value={visitFormData.patient_payment_amount}
+                    onChange={(e) => setVisitFormData({...visitFormData, patient_payment_amount: e.target.value})}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="e.g., 1000"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Payment Type</label>
+                  <select
+                    value={visitFormData.patient_payment_type}
+                    onChange={(e) => setVisitFormData({...visitFormData, patient_payment_type: e.target.value})}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="cash">Cash</option>
+                    <option value="online">Online</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Payment Note</label>
+                <textarea
+                  value={visitFormData.payment_note}
+                  onChange={(e) => setVisitFormData({...visitFormData, payment_note: e.target.value})}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Add any payment notes..."
+                  rows="2"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditVisitModal(false);
+                    setVisitToEdit(null);
+                    resetVisitFormData();
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingVisit || !visitFormData.next_visit_date}
+                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 disabled:opacity-50"
+                >
+                  {submittingVisit ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </form>

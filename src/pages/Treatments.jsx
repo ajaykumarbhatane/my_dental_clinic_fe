@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { Search, Filter, Eye, Edit3, Plus, X, Trash2 } from 'lucide-react';
 import { treatmentApi } from '../api/treatmentApi';
@@ -58,12 +58,14 @@ const Treatments = () => {
   const [showDeleteVisitModal, setShowDeleteVisitModal] = useState(false);
   const [visitToDelete, setVisitToDelete] = useState(null);
   const [isDeletingVisit, setIsDeletingVisit] = useState(false);
+  const lastSyncedSearch = useRef(currentSearch);
 
   useEffect(() => {
-    if (currentSearch !== searchTerm) {
+    if (currentSearch !== lastSyncedSearch.current) {
       setSearchTerm(currentSearch);
+      lastSyncedSearch.current = currentSearch;
     }
-  }, [currentSearch, searchTerm]);
+  }, [currentSearch]);
 
   useEffect(() => {
     fetchTreatments(currentPage, currentSearch, currentType, currentStatus);
