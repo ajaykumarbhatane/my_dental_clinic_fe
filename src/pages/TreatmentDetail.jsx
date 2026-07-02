@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Calendar, X } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Calendar, X, CalendarDays, ClipboardList, DollarSign, Sparkles } from 'lucide-react';
 import { treatmentApi } from '../api/treatmentApi';
 import { visitsApi, visitImagesApi } from '../api/visitsApi';
 import { compressImage } from '../utils/imageOptimizer';
@@ -411,113 +411,76 @@ const TreatmentDetail = () => {
   }
 
   return (
-    <div className="space-y-6">
-
-      {/* 🔷 Back */}
-      {/* <div className="flex justify-between items-center">
-        <button
-          onClick={() => {
-            const params = new URLSearchParams(location.search);
-            const returnToRaw = params.get('returnTo') || location.state?.returnTo || location.state?.from;
-
-            const normalizeReturnTo = (value) => {
-              if (!value) return null;
-              try {
-                return decodeURIComponent(value);
-              } catch {
-                return value;
-              }
-            };
-
-            const returnTo = normalizeReturnTo(returnToRaw);
-
-            if (returnTo) {
-              navigate(returnTo, { replace: true });
-              return;
-            }
-
-            if (location.state?.fromPatientDetail && location.state?.patientId) {
-              const query = location.state?.returnTab ? `?tab=${location.state.returnTab}` : '';
-              navigate(`/app/patients/${location.state.patientId}${query}`, { replace: true });
-              return;
-            }
-
-            navigate('/app/treatments', { replace: true });
-          }}
-          className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          Back to Treatments
-        </button>
-        <button
-          onClick={handleDeleteTreatment}
-          className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-600 hover:bg-red-200 rounded-lg transition-colors"
-        >
-          <Trash2 className="w-5 h-5" />
-          Delete Treatment
-        </button>
-      </div> */}
-
-      {/* 🔷 Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white shadow rounded-xl p-4 border">
-          <p className="text-xs text-gray-500">Treatment</p>
-          <p className="font-semibold">{treatment.type_of_treatment_name}</p>
+    <div className="space-y-8">
+      <div className="rounded-[32px] bg-white shadow-2xl border border-slate-200 overflow-hidden">
+        <div className="bg-gradient-to-r from-slate-900 via-indigo-800 to-sky-700 text-white px-6 py-6 md:px-10 md:py-8">
+          <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-slate-300">Treatment Summary</p>
+              <h1 className="mt-2 text-4xl font-semibold tracking-tight text-white">{treatment.treatment_name || treatment.type_of_treatment_name || 'Treatment'}</h1>
+              <div className="mt-3 flex items-center gap-3">
+                {/* <div className="rounded-full bg-white/10 px-3 py-1 text-sm text-white/90">
+                  {formatAmount(treatment.planned_amount)} · {treatment.estimated_duration_months || 'N/A'} months
+                </div> */}
+                <div className="text-sm text-white/90 hidden md:block">
+                  {treatment.treatment_plan ? (treatment.treatment_plan.length > 80 ? `${treatment.treatment_plan.slice(0,80)}...` : treatment.treatment_plan) : ''}
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="rounded-3xl bg-white/10 p-4 border border-white/10 backdrop-blur-sm">
+                <p className="text-[10px] uppercase tracking-[0.3em] text-slate-200/80">Status</p>
+                <p className="mt-2 text-lg font-semibold text-white">{treatment.status || 'Ongoing'}</p>
+              </div>
+              <div className="rounded-3xl bg-white/10 p-4 border border-white/10 backdrop-blur-sm">
+                <p className="text-[10px] uppercase tracking-[0.3em] text-slate-200/80">Total Amount</p>
+                <p className="mt-2 text-lg font-semibold text-white">{formatAmount(treatment.planned_amount)}</p>
+              </div>
+              <div className="rounded-3xl bg-white/10 p-4 border border-white/10 backdrop-blur-sm">
+                <p className="text-[10px] uppercase tracking-[0.3em] text-slate-200/80">Duration</p>
+                <p className="mt-2 text-lg font-semibold text-white">{treatment.estimated_duration_months || 'N/A'} months</p>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="bg-white shadow rounded-xl p-4 border">
-          <p className="text-xs text-gray-500">Status</p>
-          <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700">
-            {treatment.status}
-          </span>
-        </div>
+        {/* <div className="p-6 bg-slate-50">
+          <div className="rounded-[32px] bg-white border border-slate-200 p-6 shadow-sm">
+            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Treatment Plan</p>
+                <h2 className="mt-2 text-lg font-semibold text-slate-900">Plan Overview</h2>
+              </div>
+              <div className="rounded-3xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-800">
+                {formatAmount(treatment.planned_amount)} · {treatment.estimated_duration_months || 'N/A'} months
+              </div>
+            </div>
 
-        <div className="bg-white shadow rounded-xl p-4 border">
-          <p className="text-xs text-gray-500">Duration</p>
-          <p className="font-semibold">
-            {treatment.estimated_duration_months || 'N/A'} months
-          </p>
-        </div>
-
-        <div className="bg-white shadow rounded-xl p-4 border">
-          <p className="text-xs text-gray-500">Amount</p>
-          <p className="font-semibold text-green-600">
-            {formatAmount(treatment.planned_amount)}
-          </p>
-        </div>
+            <p className="mt-5 text-sm leading-7 text-slate-700">{treatment.treatment_plan || 'No plan description available.'}</p>
+          </div>
+        </div> */}
       </div>
 
-      {/* 🔷 Patient Info */}
-      <div className="grid md:grid-cols-2 gap-6">
-        <div className="bg-white p-5 rounded-xl shadow border">
-          <h3 className="font-semibold mb-3">Patient Info</h3>
-          <p>Name: {treatment.patient_name || 'N/A'}</p>
-          <p>DOB: {treatment.patient_date_of_birth ? formatDate(treatment.patient_date_of_birth) : 'N/A'}</p>
-          <p>Gender: {treatment.patient_gender || 'N/A'}</p>
-          <p>Mobile: {treatment.patient_mobile || 'N/A'}</p>
-          <p>Assigned Doctor: {treatment.patient_assigned_doctor || 'N/A'}</p>
-        </div>
-
-        <div className="bg-white p-5 rounded-xl shadow border">
-          <h3 className="font-semibold mb-3">Treatment Plan</h3>
-          <p>{treatment.treatment_plan || 'N/A'}</p>
-        </div>
-      </div>
-
-      {/* 🔷 Visits Timeline */}
-      <div className="bg-white rounded-xl shadow p-6 border">
-
-        <div className="flex justify-between mb-4">
-          <h2 className="font-bold text-lg">Treatment Timeline</h2>
-
+      <div className="rounded-[32px] bg-white shadow-2xl border border-slate-200 p-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-blue-100 text-blue-700">
+              <Calendar className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Treatment Timeline</p>
+              <h2 className="text-2xl font-semibold text-slate-900">Visits & Records</h2>
+            </div>
+          </div>
           <button
             onClick={() => setShowAddVisitModal(true)}
-            className="bg-blue-600 text-white px-3 py-2 rounded-lg flex gap-2"
+            className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/10 transition hover:bg-blue-700"
           >
             <Plus className="w-4 h-4" />
-            <span>Add Visit</span>
+            Add Visit
           </button>
         </div>
+
 
         {visits.map((visit) => (
           <div key={visit.id} className="mb-6 border-l-2 pl-4 relative">
