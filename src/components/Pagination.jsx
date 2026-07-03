@@ -58,7 +58,7 @@ const Pagination = ({
             onClick={() => onPageChange(1)}
             disabled={currentPage === 1}
             aria-label="First page"
-            className="inline-flex items-center justify-center w-12 h-8 rounded-full border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 text-xs font-medium"
+              className="inline-flex items-center justify-center w-12 h-8 rounded-full border border-gray-300 bg-white hover-common text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 text-xs font-medium"
           >
             First
           </button>
@@ -68,7 +68,7 @@ const Pagination = ({
           onClick={() => onPageChange(Math.max(1, currentPage - 1))}
           disabled={currentPage === 1}
           aria-label="Previous page"
-          className="inline-flex items-center justify-center w-10 h-8 rounded-full border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center justify-center w-10 h-8 rounded-full border border-gray-300 bg-white hover-common text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <ChevronLeft className="w-3 h-3" />
         </button>
@@ -98,7 +98,7 @@ const Pagination = ({
           onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
           disabled={currentPage === totalPages}
           aria-label="Next page"
-          className="inline-flex items-center justify-center w-10 h-8 rounded-full border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center justify-center w-10 h-8 rounded-full border border-gray-300 bg-white hover-common text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <ChevronRight className="w-3 h-3" />
         </button>
@@ -108,7 +108,7 @@ const Pagination = ({
             onClick={() => onPageChange(totalPages)}
             disabled={currentPage === totalPages}
             aria-label="Last page"
-            className="inline-flex items-center justify-center w-12 h-8 rounded-full border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 text-xs font-medium"
+              className="inline-flex items-center justify-center w-12 h-8 rounded-full border border-gray-300 bg-white hover-common text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 text-xs font-medium"
           >
             Last
           </button>

@@ -155,7 +155,7 @@ const Settings = () => {
       ) : (
         <>
           {/* Profile Information Card */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 hover:shadow-lg transition-shadow">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 hover-common hover:shadow-lg transition-shadow">
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">Profile Information</h2>
@@ -290,7 +290,7 @@ const Settings = () => {
           </div>
 
           {/* System Preferences Card */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 hover:shadow-lg transition-shadow">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 hover-common hover:shadow-lg transition-shadow">
             <div className="mb-8">
               <h2 className="text-2xl font-bold text-gray-900">System Preferences</h2>
               <p className="text-sm text-gray-600 mt-1">Customize your experience</p>
@@ -298,36 +298,36 @@ const Settings = () => {
 
             <div className="space-y-5">
               {/* Email Notifications */}
-              <div className="flex items-center justify-between p-5 rounded-lg hover:bg-gray-50 transition-colors border border-gray-100">
+              <div className="flex items-center justify-between p-5 rounded-lg hover-common hover:bg-gray-50 transition-colors border border-gray-100">
                 <div className="flex-1">
                   <h3 className="text-base font-bold text-gray-900">Email Notifications</h3>
                   <p className="text-sm text-gray-600 mt-1">Receive email notifications for appointments and updates</p>
                 </div>
-                <div className="relative inline-flex h-8 w-14 items-center rounded-full bg-gray-300 cursor-pointer hover:bg-gray-400 transition-colors">
+                <div className="relative inline-flex h-8 w-14 items-center rounded-full bg-gray-300 cursor-pointer hover-common hover:bg-gray-400 transition-colors">
                   <input type="checkbox" className="sr-only peer" defaultChecked />
                   <div className="h-6 w-6 transform rounded-full bg-white transition-transform peer-checked:translate-x-6"></div>
                 </div>
               </div>
 
               {/* SMS Notifications */}
-              <div className="flex items-center justify-between p-5 rounded-lg hover:bg-gray-50 transition-colors border border-gray-100">
+              <div className="flex items-center justify-between p-5 rounded-lg hover-common hover:bg-gray-50 transition-colors border border-gray-100">
                 <div className="flex-1">
                   <h3 className="text-base font-bold text-gray-900">SMS Notifications</h3>
                   <p className="text-sm text-gray-600 mt-1">Receive SMS reminders for upcoming appointments</p>
                 </div>
-                <div className="relative inline-flex h-8 w-14 items-center rounded-full bg-gray-300 cursor-pointer hover:bg-gray-400 transition-colors">
+                <div className="relative inline-flex h-8 w-14 items-center rounded-full bg-gray-300 cursor-pointer hover-common hover:bg-gray-400 transition-colors">
                   <input type="checkbox" className="sr-only peer" />
                   <div className="h-6 w-6 transform rounded-full bg-white transition-transform peer-checked:translate-x-6"></div>
                 </div>
               </div>
 
               {/* Dark Mode */}
-              <div className="flex items-center justify-between p-5 rounded-lg hover:bg-gray-50 transition-colors border border-gray-100">
+              <div className="flex items-center justify-between p-5 rounded-lg hover-common hover:bg-gray-50 transition-colors border border-gray-100">
                 <div className="flex-1">
                   <h3 className="text-base font-bold text-gray-900">Dark Mode</h3>
                   <p className="text-sm text-gray-600 mt-1">Use dark theme for the interface (coming soon)</p>
                 </div>
-                <div className="relative inline-flex h-8 w-14 items-center rounded-full bg-gray-300 cursor-pointer hover:bg-gray-400 transition-colors opacity-50 cursor-not-allowed">
+                <div className="relative inline-flex h-8 w-14 items-center rounded-full bg-gray-300 cursor-pointer hover-common hover:bg-gray-400 transition-colors opacity-50 cursor-not-allowed">
                   <input type="checkbox" className="sr-only peer" disabled />
                   <div className="h-6 w-6 transform rounded-full bg-white transition-transform peer-checked:translate-x-6"></div>
                 </div>
@@ -336,7 +336,7 @@ const Settings = () => {
           </div>
 
           {/* Danger Zone */}
-          <div className="bg-white rounded-xl shadow-sm border border-red-100 p-8 hover:shadow-lg transition-shadow">
+          <div className="bg-white rounded-xl shadow-sm border border-red-100 p-8 hover-common hover:shadow-lg transition-shadow">
             <div className="mb-6">
               <h2 className="text-2xl font-bold text-red-600">Danger Zone</h2>
               <p className="text-sm text-gray-600 mt-1">Irreversible actions</p>

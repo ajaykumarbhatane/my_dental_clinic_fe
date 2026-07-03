@@ -115,6 +115,13 @@
     @apply bg-white rounded-xl shadow-sm border border-gray-100 p-6 transition-all duration-300 hover:shadow-lg hover:border-blue-200;
   }
 
+  /* Common hover utility to standardize hover effects across the app
+     Use this class on interactive elements: e.g. <div className="hover-common"> */
+  .hover-common {
+    @apply transition-all duration-200 transform cursor-pointer;
+    @apply hover:shadow-lg hover:-translate-y-0.5;
+  }
+
   /* Input styling */
   .form-input {
     @apply px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 placeholder-gray-400;

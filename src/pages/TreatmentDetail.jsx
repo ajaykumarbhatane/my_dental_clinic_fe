@@ -412,7 +412,7 @@ const TreatmentDetail = () => {
 
   return (
     <div className="space-y-8">
-      <div className="rounded-[32px] bg-white shadow-2xl border border-slate-200 overflow-hidden">
+      <div className="rounded-[32px] bg-white shadow-2xl border border-slate-200 overflow-hidden sticky top-4 z-30">
         <div className="bg-gradient-to-r from-slate-900 via-indigo-800 to-sky-700 text-white px-6 py-6 md:px-10 md:py-8">
           <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
             <div>
@@ -483,11 +483,11 @@ const TreatmentDetail = () => {
 
 
         {visits.map((visit) => (
-          <div key={visit.id} className="mb-6 border-l-2 pl-4 relative">
+          <div key={visit.id} className="mb-6 border-l-2 border-transparent hover:border-blue-400 pl-4 relative group">
 
             <div className="absolute left-[-6px] top-2 w-3 h-3 bg-blue-600 rounded-full"></div>
 
-            <div className="bg-gray-50 p-4 rounded-xl">
+            <div className="bg-gray-50 p-4 rounded-xl transition-all duration-200 group-hover:bg-blue-50 group-hover:shadow-md group-hover:translate-y-0.5 cursor-pointer">
 
               <div className="flex justify-between">
                 <div className="flex flex-col">

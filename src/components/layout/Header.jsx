@@ -98,7 +98,7 @@ const Header = ({ onMenuClick }) => {
           {/* Mobile Menu Button */}
           <button
             onClick={onMenuClick}
-            className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="p-2 rounded-lg bg-gray-100 hover-common text-gray-600 hover:bg-gray-200 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             aria-label="Toggle sidebar"
           >
             <Menu className="w-5 h-5" />
@@ -120,7 +120,7 @@ const Header = ({ onMenuClick }) => {
             
             <button
               onClick={() => setShowDropdown(!showDropdown)}
-              className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-gray-100 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="flex items-center gap-2 px-2 py-1 rounded-lg hover-common hover:bg-gray-100 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               <div className="flex items-center justify-center w-9 h-9 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg text-white font-semibold">
                 {getUserDisplayName().charAt(0).toUpperCase()}
@@ -159,7 +159,7 @@ const Header = ({ onMenuClick }) => {
                     setShowDropdown(false);
                     navigate('settings');
                   }}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover-common hover:bg-gray-50 flex items-center gap-2"
                 >
                   <User className="w-4 h-4 text-gray-400" />
                   Profile Settings
@@ -172,7 +172,7 @@ const Header = ({ onMenuClick }) => {
                     setShowDropdown(false);
                     handleLogout();
                   }}
-                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 font-medium"
+                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover-common hover:bg-red-50 flex items-center gap-2 font-medium"
                 >
                   <LogOut className="w-4 h-4" />
                   Logout
