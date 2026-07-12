@@ -909,131 +909,90 @@ return (
                   return (
                   <div
                      key={treatment.id}
-                     onClick={() =>
-                     handleViewTreatment(treatment)}
-                     className="group relative rounded-xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow-md transition-all"
+                     onClick={() => handleViewTreatment(treatment)}
+                     className="group relative rounded-xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow-lg transition-all"
                      >
                      <div className="absolute left-0 top-0 h-full w-[3px] bg-blue-500 rounded-l-2xl"></div>
-                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+
+                     <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
                         <div>
-                           <h3 className="text-base md:text-lg font-semibold text-gray-900">
-                              {treatment.type_of_treatment_name || 'Untitled'}
-                           </h3>
-                           <p className="text-xs text-gray-500 mt-1">Treatment</p>
+                           <p className="text-xs uppercase tracking-[0.3em] text-gray-500">Treatment</p>
+                           <h3 className="mt-2 text-2xl font-semibold tracking-tight text-gray-900">{treatment.type_of_treatment_name || 'Untitled'}</h3>
+                           <div className="mt-3 text-sm text-gray-600">
+                              {treatment.treatment_plan ? (treatment.treatment_plan.length > 100 ? `${treatment.treatment_plan.slice(0,100)}...` : treatment.treatment_plan) : 'No plan provided.'}
+                           </div>
                         </div>
-                        <div className="flex items-center justify-between sm:justify-end gap-2">
-                           <span className={`px-2.5 py-1 rounded-full text-[11px] font-medium ${statusClass}`}>
-                           {treatment.status || 'N/A'}
-                           </span>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                           <div className="rounded-2xl bg-white/50 p-3 border border-gray-100">
+                              <p className="text-[10px] uppercase tracking-wider text-gray-400">Status</p>
+                              <p className="mt-2 text-lg font-semibold text-gray-900">{treatment.status || 'N/A'}</p>
+                           </div>
+
+                           <div className="rounded-2xl bg-white/50 p-3 border border-gray-100">
+                              <p className="text-[10px] uppercase tracking-wider text-gray-400">Total Amount</p>
+                              <p className="mt-2 text-lg font-semibold text-gray-900">{formatAmount(totalAmount)}</p>
+
+                              <div className="mt-3 grid grid-cols-2 gap-2">
+                                 <div className="rounded-lg bg-white p-2 border border-gray-100 text-center">
+                                    <p className="text-[10px] text-gray-400 uppercase">Paid</p>
+                                    <p className="text-sm font-semibold text-gray-800 mt-1">{formatAmount(paidAmount)}</p>
+                                 </div>
+                                 <div className="rounded-lg bg-white p-2 border border-gray-100 text-center">
+                                    <p className="text-[10px] text-gray-400 uppercase">Remaining</p>
+                                    <p className="text-sm font-semibold text-gray-800 mt-1">{formatAmount(remainingAmount)}</p>
+                                 </div>
+                              </div>
+                           </div>
+
+                           <div className="rounded-2xl bg-white/50 p-3 border border-gray-100">
+                              <p className="text-[10px] uppercase tracking-wider text-gray-400">Duration</p>
+                              <p className="mt-2 text-lg font-semibold text-gray-900">{treatment.estimated_duration_months ? `${treatment.estimated_duration_months} months` : 'N/A'}</p>
+                           </div>
+                        </div>
+                     </div>
+
+                     <div className="mt-4 flex items-center justify-between">
+                        <div className="flex flex-wrap gap-2">
+                           {treatment.cap_type && (
+                           <span className="px-2 py-0.5 text-[11px] rounded-full bg-gray-100 text-gray-700">{treatment.cap_type}</span>
+                           )}
+                           <span className="px-2 py-0.5 text-[11px] rounded-full bg-blue-50 text-blue-700">{visits.length} visits</span>
+                        </div>
+                        <div className="flex items-center gap-2">
                            <button
                               type="button"
-                              onClick={(e) =>
-                              {
-                              e.stopPropagation();
-                              openEditTreatmentModal(treatment);
-                              }}
+                              onClick={(e) => { e.stopPropagation(); openEditTreatmentModal(treatment); }}
                               className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 transition active:scale-95"
-                              >
+                           >
                               <Edit className="w-3 h-3" />
                               Edit
                            </button>
                            <button
                               type="button"
-                              onClick={(e) =>
-                              {
-                              e.stopPropagation();
-                              setSelectedTreatment(treatment);
-                              setTreatmentDrawerOpen(false);
-                              setIsAddingVisit(true);
-                              }}
+                              onClick={(e) => { e.stopPropagation(); setSelectedTreatment(treatment); setTreatmentDrawerOpen(false); setIsAddingVisit(true); }}
                               className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition active:scale-95"
-                              >
+                           >
                               <Plus className="w-3 h-3" />
                               Visit
                            </button>
                            <button
                               type="button"
-                              onClick={(e) =>
-                              {
-                              e.stopPropagation();
-                              handleViewTreatment(treatment);
-                              }}
+                              onClick={(e) => { e.stopPropagation(); handleViewTreatment(treatment); }}
                               className="opacity-0 group-hover:opacity-100 inline-flex items-center justify-center rounded-full border border-blue-200 bg-white p-2 text-blue-600 shadow-sm transition hover:bg-blue-50"
-                              >
+                           >
                               <ArrowRight className="w-4 h-4" />
                            </button>
                         </div>
                      </div>
-                     <div className="mt-4 grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
-                        <div className="md:col-span-8 space-y-3">
-                           <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                 <p className="text-[11px] text-gray-400 uppercase">Treatment Plan</p>
-                                 <p className="text-sm font-medium text-gray-800">
-                                    {treatment.treatment_plan || 'N/A'}
-                                 </p>
-                              </div>
-                              <div>
-                                 <p className="text-[11px] text-gray-400 uppercase">Notes</p>
-                                 <p className="text-sm font-medium text-gray-800">
-                                    {treatment.treatment_notes || 'N/A'}
-                                 </p>
-                              </div>
-                           </div>
-                           <div className="flex flex-wrap gap-2 pt-1">
-                              {treatment.cap_type && (
-                              <span className="px-2 py-0.5 text-[11px] rounded-full bg-gray-100 text-gray-700">
-                              {treatment.cap_type}
-                              </span>
-                              )}
-                              <span className="px-2 py-0.5 text-[11px] rounded-full bg-blue-50 text-blue-700">
-                              {visits.length} visits
-                              </span>
-                           </div>
-                        </div>
-                        <div className="md:col-span-4">
-                           <div className="bg-gray-50 border border-gray-100 rounded-lg p-3 space-y-3">
-                              <div>
-                                 <p className="text-[11px] text-gray-400 uppercase">Total Amount</p>
-                                 <p className="text-lg font-bold text-gray-900">
-                                    {formatAmount(totalAmount)}
-                                 </p>
-                              </div>
-                              <div className="grid grid-cols-3 gap-2">
-                                 <div className="rounded-lg bg-white border border-gray-100 p-3">
-                                    <p className="text-[11px] text-gray-400 uppercase">Paid</p>
-                                    <p className="text-sm font-semibold text-gray-800">
-                                       {formatAmount(paidAmount)}
-                                    </p>
-                                 </div>
-                                 <div className="rounded-lg bg-white border border-gray-100 p-3 col-span-2">
-                                    <p className="text-[11px] text-gray-400 uppercase">Remaining</p>
-                                    <p className="text-sm font-semibold text-gray-800">
-                                       {formatAmount(remainingAmount)}
-                                    </p>
-                                 </div>
-                              </div>
-                              <div>
-                                 <p className="text-[11px] text-gray-400 uppercase">Duration</p>
-                                 <p className="text-sm font-semibold text-gray-800">
-                                    {treatment.estimated_duration_months
-                                    ? `${treatment.estimated_duration_months} months`
-                                    : 'N/A'}
-                                 </p>
-                              </div>
-                           </div>
-                        </div>
-                     </div>
+
                      <div className="mt-4">
                         <div className="flex justify-between text-xs text-gray-500 mb-1">
                            <span>Progress</span>
                            <span>{progress}%</span>
                         </div>
                         <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                           <div
-                           className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-500"
-                           style={{ width: `${progress}%` }}
-                           />
+                           <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
                         </div>
                      </div>
                   </div>
