@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import {
-  Edit, ArrowLeft, ArrowRight, Plus, Users, X, UploadCloud, Eye, Printer, Trash2, Check, ChevronDown, FileText,
+  Edit, ArrowLeft, ArrowRight, Plus, Users, X, UploadCloud, Eye, Printer, Trash2, Check, ChevronDown, FileText, Phone, MapPin, CalendarDays, ClipboardCheck, CircleDollarSign, Wallet, Heart
 } from 'lucide-react';
 import { patientApi } from '../api/patientApi';
 import { treatmentApi } from '../api/treatmentApi';
@@ -11,6 +11,240 @@ import { prescriptionApi } from '../api/prescriptionApi';
 import { useApiWithErrorHandling } from '../utils/apiUtils';
 import { useNotification } from '../context/NotificationContext';
 import { formatDate, parseDateString, toISODate, toDDMMYYYY } from '../utils/dateUtils';
+
+const HeroCard = ({ patient, patientInitials, patientAge, doctorLabel, onAddTreatment }) => (
+  <section className="relative overflow-hidden rounded-[32px] border border-white/20 bg-gradient-to-br from-slate-950 via-blue-800 to-cyan-500 p-5 text-white shadow-[0_24px_80px_-24px_rgba(15,23,42,0.6)] sm:p-7 lg:p-8">
+    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.24),_transparent_32%)]" />
+    <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white/15 text-3xl font-semibold uppercase tracking-[0.3em] text-white shadow-lg ring-1 ring-white/25 sm:h-24 sm:w-24 sm:text-4xl">
+          {patientInitials || 'P'}
+        </div>
+        <div className="space-y-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-slate-200">Patient Profile</p>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+              {patient.first_name} {patient.last_name}
+            </h1>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {patient.gender ? (
+                <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-sm font-medium text-white/90">
+                  {patient.gender}
+                </span>
+              ) : null}
+              {patientAge ? (
+                <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-sm font-medium text-white/90">
+                  {patientAge} Years
+                </span>
+              ) : null}
+              {patient.mobile ? (
+                <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-sm font-medium text-white/90">
+                  {patient.mobile}
+                </span>
+              ) : null}
+              {doctorLabel ? (
+                <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-sm font-medium text-white/90">
+                  {doctorLabel}
+                </span>
+              ) : null}
+              {patient.address ? (
+                <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-sm font-medium text-white/90">
+                  {patient.address}
+                </span>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      </div>
+      <button
+        onClick={onAddTreatment}
+        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-900 shadow-xl shadow-slate-950/10 transition hover:bg-slate-100"
+      >
+        <Plus className="h-4 w-4" />
+        Add Treatment
+      </button>
+    </div>
+  </section>
+);
+
+const StatCard = ({ icon: Icon, label, value, tone }) => (
+  <div className={`group rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${tone || ''}`}>
+    <div className="flex items-start justify-between gap-3">
+      <div>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-400">{label}</p>
+        <p className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">{value}</p>
+      </div>
+      <div className="rounded-2xl bg-slate-100 p-3 text-slate-600 transition group-hover:bg-blue-50 group-hover:text-blue-600">
+        <Icon className="h-5 w-5" />
+      </div>
+    </div>
+  </div>
+);
+
+const InfoRow = ({ label, value }) => (
+  <div className="flex items-start justify-between gap-4 border-b border-slate-100 py-3 last:border-b-0">
+    <span className="text-sm font-medium text-slate-500">{label}</span>
+    <span className="max-w-[60%] text-right text-sm font-semibold text-slate-900">{value || 'N/A'}</span>
+  </div>
+);
+
+const HistoryCard = ({ title, value, tone, icon: Icon, iconTone }) => (
+  <div className={`rounded-[24px] border border-slate-200 p-4 shadow-sm ${tone}`}>
+    <div className="flex items-center gap-3">
+      <div className={`rounded-2xl p-2 ${iconTone}`}>
+        <Icon className="h-4 w-4" />
+      </div>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">{title}</p>
+    </div>
+    <p className="mt-4 text-sm leading-6 text-slate-700">{value || 'No information recorded yet.'}</p>
+  </div>
+);
+
+const TreatmentCard = ({ treatment, onOpen, onEdit, onAddVisit, onView, progress, totalAmount, paidAmount, remainingAmount, visitsLength, statusClass }) => (
+  <div
+    onClick={onOpen}
+    className="group rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+  >
+    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-lg font-semibold text-slate-900">{treatment.type_of_treatment_name || 'Untitled'}</h3>
+          <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusClass}`}>
+            {treatment.status || 'N/A'}
+          </span>
+        </div>
+        <p className="text-sm leading-6 text-slate-600">
+          {treatment.treatment_plan ? (treatment.treatment_plan.length > 120 ? `${treatment.treatment_plan.slice(0, 120)}...` : treatment.treatment_plan) : 'No plan provided.'}
+        </p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onEdit(treatment); }}
+          className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-blue-300 hover:text-blue-700"
+        >
+          <Edit className="h-3.5 w-3.5" />
+          Edit
+        </button>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onAddVisit(treatment); }}
+          className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Add Visit
+        </button>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onView(treatment); }}
+          className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-blue-300 hover:text-blue-700"
+        >
+          <Eye className="h-3.5 w-3.5" />
+          View
+        </button>
+      </div>
+    </div>
+
+    <div className="mt-5 grid gap-3 sm:grid-cols-3">
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">Total Amount</p>
+        <p className="mt-2 text-base font-semibold text-slate-900">{totalAmount}</p>
+      </div>
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">Paid</p>
+        <p className="mt-2 text-base font-semibold text-slate-900">{paidAmount}</p>
+      </div>
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">Remaining</p>
+        <p className="mt-2 text-base font-semibold text-slate-900">{remainingAmount}</p>
+      </div>
+    </div>
+
+    <div className="mt-5">
+      <div className="mb-2 flex items-center justify-between text-xs text-slate-500">
+        <span>Progress</span>
+        <span>{progress}%</span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+        <div className="h-full rounded-full bg-gradient-to-r from-blue-600 to-indigo-500 transition-all duration-500" style={{ width: `${progress}%` }} />
+      </div>
+      <div className="mt-3 flex items-center justify-between text-sm text-slate-500">
+        <span>{visitsLength} visits</span>
+        <span>{treatment.estimated_duration_months ? `${treatment.estimated_duration_months} months` : 'Timeline pending'}</span>
+      </div>
+    </div>
+  </div>
+);
+
+const PrescriptionCard = ({ prescription, onView, onEdit, onPrint, onPdf, onDelete, formatDateValue }) => (
+  <article className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <div className="space-y-2">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-400">{formatDateValue(prescription.created_at || prescription.next_visit_date)}</p>
+        <h3 className="text-lg font-semibold text-slate-900">Prescription #{prescription.id}</h3>
+        <p className="text-sm leading-6 text-slate-600">
+          {prescription.diagnosis || prescription.complaints || 'No summary available'}
+        </p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
+          {prescription.x_ray ? 'RVG' : 'No RVG'}
+        </span>
+        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+          {prescription.items?.length ?? 0} medicines
+        </span>
+        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+          Next: {prescription.next_visit_date ? formatDate(prescription.next_visit_date) : 'N/A'}
+        </span>
+      </div>
+    </div>
+
+    <div className="mt-5 grid gap-3 lg:grid-cols-2">
+      <div className="rounded-[20px] border border-slate-200 bg-slate-50 p-4">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">Complaints</p>
+        <p className="mt-2 text-sm leading-6 text-slate-700">{prescription.complaints || 'None'}</p>
+      </div>
+      <div className="rounded-[20px] border border-slate-200 bg-slate-50 p-4">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">Diagnosis</p>
+        <p className="mt-2 text-sm leading-6 text-slate-700">{prescription.diagnosis || 'None'}</p>
+      </div>
+      <div className="rounded-[20px] border border-slate-200 bg-slate-50 p-4">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">Next Visit</p>
+        <p className="mt-2 text-sm leading-6 text-slate-700">{prescription.next_visit_date ? formatDate(prescription.next_visit_date) : 'Not scheduled'}</p>
+      </div>
+      <div className="rounded-[20px] border border-slate-200 bg-slate-50 p-4">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">Treatment</p>
+        <p className="mt-2 text-sm leading-6 text-slate-700">{prescription.treatment_name || 'Not assigned'}</p>
+      </div>
+    </div>
+
+    <div className="mt-5 flex flex-wrap gap-2">
+      <button type="button" onClick={() => onView(prescription)} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-blue-300 hover:text-blue-700">
+        <Eye className="h-3.5 w-3.5" />
+        View
+      </button>
+      <button type="button" onClick={() => onEdit(prescription)} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-blue-300 hover:text-blue-700">
+        <Edit className="h-3.5 w-3.5" />
+        Edit
+      </button>
+      <button type="button" onClick={() => onPrint(prescription)} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-blue-300 hover:text-blue-700">
+        <Printer className="h-3.5 w-3.5" />
+        Print
+      </button>
+      {prescription.pdf_url && (
+        <button type="button" onClick={() => onPdf(prescription)} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-blue-300 hover:text-blue-700">
+          <FileText className="h-3.5 w-3.5" />
+          PDF
+        </button>
+      )}
+      <button type="button" onClick={() => onDelete(prescription)} className="inline-flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100">
+        <Trash2 className="h-3.5 w-3.5" />
+        Delete
+      </button>
+    </div>
+  </article>
+);
+
 const PatientDetail = () => {
 const { id } = useParams();
 const navigate = useNavigate();
@@ -685,7 +919,7 @@ setLoading(false);
 useEffect(() => {
 const query = new URLSearchParams(location.search);
 const tab = query.get('tab');
-setActiveTab(['patient_info', 'treatments', 'visits', 'prescription'].includes(tab) ? tab : 'patient_info');
+setActiveTab(['patient_info', 'treatments', 'prescription'].includes(tab) ? tab : 'patient_info');
 loadData();
 fetchDoctors();
 }, [id]);
@@ -752,6 +986,15 @@ const pendingAmount = Math.max(0, totalAmount - totalPaid);
 return { totalTreatments, totalVisits, totalPaid, pendingAmount };
 };
 const { totalTreatments, totalVisits, totalPaid, pendingAmount } = calculateTotals();
+const patientInitials = `${patient?.first_name?.[0] || ''}${patient?.last_name?.[0] || ''}`.toUpperCase();
+const patientAge = patient?.date_of_birth ? Math.max(0, new Date().getFullYear() - new Date(patient.date_of_birth).getFullYear()) : null;
+const lastVisitDateObj = allVisits.reduce((latest, visit) => {
+  if (!visit.next_visit_date) return latest;
+  const date = parseDateString(visit.next_visit_date);
+  if (!date) return latest;
+  return !latest || date > latest ? date : latest;
+}, null);
+const lastVisitLabel = lastVisitDateObj ? formatDate(lastVisitDateObj) : 'N/A';
 if (loading) {
 return (
 <div className="flex justify-center items-center h-72">
@@ -760,50 +1003,299 @@ return (
 );
 }
 if (!patient) {
-return 
-<div className="text-center text-gray-500">Patient not found</div>
-;
+  return <div className="text-center text-gray-500">Patient not found</div>;
 }
 return (
 <div className="flex flex-col gap-6">
-<div className="flex items-center gap-3 px-4 lg:px-0">
-   <button
-      onClick={() =>
-      navigate(-1)}
-      className="inline-flex items-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:border-blue-300 hover:text-blue-700 transition"
-      >
-      <ArrowLeft className="w-4 h-4" />
-      Back to all patients
-   </button>
-</div>
 <div className="px-4 lg:px-0">
-   <main className="space-y-6">
-      <div className="rounded-[20px] border border-gray-200 bg-white p-5 shadow-sm">
-         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-               <p className="text-xs uppercase tracking-wider text-gray-500 font-semibold">Patient</p>
-               <h1 className="text-xl font-bold text-gray-900">{patient.first_name} {patient.last_name}</h1>
-               <p className="mt-1 text-sm text-gray-600">{patient.mobile || 'N/A'}</p>
-            </div>
+   <main className="w-full flex flex-col gap-6 px-2">
+      <HeroCard
+         patient={patient}
+         patientInitials={patientInitials}
+         patientAge={patientAge}
+         doctorLabel={patient.assigned_doctor || (patient.user && `${patient.user.first_name || ''} ${patient.user.last_name || ''}`.trim()) || 'N/A'}
+         onAddTreatment={() => {
+            closeTreatmentModal();
+            setIsAddingTreatment(true);
+         }}
+      />
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+         <StatCard icon={CalendarDays} label="Visits" value={totalVisits} />
+         <StatCard icon={CircleDollarSign} label="Revenue" value={formatAmount(totalPaid)} />
+         <StatCard icon={Wallet} label="Outstanding" value={formatAmount(pendingAmount)} />
+         <StatCard icon={ClipboardCheck} label="Rx" value={prescriptions.length} />
+      </div>
+
+      <div className="rounded-[28px] border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
+         <div className="flex flex-wrap gap-2 rounded-[20px] bg-slate-100 p-1.5">
+            {[
+            { key: 'patient_info', label: 'Patient Info' },
+            { key: 'treatments', label: 'Treatments' },
+            { key: 'prescription', label: 'Prescription' },
+            ].map((tab) => (
             <button
-               onClick={() =>
-               {
-               closeTreatmentModal();
-               setIsAddingTreatment(true);
-               }}
-               className="w-full md:w-auto rounded-2xl bg-gradient-to-r from-blue-600 to-sky-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-200/50 hover:from-blue-700 hover:to-sky-700 transition"
-               >
-               <Plus className="inline w-4 h-4 mr-2" />
-               Add Treatment
+               key={tab.key}
+               onClick={() => handleSelectPrescriptionTab(tab.key)}
+               className={`flex-1 rounded-[16px] px-4 py-2.5 text-sm font-semibold transition ${
+               activeTab === tab.key
+               ? 'bg-white text-blue-600 shadow-lg shadow-slate-200'
+               : 'text-slate-500 hover:bg-white/70 hover:text-slate-700'
+               }`}
+            >
+            {tab.label}
             </button>
+            ))}
          </div>
       </div>
-      <div className="bg-white rounded-[20px] border border-gray-150 p-5 shadow-sm">
+
+      {activeTab === 'patient_info' && (
+      <section className="space-y-4" aria-labelledby="patient-info-heading">
+         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+               <p id="patient-info-heading" className="text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-400">Patient overview</p>
+               <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Clinical profile</h2>
+            </div>
+            <button
+               type="button"
+               onClick={openEditPatientModal}
+               className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-200/50 transition hover:bg-blue-700"
+            >
+               <Edit className="h-4 w-4" />
+               Edit Patient
+            </button>
+         </div>
+
+         <div className="grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
+            <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+               <div className="grid gap-0 sm:grid-cols-2">
+                  <InfoRow label="Phone" value={patient.mobile || 'N/A'} />
+                  <InfoRow label="Gender" value={patient.gender || 'N/A'} />
+                  <InfoRow label="Doctor" value={patient.assigned_doctor || (patient.user && `${patient.user.first_name || ''} ${patient.user.last_name || ''}`.trim()) || 'N/A'} />
+                  <InfoRow label="DOB" value={formatDate(patient.date_of_birth) || 'N/A'} />
+                  <InfoRow label="Location" value={patient.address || 'N/A'} />
+                  <InfoRow label="Status" value="Active" />
+               </div>
+            </div>
+            <div className="space-y-4">
+               <HistoryCard
+                  title="Medical History"
+                  value={patient.medical_history || 'No medical history recorded'}
+                  tone="bg-blue-50/70"
+                  icon={ClipboardCheck}
+                  iconTone="bg-blue-100 text-blue-700"
+               />
+               <HistoryCard
+                  title="Dental History"
+                  value={patient.dental_history || 'No dental history recorded'}
+                  tone="bg-emerald-50/70"
+                  icon={Heart}
+                  iconTone="bg-emerald-100 text-emerald-700"
+               />
+            </div>
+         </div>
+
+         <div className="rounded-[28px] border border-slate-200 bg-gradient-to-br from-slate-950 via-blue-900 to-sky-600 p-5 text-white shadow-sm">
+            <div className="flex items-center gap-3">
+               <div className="rounded-2xl bg-white/15 p-3">
+                  <CalendarDays className="h-5 w-5" />
+               </div>
+               <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-300">Activity timeline</p>
+                  <h3 className="text-lg font-semibold">Care journey</h3>
+               </div>
+            </div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+               <div className="rounded-[20px] border border-white/10 bg-white/10 p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-300">Last visit</p>
+                  <p className="mt-2 text-sm font-semibold">{lastVisitLabel}</p>
+               </div>
+               <div className="rounded-[20px] border border-white/10 bg-white/10 p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-300">Upcoming visit</p>
+                  <p className="mt-2 text-sm font-semibold">{upcomingVisits[0] ? formatDate(upcomingVisits[0].next_visit_date) : 'No upcoming visits'}</p>
+               </div>
+               <div className="rounded-[20px] border border-white/10 bg-white/10 p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-300">Total treatments</p>
+                  <p className="mt-2 text-sm font-semibold">{totalTreatments}</p>
+               </div>
+            </div>
+         </div>
+      </section>
+      )}
+      <div>
+         {activeTab === 'treatments' && (
+         <div className="space-y-4">
+            {treatments.length === 0 ? (
+            <div className="rounded-[28px] border border-dashed border-slate-200 bg-white p-8 text-center shadow-sm">
+               <p className="text-lg font-semibold text-slate-900">No treatments yet</p>
+               <p className="mt-2 text-sm text-slate-500">Start the first plan for this patient to track care progress.</p>
+            </div>
+            ) : (
+            <div className="grid gap-4">
+               {treatments.map((treatment) => {
+               const visits = getVisitsForTreatment(treatment.id);
+               const progress = treatmentProgress(treatment);
+               const { totalAmount, paidAmount, remainingAmount } = getTreatmentPaymentTotals(treatment);
+               const statusClass =
+               treatment.status === 'completed'
+               ? 'bg-emerald-100 text-emerald-700'
+               : treatment.status === 'ongoing'
+               ? 'bg-blue-100 text-blue-700'
+               : treatment.status === 'scheduled'
+               ? 'bg-amber-100 text-amber-700'
+               : 'bg-slate-100 text-slate-700';
+               return (
+               <TreatmentCard
+                  key={treatment.id}
+                  treatment={treatment}
+                  onOpen={() => handleViewTreatment(treatment)}
+                  onEdit={openEditTreatmentModal}
+                  onAddVisit={(selected) => {
+                    setSelectedTreatment(selected);
+                    setTreatmentDrawerOpen(false);
+                    setIsAddingVisit(true);
+                  }}
+                  onView={handleViewTreatment}
+                  progress={progress}
+                  totalAmount={formatAmount(totalAmount)}
+                  paidAmount={formatAmount(paidAmount)}
+                  remainingAmount={formatAmount(remainingAmount)}
+                  visitsLength={visits.length}
+                  statusClass={statusClass}
+               />
+               );
+               })}
+            </div>
+            )}
+         </div>
+         )}
+         {activeTab === 'visits' && (
+         <div className="space-y-3 px-1">
+            {allVisits.length === 0 ? (
+            <div className="rounded-[24px] border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">No visits found for this patient.</div>
+            ) : (
+            <div className="space-y-3">
+               {allVisits.map((visit) => (
+               <div
+                  key={visit.id}
+                  onClick={() =>
+                  {
+                  const related = treatments.find(
+                  (t) =>
+                  String(t.id) === String(visit.treatment) ||
+                  String(t.id) === String(visit.treatment_id)
+                  );
+                  if (related) handleViewTreatment(related);
+                  }}
+                  className="group relative cursor-pointer rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+                  >
+                     <div className="flex items-start justify-between gap-3">
+                        <div>
+                           <h3 className="text-sm font-semibold text-slate-900">
+                              {visit.treatment_name || 'Treatment'}
+                           </h3>
+                           <p className="mt-1 text-xs text-slate-500">
+                              {formatDate(visit.next_visit_date)}
+                           </p>
+                        </div>
+                        <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
+                        {visit.patient_payment_type || 'N/A'}
+                        </span>
+                     </div>
+                     <p className="mt-2 text-sm text-slate-600 line-clamp-2">
+                        {visit.treatment_notes || visit.patient_complaints || 'No notes'}
+                     </p>
+                     <div className="mt-3 flex items-center justify-between">
+                        <p className="text-sm font-semibold text-slate-900">
+                           {visit.patient_payment_amount ? formatAmount(visit.patient_payment_amount) : 'No Payment'}
+                        </p>
+                        <span className="text-xs font-semibold text-blue-600">
+                        View →
+                        </span>
+                     </div>
+                  </div>
+                  ))}
+               </div>
+               )}
+            </div>
+            )}
+            {activeTab === 'prescription' && (
+            <div className="space-y-4">
+               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                     <p className="text-sm text-slate-500">Prescription history</p>
+                     <h2 className="text-2xl font-semibold tracking-tight text-slate-900">Prescriptions</h2>
+                  </div>
+                  <button
+                     type="button"
+                     onClick={() => openPrescriptionModal('create')}
+                     className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-sky-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-200/50 transition hover:from-blue-700 hover:to-sky-700"
+                     >
+                     <Plus className="h-4 w-4" />
+                     Add Prescription
+                  </button>
+               </div>
+               {prescriptions.length === 0 ? (
+               <div className="rounded-[28px] border border-dashed border-slate-200 bg-white p-8 text-center shadow-sm">
+                  <p className="text-lg font-semibold text-slate-900">No prescriptions yet</p>
+                  <p className="mt-2 text-sm text-slate-500">Create the first prescription for this patient to keep records organized.</p>
+               </div>
+               ) : (
+               <div className="grid gap-4">
+                  {prescriptions.map((prescription) => (
+                  <PrescriptionCard
+                     key={prescription.id}
+                     prescription={prescription}
+                     onView={handleViewPrescription}
+                     onEdit={handleEditPrescription}
+                     onPrint={handlePrintPrescription}
+                     onPdf={handleViewPDF}
+                     onDelete={handleDeletePrescription}
+                     formatDateValue={(value) => formatDate(value)}
+                  />
+                  ))}
+               </div>
+               )}
+            </div>
+            )}
+         </div>
+   </main>
+   </div>
+   
+   {/*
+<div className="px-4 lg:px-0">
+   <main className="space-y-6">
+      <div className="rounded-[28px] overflow-hidden shadow-2xl shadow-slate-200">
+         <div className="relative overflow-hidden bg-gradient-to-r from-slate-900 via-blue-700 to-sky-500 px-6 py-8 sm:px-10 sm:py-10">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.22),_transparent_30%)]" />
+            <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+               <div className="flex items-start gap-5">
+                  <div className="flex h-24 w-24 items-center justify-center rounded-full bg-white/15 text-4xl font-bold uppercase tracking-[0.22em] text-white shadow-lg ring-1 ring-white/20">
+                     {patientInitials || 'P'}
+                  </div>
+                  <div className="space-y-3">
+                     <p className="text-xs uppercase tracking-[0.28em] text-slate-200 font-semibold">Patient Profile</p>
+                     <h1 className="mt-3 text-4xl font-semibold text-white">{patient.first_name} {patient.last_name}</h1>
+                  </div>
+               </div>
+               <button
+                  onClick={() => {
+                     closeTreatmentModal();
+                     setIsAddingTreatment(true);
+                  }}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-slate-900 shadow-xl shadow-slate-900/10 transition hover:bg-slate-100"
+               >
+                  <Plus className="w-4 h-4" />
+                  Add Treatment
+               </button>
+            </div>
+         </div>
+      </div>
+      <div className="bg-white rounded-[24px] border border-gray-150 p-5 shadow-sm">
          <div className="flex flex-wrap gap-2 border-b border-gray-100 pb-4 mb-4">
             {[
             { key: 'patient_info', label: 'Patient Info' },
             { key: 'treatments', label: 'Treatments' },
-            { key: 'visits', label: 'Visits' },
             { key: 'prescription', label: 'Prescription' },
             ].map((tab) => (
             <button
@@ -821,63 +1313,119 @@ return (
          </div>
       </div>
       {activeTab === 'patient_info' && (
-      <section className="rounded-[20px] border border-gray-200 bg-white shadow-sm p-5" aria-labelledby="patient-info-heading">
-         <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-3 pb-4 border-b border-gray-100">
-               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-sky-500 text-white shadow-md">
-                  <Users className="w-5 h-5" />
-               </div>
-               <div className="flex-1">
-                  <p id="patient-info-heading" className="text-xs uppercase tracking-wider text-gray-500 font-semibold">Patient Info</p>
-                  <h2 className="text-lg font-bold text-gray-900">{patient.first_name} {patient.last_name}</h2>
-               </div>
-               <button
-                  type="button"
-                  onClick={openEditPatientModal}
-                  className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition"
-                  >
-                  <Edit className="w-4 h-4" />
-                  Edit Patient
-               </button>
+      <section className="rounded-[24px] border border-gray-200 bg-white shadow-sm p-6" aria-labelledby="patient-info-heading">
+         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between mb-4">
+            <div>
+               <p id="patient-info-heading" className="text-xs uppercase tracking-[0.3em] text-gray-500 font-semibold">Patient Info</p>
+               <h2 className="mt-2 text-2xl font-semibold text-gray-900">{patient.first_name} {patient.last_name}</h2>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-               <div className="rounded-2xl bg-gradient-to-br from-blue-50 to-sky-50 p-3 border border-blue-100">
-                  <p className="text-[10px] uppercase tracking-widest text-blue-600 font-semibold">Phone</p>
-                  <p className="mt-1.5 text-sm font-semibold text-gray-900">{patient.mobile || 'N/A'}</p>
+            <button
+               type="button"
+               onClick={openEditPatientModal}
+               className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-200/50 hover:bg-blue-700 transition w-fit"
+            >
+               <Edit className="w-4 h-4" />
+               Edit Patient
+            </button>
+         </div>
+         <div className="rounded-[24px] border border-gray-100 bg-slate-50 p-4 shadow-sm">
+            <div className="grid gap-3 lg:grid-cols-3">
+               <div className="rounded-[16px] border border-gray-100 bg-white p-3 shadow-sm">
+                  <div className="flex items-center gap-2 text-slate-400">
+                     <Phone className="h-4 w-4" />
+                     <p className="text-[9px] uppercase tracking-[0.3em]">Phone</p>
+                  </div>
+                  <p className="mt-2 text-sm font-semibold text-gray-900">{patient.mobile || 'N/A'}</p>
                </div>
-               <div className="rounded-2xl bg-gradient-to-br from-purple-50 to-pink-50 p-3 border border-purple-100">
-                  <p className="text-[10px] uppercase tracking-widest text-purple-600 font-semibold">Gender</p>
-                  <p className="mt-1.5 text-sm font-semibold text-gray-900">{patient.gender || 'N/A'}</p>
+               <div className="rounded-[16px] border border-gray-100 bg-white p-3 shadow-sm">
+                  <div className="flex items-center gap-2 text-slate-400">
+                     <Users className="h-4 w-4" />
+                     <p className="text-[9px] uppercase tracking-[0.3em]">Gender</p>
+                  </div>
+                  <p className="mt-2 text-sm font-semibold text-gray-900">{patient.gender || 'N/A'}</p>
                </div>
-               <div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 p-3 border border-emerald-100 col-span-2">
-                  <p className="text-[10px] uppercase tracking-widest text-emerald-600 font-semibold">Doctor</p>
-                  <p className="mt-1.5 text-sm font-semibold text-gray-900">
-                     {patient.assigned_doctor ||
-                     (patient.user && `${patient.user.first_name || ''} ${patient.user.last_name || ''}`.trim()) ||
-                     'N/A'}
+               <div className="rounded-[16px] border border-gray-100 bg-white p-3 shadow-sm">
+                  <div className="flex items-center gap-2 text-slate-400">
+                     <Users className="h-4 w-4" />
+                     <p className="text-[9px] uppercase tracking-[0.3em]">Doctor</p>
+                  </div>
+                  <p className="mt-2 text-sm font-semibold text-gray-900">
+                     {patient.assigned_doctor || (patient.user && `${patient.user.first_name || ''} ${patient.user.last_name || ''}`.trim()) || 'N/A'}
                   </p>
                </div>
+               <div className="rounded-[16px] border border-gray-100 bg-white p-3 shadow-sm">
+                  <div className="flex items-center gap-2 text-slate-400">
+                     <CalendarDays className="h-4 w-4" />
+                     <p className="text-[9px] uppercase tracking-[0.3em]">Since</p>
+                  </div>
+                  <p className="mt-2 text-sm font-semibold text-gray-900">{patient.created_at ? formatDate(patient.created_at) : 'N/A'}</p>
+               </div>
+               <div className="rounded-[16px] border border-gray-100 bg-white p-3 shadow-sm">
+                  <div className="flex items-center gap-2 text-slate-400">
+                     <CalendarDays className="h-4 w-4" />
+                     <p className="text-[9px] uppercase tracking-[0.3em]">Born</p>
+                  </div>
+                  <p className="mt-2 text-sm font-semibold text-gray-900">{formatDate(patient.date_of_birth) || 'N/A'}</p>
+               </div>
+               <div className="rounded-[16px] border border-gray-100 bg-white p-3 shadow-sm">
+                  <div className="flex items-center gap-2 text-slate-400">
+                     <MapPin className="h-4 w-4" />
+                     <p className="text-[9px] uppercase tracking-[0.3em]">Location</p>
+                  </div>
+                  <p className="mt-2 text-sm font-semibold text-gray-900 line-clamp-1">{patient.address || 'N/A'}</p>
+               </div>
+               <div className="rounded-[16px] border border-gray-100 bg-white p-3 shadow-sm">
+                  <div className="flex items-center gap-2 text-slate-400">
+                     <CalendarDays className="h-4 w-4" />
+                     <p className="text-[9px] uppercase tracking-[0.3em]">Total Visits</p>
+                  </div>
+                  <p className="mt-2 text-sm font-semibold text-gray-900">{totalVisits}</p>
+               </div>
+               <div className="rounded-[16px] border border-gray-100 bg-white p-3 shadow-sm">
+                  <div className="flex items-center gap-2 text-slate-400">
+                     <CircleDollarSign className="h-4 w-4" />
+                     <p className="text-[9px] uppercase tracking-[0.3em]">Revenue</p>
+                  </div>
+                  <p className="mt-2 text-sm font-semibold text-gray-900">{formatAmount(totalPaid)}</p>
+               </div>
+               <div className="rounded-[16px] border border-gray-100 bg-white p-3 shadow-sm">
+                  <div className="flex items-center gap-2 text-slate-400">
+                     <Wallet className="h-4 w-4" />
+                     <p className="text-[9px] uppercase tracking-[0.3em]">Outstanding</p>
+                  </div>
+                  <p className="mt-2 text-sm font-semibold text-gray-900">{formatAmount(pendingAmount)}</p>
+               </div>
+               <div className="rounded-[16px] border border-gray-100 bg-white p-3 shadow-sm">
+                  <div className="flex items-center gap-2 text-slate-400">
+                     <ClipboardCheck className="h-4 w-4" />
+                     <p className="text-[9px] uppercase tracking-[0.3em]">Rx</p>
+                  </div>
+                  <p className="mt-2 text-sm font-semibold text-gray-900">{prescriptions.length}</p>
+               </div>
+               <div className="rounded-[16px] border border-gray-100 bg-white p-3 shadow-sm">
+                  <div className="flex items-center gap-2 text-slate-400">
+                     <Heart className="h-4 w-4" />
+                     <p className="text-[9px] uppercase tracking-[0.3em]">Status</p>
+                  </div>
+                  <p className="mt-2 text-sm font-semibold text-green-600">Active</p>
+               </div>
             </div>
-            <div className="rounded-2xl bg-white border border-gray-200 p-4 space-y-3">
-               <div className="pb-3 border-b border-gray-100">
-                  <p className="text-[10px] uppercase tracking-widest text-gray-600 font-semibold">Born</p>
-                  <p className="mt-1.5 text-sm font-semibold text-gray-900">{formatDate(patient.date_of_birth) || 'N/A'}</p>
+            <div className="mt-3 grid gap-3 lg:grid-cols-2">
+               <div className="rounded-[16px] bg-blue-50 p-3 border border-blue-100">
+                  <p className="text-[9px] uppercase tracking-[0.3em] text-blue-600 font-semibold">Medical History</p>
+                  <p className="mt-1 text-xs text-gray-700">{patient.medical_history || 'No medical history recorded'}</p>
                </div>
-               <div className="pb-3 border-b border-gray-100">
-                  <p className="text-[10px] uppercase tracking-widest text-gray-600 font-semibold">Location</p>
-                  <p className="mt-1.5 text-sm font-semibold text-gray-900">{patient.address || 'N/A'}</p>
+               <div className="rounded-[16px] bg-emerald-50 p-3 border border-emerald-100">
+                  <p className="text-[9px] uppercase tracking-[0.3em] text-emerald-600 font-semibold">Dental History</p>
+                  <p className="mt-1 text-xs text-gray-700">{patient.dental_history || 'No dental history recorded'}</p>
                </div>
-               <div>
-                  <p className="text-[10px] uppercase tracking-widest text-gray-600 font-semibold mb-2">Clinical Overview</p>
-                  <div className="space-y-2">
-                     <div className="rounded-lg bg-gray-50 p-2.5 border border-gray-100">
-                        <p className="text-[9px] uppercase tracking-wider text-gray-500 font-semibold">Medical History</p>
-                        <p className="mt-1 text-xs text-gray-700">{patient.medical_history || 'No history'}</p>
-                     </div>
-                     <div className="rounded-lg bg-gray-50 p-2.5 border border-gray-100">
-                        <p className="text-[9px] uppercase tracking-wider text-gray-500 font-semibold">Dental History</p>
-                        <p className="mt-1 text-xs text-gray-700">{patient.dental_history || 'No history'}</p>
-                     </div>
+            </div>
+            <div className="mt-3 rounded-[16px] bg-gradient-to-r from-slate-900 via-blue-800 to-sky-500 p-3 text-white shadow-lg">
+               <p className="text-[9px] uppercase tracking-[0.3em] text-slate-200">Activity</p>
+               <div className="mt-2 flex gap-3">
+                  <div className="flex-1">
+                     <p className="text-[8px] uppercase tracking-[0.2em] text-slate-300">Last Visit</p>
+                     <p className="mt-1 text-xs font-semibold">{lastVisitLabel}</p>
                   </div>
                </div>
             </div>
@@ -1180,306 +1728,226 @@ return (
          </div>
    </main>
    </div>
+*/}
    {isPrescriptionModalOpen && (
-   <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex justify-center items-center p-4">
-      <div className="bg-white w-full max-w-6xl max-h-[92vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col">
-         {/* HEADER */}
-         <div className="border-b px-8 py-5 flex justify-between items-center bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 backdrop-blur-sm sm:p-4">
+      <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-2xl">
+         <div className="flex items-center justify-between border-b border-slate-200 bg-gradient-to-r from-blue-600 via-blue-700 to-sky-600 px-5 py-5 text-white sm:px-8">
             <div>
-               <p className="text-xs uppercase tracking-widest opacity-80">
-                  {prescriptionModalMode === 'edit'
-                  ? 'Edit Prescription'
-                  : 'Create Prescription'}
+               <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-slate-200">
+                  {prescriptionModalMode === 'edit' ? 'Edit Prescription' : 'Create Prescription'}
                </p>
-               <h2 className="text-2xl font-bold mt-1">
+               <h2 className="mt-1 text-xl font-semibold sm:text-2xl">
                   {patient.first_name} {patient.last_name}
                </h2>
             </div>
             <button
                onClick={closePrescriptionModal}
-               className="h-10 w-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center"
+               className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 transition hover:bg-white/30"
                >
-               <X className="w-5 h-5" />
+               <X className="h-5 w-5" />
             </button>
          </div>
-         {/* BODY */}
-         <form onSubmit={(e) =>
-            handleSavePrescription(e, false)} className="overflow-y-auto px-8 py-6 space-y-6 bg-slate-50">
-            {/* TOP GRID */}
-            <div className="grid md:grid-cols-2 gap-5">
-               <div>
-                  <label className="label-ui">Treatment</label>
-                  <select
-                     value={prescriptionFormData.treatment}
-                     onChange={(e)=>
-                     handlePrescriptionFieldChange('treatment',e.target.value)}
-                     className="input-ui"
+         <form onSubmit={(e) => handleSavePrescription(e, false)} className="overflow-y-auto bg-slate-50 px-4 py-5 sm:px-6 lg:px-8 lg:py-6">
+            <div className="space-y-5">
+               <div className="grid gap-5 md:grid-cols-2">
+                  <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+                     <label className="mb-2 block text-sm font-semibold text-slate-700">Treatment</label>
+                     <select
+                        value={prescriptionFormData.treatment}
+                        onChange={(e) => handlePrescriptionFieldChange('treatment', e.target.value)}
+                        className="input-ui"
                      >
-                     <option>Select treatment</option>
-                     {treatments.map((t)=>(
-                     <option key={t.id} value={t.id}>
-                        {t.type_of_treatment_name}
-                     </option>
-                     ))}
-                  </select>
+                        <option>Select treatment</option>
+                        {treatments.map((t) => (
+                        <option key={t.id} value={t.id}>
+                           {t.type_of_treatment_name}
+                        </option>
+                        ))}
+                     </select>
+                  </div>
+                  <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+                     <label className="mb-2 block text-sm font-semibold text-slate-700">Next Visit</label>
+                     <input
+                        type="date"
+                        value={prescriptionFormData.next_visit_date}
+                        onChange={(e) => handlePrescriptionFieldChange('next_visit_date', e.target.value)}
+                        className="input-ui"
+                     />
+                  </div>
                </div>
-               <div>
-                  <label className="label-ui">Next Visit</label>
-                  <input
-                     type="date"
-                     value={prescriptionFormData.next_visit_date}
-                     onChange={(e)=>handlePrescriptionFieldChange('next_visit_date',e.target.value)}
-                  className="input-ui"
-                  />
+
+               <div className="grid gap-5 md:grid-cols-2">
+                  <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+                     <label className="mb-2 block text-sm font-semibold text-slate-700">Complaints</label>
+                     <textarea rows="4"
+                        className="input-ui resize-none"
+                        placeholder="Enter Patient complaints"
+                        value={prescriptionFormData.complaints}
+                        onChange={(e) => handlePrescriptionFieldChange('complaints', e.target.value)}
+                     />
+                  </div>
+                  <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+                     <label className="mb-2 block text-sm font-semibold text-slate-700">Diagnosis</label>
+                     <textarea rows="4"
+                        className="input-ui resize-none"
+                        placeholder="Enter Diagnosis"
+                        value={prescriptionFormData.diagnosis}
+                        onChange={(e) => handlePrescriptionFieldChange('diagnosis', e.target.value)}
+                     />
+                  </div>
                </div>
-            </div>
-            {/* TEXT AREA GRID */}
-            <div className="grid md:grid-cols-2 gap-5">
-               <div>
-                  {/* <label className="label-ui">Complaints</label> */}
-                  <textarea rows="4"
+
+               <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">Instructions</label>
+                  <textarea rows="3"
                      className="input-ui resize-none"
-                     placeholder="Enter Patient complaints"
-                     value={prescriptionFormData.complaints}
-                     onChange={(e)=>handlePrescriptionFieldChange('complaints',e.target.value)}
+                     placeholder="Enter Instructions"
+                     value={prescriptionFormData.instructions}
+                     onChange={(e) => handlePrescriptionFieldChange('instructions', e.target.value)}
                   />
                </div>
-               <div>
-                  {/* <label className="label-ui">Diagnosis</label> */}
-                  <textarea rows="4"
-                     className="input-ui resize-none"
-                     placeholder="Enter Diagnosis"
-                     value={prescriptionFormData.diagnosis}
-                     onChange={(e)=>handlePrescriptionFieldChange('diagnosis',e.target.value)}
-                  />
-               </div>
-            </div>
-            <div>
-               {/* <label className="label-ui">Instructions</label> */}
-               <textarea rows="3"
-                  className="input-ui resize-none"
-                  placeholder="Enter Instructions"
-                  value={prescriptionFormData.instructions}
-                  onChange={(e)=>handlePrescriptionFieldChange('instructions',e.target.value)}
-               />
-            </div>
-            {/* MEDICINES */}
-            <div className="bg-white rounded-2xl border p-4 space-y-4">
-               <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold">Medicines</h3>
-               </div>
-               <div className="space-y-3">
-                  {prescriptionItems.map((item,index)=>(
-                  <div
-                     key={item.localId}
-                     className="grid md:grid-cols-6 gap-3 border rounded-2xl p-3 bg-slate-50"
+
+               <div className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                  <div className="mb-4 flex items-center justify-between">
+                     <div>
+                        <h3 className="text-lg font-semibold text-slate-900">Medicines</h3>
+                        <p className="text-sm text-slate-500">Add medications and dosing instructions</p>
+                     </div>
+                  </div>
+                  <div className="space-y-3">
+                     {prescriptionItems.map((item, index) => (
+                     <div
+                        key={item.localId}
+                        className="grid gap-3 rounded-[24px] border border-slate-200 bg-slate-50 p-3 lg:grid-cols-[1.5fr_0.7fr_1fr_0.9fr_1fr_auto]"
                      >
-                     {/* ===== MODERN MEDICINE DROPDOWN ===== */}
-                     <div className="relative" ref={dropdownRef}>
-                        <input
-                        ref={itemSearchOpenId === index ? newItemRef : null}
-                        type="text"
-                        placeholder="Search Medicine..."
-                        className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium shadow-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition"
-                        value={item.search}
-                        onChange={(e) => {
-                        handlePrescriptionItemChange(index, "search", e.target.value);
-                        setItemSearchOpenId(index);
-                        }}
-                        onFocus={() => setItemSearchOpenId(index)}
-                        onKeyDown={(e) => {
-                        const filtered = getClinicMedicineOptions(item.search);
-                        if (!filtered.length) return;
-                        let current = filtered.findIndex(
-                        (m) => String(m.id) === String(item.highlightedId)
-                        );
-                        if (e.key === "ArrowDown") {
-                        e.preventDefault();
-                        const next = filtered[current + 1] || filtered[0];
-                        updatePrescriptionItem(index, { highlightedId: next.id });
-                        }
-                        if (e.key === "ArrowUp") {
-                        e.preventDefault();
-                        const prev =
-                        filtered[current - 1] || filtered[filtered.length - 1];
-                        updatePrescriptionItem(index, { highlightedId: prev.id });
-                        }
-                        if (e.key === "Enter") {
-                        e.preventDefault();
-                        const selected =
-                        filtered.find(
-                        (m) => String(m.id) === String(item.highlightedId)
-                        ) || filtered[0];
-                        handleMedicineSelect(index, selected);
-                        }
-                        if (e.key === "Escape") {
-                        setItemSearchOpenId(null);
-                        }
-                        }}
-                        />
-                        {/* Dropdown */}
-                        {itemSearchOpenId === index && (
-                        <div className="absolute z-50 mt-2 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl animate-in fade-in zoom-in-95">
-                           <div className="h-48 overflow-y-scroll py-2 custom-scrollbar">
-                              {getClinicMedicineOptions(item.search).length > 0 ? (
-                              getClinicMedicineOptions(item.search).map((medicine) => {
-                              const active =
-                              String(item.highlightedId) === String(medicine.id);
-                              return (
-                              <button
-                                 key={medicine.id}
-                                 type="button"
-                                 onMouseDown={(e) =>
-                                 {
-                                 e.preventDefault();
-                                 handleMedicineSelect(index, medicine);
-                                 }}
-                                 onMouseEnter={() =>
-                                 updatePrescriptionItem(index, {
-                                 highlightedId: medicine.id,
-                                 })
+                        <div className="relative" ref={dropdownRef}>
+                           <input
+                              ref={itemSearchOpenId === index ? newItemRef : null}
+                              type="text"
+                              placeholder="Search Medicine..."
+                              className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                              value={item.search}
+                              onChange={(e) => {
+                                 handlePrescriptionItemChange(index, 'search', e.target.value);
+                                 setItemSearchOpenId(index);
+                              }}
+                              onFocus={() => setItemSearchOpenId(index)}
+                              onKeyDown={(e) => {
+                                 const filtered = getClinicMedicineOptions(item.search);
+                                 if (!filtered.length) return;
+                                 let current = filtered.findIndex((m) => String(m.id) === String(item.highlightedId));
+                                 if (e.key === 'ArrowDown') {
+                                    e.preventDefault();
+                                    const next = filtered[current + 1] || filtered[0];
+                                    updatePrescriptionItem(index, { highlightedId: next.id });
                                  }
-                                 className={`w-full px-4 py-3 text-left transition ${
-                                 active
-                                 ? "bg-blue-600 text-white"
-                                 : "hover:bg-slate-50 text-slate-800"
-                                 }`}
+                                 if (e.key === 'ArrowUp') {
+                                    e.preventDefault();
+                                    const prev = filtered[current - 1] || filtered[filtered.length - 1];
+                                    updatePrescriptionItem(index, { highlightedId: prev.id });
+                                 }
+                                 if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    const selected = filtered.find((m) => String(m.id) === String(item.highlightedId)) || filtered[0];
+                                    handleMedicineSelect(index, selected);
+                                 }
+                                 if (e.key === 'Escape') {
+                                    setItemSearchOpenId(null);
+                                 }
+                              }}
+                           />
+                           {itemSearchOpenId === index && (
+                           <div className="absolute z-50 mt-2 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                              <div className="h-48 overflow-y-scroll py-2">
+                                 {getClinicMedicineOptions(item.search).length > 0 ? (
+                                 getClinicMedicineOptions(item.search).map((medicine) => {
+                                 const active = String(item.highlightedId) === String(medicine.id);
+                                 return (
+                                 <button
+                                    key={medicine.id}
+                                    type="button"
+                                    onMouseDown={(e) => {
+                                       e.preventDefault();
+                                       handleMedicineSelect(index, medicine);
+                                    }}
+                                    onMouseEnter={() => updatePrescriptionItem(index, { highlightedId: medicine.id })}
+                                    className={`w-full px-4 py-3 text-left transition ${active ? 'bg-blue-600 text-white' : 'text-slate-800 hover:bg-slate-50'}`}
                                  >
-                                 <div className="font-semibold">
-                                    {medicine.medicine_name}
-                                 </div>
-                                 <div
-                                 className={`text-xs mt-1 ${
-                                 active
-                                 ? "text-blue-100"
-                                 : "text-slate-500"
-                                 }`}
-                                 >
-                                 {medicine.strength || "Standard"} •{" "}
-                                 {medicine.form || "Tablet"}
-                           </div>
-                           </button>
-                           );
-                           })
-                           ) : (
-                           <div className="px-4 py-4 text-sm text-slate-500 text-center">
-                              No medicine found
+                                    <div className="font-semibold">{medicine.medicine_name}</div>
+                                    <div className={`mt-1 text-xs ${active ? 'text-blue-100' : 'text-slate-500'}`}>
+                                       {medicine.strength || 'Standard'} • {medicine.form || 'Tablet'}
+                                    </div>
+                                 </button>
+                                 );
+                                 })
+                                 ) : (
+                                 <div className="px-4 py-4 text-center text-sm text-slate-500">No medicine found</div>
+                                 )}
+                              </div>
                            </div>
                            )}
                         </div>
+                        <input placeholder="Qty" className="input-ui" value={item.dosage} onChange={(e) => handlePrescriptionItemChange(index, 'dosage', e.target.value)} />
+                        <select className="input-ui" value={item.frequency} onChange={(e) => handlePrescriptionItemChange(index, 'frequency', e.target.value)}>
+                           <option>1-0-1</option>
+                           <option>0-1-0</option>
+                           <option>1-0-0</option>
+                           <option>0-0-1</option>
+                           <option>1-1-1</option>
+                           <option>1-1-0</option>
+                           <option>0-1-1</option>
+                        </select>
+                        <select className="input-ui" value={item.duration} onChange={(e) => handlePrescriptionItemChange(index, 'duration', e.target.value)}>
+                           <option>1 Day</option>
+                           <option>2 Days</option>
+                           <option>3 Days</option>
+                           <option>4 Days</option>
+                           <option>5 Days</option>
+                           <option>6 Days</option>
+                           <option>7 Days</option>
+                           <option>8 Days</option>
+                           <option>9 Days</option>
+                           <option>10 Days</option>
+                           <option>11 Days</option>
+                           <option>12 Days</option>
+                           <option>13 Days</option>
+                           <option>14 Days</option>
+                           <option>15 Days</option>
+                        </select>
+                        <select className="input-ui" value={item.before_after_food} onChange={(e) => handlePrescriptionItemChange(index, 'before_after_food', e.target.value)}>
+                           <option value="before_food">जेवणाआगोदर</option>
+                           <option value="afternoon">दुपारी</option>
+                           <option value="after_food">जेवणानंतर</option>
+                           <option value="anytime">कधीही</option>
+                        </select>
+                        <button type="button" onClick={() => handleRemovePrescriptionRow(index)} className="flex h-10 w-10 items-center justify-center rounded-2xl bg-red-50 text-red-600 transition hover:bg-red-100">
+                           <Trash2 className="h-4 w-4" />
+                        </button>
                      </div>
-                     )}
+                     ))}
                   </div>
-                  <input placeholder="Enter Quantity" className="input-ui" 
-                     value={item.dosage}
-                     onChange={(e) => handlePrescriptionItemChange(index, 'dosage', e.target.value)}
-                  />
-                  <select className="input-ui"
-                     value={item.frequency}
-                     onChange={(e) =>
-                     handlePrescriptionItemChange(index, 'frequency', e.target.value)}
-                     >
-                     <option>1-0-1</option>
-                     <option>0-1-0</option>
-                     <option>1-0-0</option>
-                     <option>0-0-1</option>
-                     <option>1-1-1</option>
-                     <option>1-1-0</option>
-                     <option>0-1-1</option>
-                  </select>
-
-
-                  <select className="input-ui"
-                     value={item.duration}
-                     onChange={(e) =>
-                     handlePrescriptionItemChange(index, 'duration', e.target.value)}
-                     >
-                     <option>1 Day</option>
-                     <option>2 Days</option>
-                     <option>3 Days</option>
-                     <option>4 Days</option>
-                     <option>5 Days</option>
-                     <option>6 Days</option>
-                     <option>7 Days</option>
-                     <option>8 Days</option>
-                     <option>9 Days</option>
-                     <option>10 Days</option>
-                     <option>11 Days</option>
-                     <option>12 Days</option>
-                     <option>13 Days</option>
-                     <option>14 Days</option>
-                     <option>15 Days</option>
-                  </select>
-
-                  <select className="input-ui"
-                     value={item.before_after_food}
-                     onChange={(e) =>
-                     handlePrescriptionItemChange(index, 'before_after_food', e.target.value)}
-                     >
-                     <option value="before_food">जेवणाआगोदर</option>
-                     <option value="afternoon">दुपारी</option>
-                     <option value="after_food">जेवणानंतर</option>
-                     <option value="anytime">कधीही</option>
-                  </select>
-                  <button
-                     type="button"
-                     onClick={() => handleRemovePrescriptionRow(index)}
-                     className="flex items-center justify-center h-10 w-10 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition"
-                     >
-                     <Trash2 className="w-4 h-4" />
+                  <button type="button" onClick={handleAddPrescriptionRow} className="mt-4 rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700">
+                     + Add Medicine
                   </button>
                </div>
-               ))}
             </div>
-            <button
-               type="button"
-               onClick={handleAddPrescriptionRow}
-               className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm"
-               >
-            + Add Medicine
+         </form>
+         <div className="flex flex-col gap-3 border-t border-slate-200 bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+            <button onClick={closePrescriptionModal} className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+               Cancel
             </button>
-            {/* Notes */}
-            {/* 
-            <div className="space-y-2">
-               <label className="text-sm font-medium text-slate-700">Notes</label>
-               <textarea
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm"
-                  rows={3}
-                  placeholder="Additional notes..."
-                  value={prescriptionNotes}
-                  onChange={(e) => setPrescriptionNotes(e.target.value)}
-               />
+            <div className="flex flex-col gap-2 sm:flex-row">
+               <button type="button" className="rounded-2xl bg-slate-100 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-200" onClick={(e) => handleSavePrescription(e, false)}>
+                  Save Draft
+               </button>
+               <button type="button" className="rounded-2xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-blue-700" onClick={(e) => handleSavePrescription(e, true)}>
+                  Save & Print
+               </button>
             </div>
-            */}
-      </div>
-      </form>
-      {/* FOOTER */}
-      <div className="border-t bg-white px-8 py-4 flex justify-between">
-         <button
-            onClick={closePrescriptionModal}
-            className="px-5 py-3 rounded-xl border"
-            >
-         Cancel
-         </button>
-         <div className="flex gap-3">
-            <button
-               type="button"
-               className="px-5 py-3 rounded-xl bg-gray-100"
-               onClick={(e) => handleSavePrescription(e, false)}
-            >
-            Save Draft
-            </button>
-            <button
-               type="button"
-               className="px-6 py-3 rounded-xl bg-blue-600 text-white font-semibold"
-               onClick={(e) => handleSavePrescription(e, true)}
-            >
-            Save & Print
-            </button>
          </div>
       </div>
    </div>
-</div>
 )}
 {isEditingPatient && (
 <div className="fixed inset-0 z-50 flex items-start justify-center px-4 py-8 sm:px-6 lg:px-8">
