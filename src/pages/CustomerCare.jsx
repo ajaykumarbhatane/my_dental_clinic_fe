@@ -106,12 +106,12 @@ const CustomerCare = () => {
           <p className="text-gray-600">Helping clinics succeed every day.</p>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 gap-2 sm:gap-6">
           {[
             { name: 'Ajaykumar Bhatane', role: 'Technical Support' },
             { name: 'Dr. Swati Lahane', role: 'Clinical Advisor' },
-            { name: 'Rahul', role: 'Customer Success' },
-            { name: 'Priya', role: 'Product Support' },
+            // { name: 'Rahul', role: 'Customer Success' },
+            // { name: 'Priya', role: 'Product Support' },
           ].map((m, i) => (
             <div
               key={i}
