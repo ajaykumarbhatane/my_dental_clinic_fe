@@ -13,46 +13,16 @@ import { useNotification } from '../context/NotificationContext';
 import { formatDate, parseDateString, toISODate, toDDMMYYYY } from '../utils/dateUtils';
 
 const HeroCard = ({ patient, patientInitials, patientAge, doctorLabel, onAddTreatment }) => (
-  <section className="relative overflow-hidden rounded-[32px] border border-white/20 bg-gradient-to-br from-slate-950 via-blue-800 to-cyan-500 p-5 text-white shadow-[0_24px_80px_-24px_rgba(15,23,42,0.6)] sm:p-7 lg:p-8">
+  <section className="relative overflow-hidden rounded-[32px] bg-gradient-to-r from-blue-800 to-cyan-500 p-5 text-white sm:p-7 lg:p-8">
     <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.24),_transparent_32%)]" />
     <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white/15 text-3xl font-semibold uppercase tracking-[0.3em] text-white shadow-lg ring-1 ring-white/25 sm:h-24 sm:w-24 sm:text-4xl">
-          {patientInitials || 'P'}
-        </div>
+      <div>
         <div className="space-y-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-slate-200">Patient Profile</p>
+          {/* <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-slate-200">Patient Profile</p> */}
           <div>
             <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
               {patient.first_name} {patient.last_name}
             </h1>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {patient.gender ? (
-                <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-sm font-medium text-white/90">
-                  {patient.gender}
-                </span>
-              ) : null}
-              {patientAge ? (
-                <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-sm font-medium text-white/90">
-                  {patientAge} Years
-                </span>
-              ) : null}
-              {patient.mobile ? (
-                <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-sm font-medium text-white/90">
-                  {patient.mobile}
-                </span>
-              ) : null}
-              {doctorLabel ? (
-                <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-sm font-medium text-white/90">
-                  {doctorLabel}
-                </span>
-              ) : null}
-              {patient.address ? (
-                <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-sm font-medium text-white/90">
-                  {patient.address}
-                </span>
-              ) : null}
-            </div>
           </div>
         </div>
       </div>
@@ -81,10 +51,25 @@ const StatCard = ({ icon: Icon, label, value, tone }) => (
   </div>
 );
 
-const InfoRow = ({ label, value }) => (
-  <div className="flex items-start justify-between gap-4 border-b border-slate-100 py-3 last:border-b-0">
-    <span className="text-sm font-medium text-slate-500">{label}</span>
-    <span className="max-w-[60%] text-right text-sm font-semibold text-slate-900">{value || 'N/A'}</span>
+const InfoRow = ({ icon: Icon, label, value }) => (
+  <div className="flex items-center gap-3 border-b border-slate-100 py-3 last:border-b-0">
+    {Icon && (
+      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+        <Icon className="h-4 w-4" />
+      </div>
+    )}
+
+    <div className="w-28 shrink-0">
+      <span className="text-sm font-medium text-slate-500">
+        {label}
+      </span>
+    </div>
+
+    <div className="flex-1">
+      <span className="text-sm font-semibold text-slate-900">
+        {value || 'N/A'}
+      </span>
+    </div>
   </div>
 );
 
@@ -1020,12 +1005,7 @@ return (
          }}
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-         <StatCard icon={CalendarDays} label="Visits" value={totalVisits} />
-         <StatCard icon={CircleDollarSign} label="Revenue" value={formatAmount(totalPaid)} />
-         <StatCard icon={Wallet} label="Outstanding" value={formatAmount(pendingAmount)} />
-         <StatCard icon={ClipboardCheck} label="Rx" value={prescriptions.length} />
-      </div>
+      {/* stats moved into Clinical profile for a tighter layout */}
 
       <div className="rounded-[28px] border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
          <div className="flex flex-wrap gap-2 rounded-[20px] bg-slate-100 p-1.5">
@@ -1037,13 +1017,13 @@ return (
             <button
                key={tab.key}
                onClick={() => handleSelectPrescriptionTab(tab.key)}
-               className={`flex-1 rounded-[16px] px-4 py-2.5 text-sm font-semibold transition ${
-               activeTab === tab.key
-               ? 'bg-white text-blue-600 shadow-lg shadow-slate-200'
-               : 'text-slate-500 hover:bg-white/70 hover:text-slate-700'
+               className={`group flex-1 rounded-[16px] px-4 py-3 text-sm font-semibold transition-all duration-300 ${
+                  activeTab === tab.key
+                     ? 'bg-gradient-to-r from-blue-700 to-cyan-500 text-white shadow-md'
+                     : 'text-slate-500 hover:bg-white hover:text-blue-600 hover:shadow-xl hover:-translate-y-1'
                }`}
-            >
-            {tab.label}
+               >
+               {tab.label}
             </button>
             ))}
          </div>
@@ -1052,10 +1032,10 @@ return (
       {activeTab === 'patient_info' && (
       <section className="space-y-4" aria-labelledby="patient-info-heading">
          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
+            {/* <div>
                <p id="patient-info-heading" className="text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-400">Patient overview</p>
                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Clinical profile</h2>
-            </div>
+            </div> */}
             <button
                type="button"
                onClick={openEditPatientModal}
@@ -1066,15 +1046,23 @@ return (
             </button>
          </div>
 
+        {/* moved stats into the clinical profile */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+           <StatCard icon={CalendarDays} label="Visits" value={totalVisits} />
+           <StatCard icon={CircleDollarSign} label="Revenue" value={formatAmount(totalPaid)} />
+           <StatCard icon={Wallet} label="Outstanding" value={formatAmount(pendingAmount)} />
+           <StatCard icon={ClipboardCheck} label="Rx" value={prescriptions.length} />
+        </div>
+
          <div className="grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
             <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
                <div className="grid gap-0 sm:grid-cols-2">
-                  <InfoRow label="Phone" value={patient.mobile || 'N/A'} />
-                  <InfoRow label="Gender" value={patient.gender || 'N/A'} />
-                  <InfoRow label="Doctor" value={patient.assigned_doctor || (patient.user && `${patient.user.first_name || ''} ${patient.user.last_name || ''}`.trim()) || 'N/A'} />
-                  <InfoRow label="DOB" value={formatDate(patient.date_of_birth) || 'N/A'} />
-                  <InfoRow label="Location" value={patient.address || 'N/A'} />
-                  <InfoRow label="Status" value="Active" />
+                  <InfoRow icon={Phone} label="Phone" value={patient.mobile || 'N/A'} />
+                  <InfoRow icon={Users} label="Gender" value={patient.gender || 'N/A'} />
+                  <InfoRow icon={Users} label="Doctor" value={patient.assigned_doctor || (patient.user && `${patient.user.first_name || ''} ${patient.user.last_name || ''}`.trim()) || 'N/A'} />
+                  <InfoRow icon={CalendarDays} label="DOB" value={formatDate(patient.date_of_birth) || 'N/A'} />
+                  <InfoRow icon={MapPin} label="Location" value={patient.address || 'N/A'} />
+                  <InfoRow icon={Heart} label="Status" value="Active" />
                </div>
             </div>
             <div className="space-y-4">
@@ -1261,474 +1249,6 @@ return (
          </div>
    </main>
    </div>
-   
-   {/*
-<div className="px-4 lg:px-0">
-   <main className="space-y-6">
-      <div className="rounded-[28px] overflow-hidden shadow-2xl shadow-slate-200">
-         <div className="relative overflow-hidden bg-gradient-to-r from-slate-900 via-blue-700 to-sky-500 px-6 py-8 sm:px-10 sm:py-10">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.22),_transparent_30%)]" />
-            <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-               <div className="flex items-start gap-5">
-                  <div className="flex h-24 w-24 items-center justify-center rounded-full bg-white/15 text-4xl font-bold uppercase tracking-[0.22em] text-white shadow-lg ring-1 ring-white/20">
-                     {patientInitials || 'P'}
-                  </div>
-                  <div className="space-y-3">
-                     <p className="text-xs uppercase tracking-[0.28em] text-slate-200 font-semibold">Patient Profile</p>
-                     <h1 className="mt-3 text-4xl font-semibold text-white">{patient.first_name} {patient.last_name}</h1>
-                  </div>
-               </div>
-               <button
-                  onClick={() => {
-                     closeTreatmentModal();
-                     setIsAddingTreatment(true);
-                  }}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-slate-900 shadow-xl shadow-slate-900/10 transition hover:bg-slate-100"
-               >
-                  <Plus className="w-4 h-4" />
-                  Add Treatment
-               </button>
-            </div>
-         </div>
-      </div>
-      <div className="bg-white rounded-[24px] border border-gray-150 p-5 shadow-sm">
-         <div className="flex flex-wrap gap-2 border-b border-gray-100 pb-4 mb-4">
-            {[
-            { key: 'patient_info', label: 'Patient Info' },
-            { key: 'treatments', label: 'Treatments' },
-            { key: 'prescription', label: 'Prescription' },
-            ].map((tab) => (
-            <button
-               key={tab.key}
-               onClick={() => handleSelectPrescriptionTab(tab.key)}
-            className={`px-4 py-2 text-sm font-semibold rounded-full transition ${
-            activeTab === tab.key
-            ? 'bg-blue-600 text-white shadow-sm'
-            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-            >
-            {tab.label}
-            </button>
-            ))}
-         </div>
-      </div>
-      {activeTab === 'patient_info' && (
-      <section className="rounded-[24px] border border-gray-200 bg-white shadow-sm p-6" aria-labelledby="patient-info-heading">
-         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between mb-4">
-            <div>
-               <p id="patient-info-heading" className="text-xs uppercase tracking-[0.3em] text-gray-500 font-semibold">Patient Info</p>
-               <h2 className="mt-2 text-2xl font-semibold text-gray-900">{patient.first_name} {patient.last_name}</h2>
-            </div>
-            <button
-               type="button"
-               onClick={openEditPatientModal}
-               className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-200/50 hover:bg-blue-700 transition w-fit"
-            >
-               <Edit className="w-4 h-4" />
-               Edit Patient
-            </button>
-         </div>
-         <div className="rounded-[24px] border border-gray-100 bg-slate-50 p-4 shadow-sm">
-            <div className="grid gap-3 lg:grid-cols-3">
-               <div className="rounded-[16px] border border-gray-100 bg-white p-3 shadow-sm">
-                  <div className="flex items-center gap-2 text-slate-400">
-                     <Phone className="h-4 w-4" />
-                     <p className="text-[9px] uppercase tracking-[0.3em]">Phone</p>
-                  </div>
-                  <p className="mt-2 text-sm font-semibold text-gray-900">{patient.mobile || 'N/A'}</p>
-               </div>
-               <div className="rounded-[16px] border border-gray-100 bg-white p-3 shadow-sm">
-                  <div className="flex items-center gap-2 text-slate-400">
-                     <Users className="h-4 w-4" />
-                     <p className="text-[9px] uppercase tracking-[0.3em]">Gender</p>
-                  </div>
-                  <p className="mt-2 text-sm font-semibold text-gray-900">{patient.gender || 'N/A'}</p>
-               </div>
-               <div className="rounded-[16px] border border-gray-100 bg-white p-3 shadow-sm">
-                  <div className="flex items-center gap-2 text-slate-400">
-                     <Users className="h-4 w-4" />
-                     <p className="text-[9px] uppercase tracking-[0.3em]">Doctor</p>
-                  </div>
-                  <p className="mt-2 text-sm font-semibold text-gray-900">
-                     {patient.assigned_doctor || (patient.user && `${patient.user.first_name || ''} ${patient.user.last_name || ''}`.trim()) || 'N/A'}
-                  </p>
-               </div>
-               <div className="rounded-[16px] border border-gray-100 bg-white p-3 shadow-sm">
-                  <div className="flex items-center gap-2 text-slate-400">
-                     <CalendarDays className="h-4 w-4" />
-                     <p className="text-[9px] uppercase tracking-[0.3em]">Since</p>
-                  </div>
-                  <p className="mt-2 text-sm font-semibold text-gray-900">{patient.created_at ? formatDate(patient.created_at) : 'N/A'}</p>
-               </div>
-               <div className="rounded-[16px] border border-gray-100 bg-white p-3 shadow-sm">
-                  <div className="flex items-center gap-2 text-slate-400">
-                     <CalendarDays className="h-4 w-4" />
-                     <p className="text-[9px] uppercase tracking-[0.3em]">Born</p>
-                  </div>
-                  <p className="mt-2 text-sm font-semibold text-gray-900">{formatDate(patient.date_of_birth) || 'N/A'}</p>
-               </div>
-               <div className="rounded-[16px] border border-gray-100 bg-white p-3 shadow-sm">
-                  <div className="flex items-center gap-2 text-slate-400">
-                     <MapPin className="h-4 w-4" />
-                     <p className="text-[9px] uppercase tracking-[0.3em]">Location</p>
-                  </div>
-                  <p className="mt-2 text-sm font-semibold text-gray-900 line-clamp-1">{patient.address || 'N/A'}</p>
-               </div>
-               <div className="rounded-[16px] border border-gray-100 bg-white p-3 shadow-sm">
-                  <div className="flex items-center gap-2 text-slate-400">
-                     <CalendarDays className="h-4 w-4" />
-                     <p className="text-[9px] uppercase tracking-[0.3em]">Total Visits</p>
-                  </div>
-                  <p className="mt-2 text-sm font-semibold text-gray-900">{totalVisits}</p>
-               </div>
-               <div className="rounded-[16px] border border-gray-100 bg-white p-3 shadow-sm">
-                  <div className="flex items-center gap-2 text-slate-400">
-                     <CircleDollarSign className="h-4 w-4" />
-                     <p className="text-[9px] uppercase tracking-[0.3em]">Revenue</p>
-                  </div>
-                  <p className="mt-2 text-sm font-semibold text-gray-900">{formatAmount(totalPaid)}</p>
-               </div>
-               <div className="rounded-[16px] border border-gray-100 bg-white p-3 shadow-sm">
-                  <div className="flex items-center gap-2 text-slate-400">
-                     <Wallet className="h-4 w-4" />
-                     <p className="text-[9px] uppercase tracking-[0.3em]">Outstanding</p>
-                  </div>
-                  <p className="mt-2 text-sm font-semibold text-gray-900">{formatAmount(pendingAmount)}</p>
-               </div>
-               <div className="rounded-[16px] border border-gray-100 bg-white p-3 shadow-sm">
-                  <div className="flex items-center gap-2 text-slate-400">
-                     <ClipboardCheck className="h-4 w-4" />
-                     <p className="text-[9px] uppercase tracking-[0.3em]">Rx</p>
-                  </div>
-                  <p className="mt-2 text-sm font-semibold text-gray-900">{prescriptions.length}</p>
-               </div>
-               <div className="rounded-[16px] border border-gray-100 bg-white p-3 shadow-sm">
-                  <div className="flex items-center gap-2 text-slate-400">
-                     <Heart className="h-4 w-4" />
-                     <p className="text-[9px] uppercase tracking-[0.3em]">Status</p>
-                  </div>
-                  <p className="mt-2 text-sm font-semibold text-green-600">Active</p>
-               </div>
-            </div>
-            <div className="mt-3 grid gap-3 lg:grid-cols-2">
-               <div className="rounded-[16px] bg-blue-50 p-3 border border-blue-100">
-                  <p className="text-[9px] uppercase tracking-[0.3em] text-blue-600 font-semibold">Medical History</p>
-                  <p className="mt-1 text-xs text-gray-700">{patient.medical_history || 'No medical history recorded'}</p>
-               </div>
-               <div className="rounded-[16px] bg-emerald-50 p-3 border border-emerald-100">
-                  <p className="text-[9px] uppercase tracking-[0.3em] text-emerald-600 font-semibold">Dental History</p>
-                  <p className="mt-1 text-xs text-gray-700">{patient.dental_history || 'No dental history recorded'}</p>
-               </div>
-            </div>
-            <div className="mt-3 rounded-[16px] bg-gradient-to-r from-slate-900 via-blue-800 to-sky-500 p-3 text-white shadow-lg">
-               <p className="text-[9px] uppercase tracking-[0.3em] text-slate-200">Activity</p>
-               <div className="mt-2 flex gap-3">
-                  <div className="flex-1">
-                     <p className="text-[8px] uppercase tracking-[0.2em] text-slate-300">Last Visit</p>
-                     <p className="mt-1 text-xs font-semibold">{lastVisitLabel}</p>
-                  </div>
-               </div>
-            </div>
-         </div>
-      </section>
-      )}
-      <div>
-         {activeTab === 'treatments' && (
-         <div className="space-y-5">
-            {treatments.length === 0 ? (
-            <div className="p-8 text-center bg-white border border-gray-200 rounded-2xl shadow-sm">
-               <p className="text-gray-500">No treatments found for this patient.</p>
-            </div>
-            ) : (
-            <div className="rounded-[20px] border border-gray-200 bg-white p-4 shadow-sm max-h-[calc(100vh-300px)] overflow-y-auto">
-               <div className="space-y-3">
-                  {treatments.map((treatment) => {
-                  const visits = getVisitsForTreatment(treatment.id);
-                  const progress = treatmentProgress(treatment);
-                  const { totalAmount, paidAmount, remainingAmount } = getTreatmentPaymentTotals(treatment);
-                  const statusClass =
-                  treatment.status === 'completed'
-                  ? 'bg-green-100 text-green-700'
-                  : treatment.status === 'ongoing'
-                  ? 'bg-blue-100 text-blue-700'
-                  : treatment.status === 'scheduled'
-                  ? 'bg-yellow-100 text-yellow-700'
-                  : 'bg-gray-100 text-gray-700';
-                  return (
-                  <div
-                     key={treatment.id}
-                     onClick={() => handleViewTreatment(treatment)}
-                     className="group relative rounded-xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow-lg transition-all"
-                     >
-                     <div className="absolute left-0 top-0 h-full w-[3px] bg-blue-500 rounded-l-2xl"></div>
-
-                     <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
-                        <div>
-                           <p className="text-xs uppercase tracking-[0.3em] text-gray-500">Treatment</p>
-                           <h3 className="mt-2 text-2xl font-semibold tracking-tight text-gray-900">{treatment.type_of_treatment_name || 'Untitled'}</h3>
-                           <div className="mt-3 text-sm text-gray-600">
-                              {treatment.treatment_plan ? (treatment.treatment_plan.length > 100 ? `${treatment.treatment_plan.slice(0,100)}...` : treatment.treatment_plan) : 'No plan provided.'}
-                           </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                           <div className="rounded-2xl bg-white/50 p-3 border border-gray-100">
-                              <p className="text-[10px] uppercase tracking-wider text-gray-400">Status</p>
-                              <p className="mt-2 text-lg font-semibold text-gray-900">{treatment.status || 'N/A'}</p>
-                           </div>
-
-                           <div className="rounded-2xl bg-white/50 p-3 border border-gray-100">
-                              <p className="text-[10px] uppercase tracking-wider text-gray-400">Total Amount</p>
-                              <p className="mt-2 text-lg font-semibold text-gray-900">{formatAmount(totalAmount)}</p>
-
-                              <div className="mt-3 grid grid-cols-2 gap-2">
-                                 <div className="rounded-lg bg-white p-2 border border-gray-100 text-center">
-                                    <p className="text-[10px] text-gray-400 uppercase">Paid</p>
-                                    <p className="text-sm font-semibold text-gray-800 mt-1">{formatAmount(paidAmount)}</p>
-                                 </div>
-                                 <div className="rounded-lg bg-white p-2 border border-gray-100 text-center">
-                                    <p className="text-[10px] text-gray-400 uppercase">Remaining</p>
-                                    <p className="text-sm font-semibold text-gray-800 mt-1">{formatAmount(remainingAmount)}</p>
-                                 </div>
-                              </div>
-                           </div>
-
-                           <div className="rounded-2xl bg-white/50 p-3 border border-gray-100">
-                              <p className="text-[10px] uppercase tracking-wider text-gray-400">Duration</p>
-                              <p className="mt-2 text-lg font-semibold text-gray-900">{treatment.estimated_duration_months ? `${treatment.estimated_duration_months} months` : 'N/A'}</p>
-                           </div>
-                        </div>
-                     </div>
-
-                     <div className="mt-4 flex items-center justify-between">
-                        <div className="flex flex-wrap gap-2">
-                           {treatment.cap_type && (
-                           <span className="px-2 py-0.5 text-[11px] rounded-full bg-gray-100 text-gray-700">{treatment.cap_type}</span>
-                           )}
-                           <span className="px-2 py-0.5 text-[11px] rounded-full bg-blue-50 text-blue-700">{visits.length} visits</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                           <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); openEditTreatmentModal(treatment); }}
-                              className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 transition active:scale-95"
-                           >
-                              <Edit className="w-3 h-3" />
-                              Edit
-                           </button>
-                           <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); setSelectedTreatment(treatment); setTreatmentDrawerOpen(false); setIsAddingVisit(true); }}
-                              className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition active:scale-95"
-                           >
-                              <Plus className="w-3 h-3" />
-                              Visit
-                           </button>
-                           <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); handleViewTreatment(treatment); }}
-                              className="opacity-0 group-hover:opacity-100 inline-flex items-center justify-center rounded-full border border-blue-200 bg-white p-2 text-blue-600 shadow-sm transition hover:bg-blue-50"
-                           >
-                              <ArrowRight className="w-4 h-4" />
-                           </button>
-                        </div>
-                     </div>
-
-                     <div className="mt-4">
-                        <div className="flex justify-between text-xs text-gray-500 mb-1">
-                           <span>Progress</span>
-                           <span>{progress}%</span>
-                        </div>
-                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                           <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
-                        </div>
-                     </div>
-                  </div>
-                  );
-                  })}
-               </div>
-            </div>
-            )}
-         </div>
-         )}
-         {activeTab === 'visits' && (
-         <div className="space-y-3 px-1">
-            {allVisits.length === 0 ? (
-            <div className="p-6 text-center bg-white border border-gray-200 rounded-lg">No visits found for this patient.</div>
-            ) : (
-            <div className="space-y-3">
-               {allVisits.map((visit) => (
-               <div
-                  key={visit.id}
-                  onClick={() =>
-                  {
-                  const related = treatments.find(
-                  (t) =>
-                  String(t.id) === String(visit.treatment) ||
-                  String(t.id) === String(visit.treatment_id)
-                  );
-                  if (related) handleViewTreatment(related);
-                  }}
-                  className="group relative cursor-pointer rounded-xl border border-gray-200 bg-white p-4 transition-all duration-300 hover:shadow-lg hover:border-blue-300 hover:bg-blue-50/30"
-                  >
-                  <div className="absolute left-0 top-0 h-full w-[3px] bg-blue-500 rounded-l-xl opacity-0 group-hover:opacity-100 transition" />
-                     <div className="flex justify-between items-start">
-                        <div>
-                           <h3 className="text-sm font-semibold text-gray-900 group-hover:text-blue-700 transition">
-                              {visit.treatment_name || 'Treatment'}
-                           </h3>
-                           <p className="text-xs text-gray-500">
-                              {formatDate(visit.next_visit_date)}
-                           </p>
-                        </div>
-                        <span className="text-[11px] px-2.5 py-1 rounded-full bg-blue-100 text-blue-700 font-medium">
-                        {visit.patient_payment_type || 'N/A'}
-                        </span>
-                     </div>
-                     <p className="mt-2 text-sm text-gray-600 line-clamp-2">
-                        {visit.treatment_notes || visit.patient_complaints || 'No notes'}
-                     </p>
-                     <div className="mt-3 flex items-center justify-between">
-                        <p className="text-sm font-semibold text-green-600">
-                           {visit.patient_payment_amount
-                           ? formatAmount(visit.patient_payment_amount)
-                           : 'No Payment'}
-                        </p>
-                        <span className="text-xs text-blue-600 font-medium opacity-0 group-hover:opacity-100 transition">
-                        View →
-                        </span>
-                     </div>
-                  </div>
-                  ))}
-               </div>
-               )}
-            </div>
-            )}
-            {activeTab === 'prescription' && (
-            <div className="space-y-5">
-               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                     <p className="text-sm text-gray-500">Prescription history</p>
-                     <h2 className="text-2xl font-bold text-gray-900">Prescriptions</h2>
-                  </div>
-                  <button
-                     type="button"
-                     onClick={() =>
-                     openPrescriptionModal('create')}
-                     className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-sky-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-200/50 hover:from-blue-700 hover:to-sky-700 transition"
-                     >
-                     <Plus className="w-4 h-4" />
-                     Add Prescription
-                  </button>
-               </div>
-               {prescriptions.length === 0 ? (
-               <div className="rounded-3xl border border-dashed border-gray-200 bg-white p-8 text-center shadow-sm">
-                  <p className="text-lg font-semibold text-gray-900">No prescriptions yet</p>
-                  <p className="mt-2 text-sm text-gray-500">Create the first prescription for this patient to keep records organized.</p>
-               </div>
-               ) : (
-               <div className="grid gap-4">
-                  {prescriptions.map((prescription) => (
-                  <div
-                     key={prescription.id}
-                     className="group rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm transition hover:shadow-lg"
-                     >
-                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="space-y-2">
-                           <p className="text-xs uppercase tracking-[0.2em] text-gray-400 font-semibold">{formatDate(prescription.created_at || prescription.next_visit_date)}</p>
-                           <h3 className="text-lg font-semibold text-gray-900">Prescription #{prescription.id}</h3>
-                           <p className="text-sm text-gray-600 line-clamp-2">{prescription.diagnosis || prescription.complaints || 'No summary available'}</p>
-                        </div>
-                        <div className="flex flex-wrap gap-2 items-center">
-                           <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
-                              <Check className="w-3 h-3" />
-                              {prescription.x_ray ? 'RVG' : 'No RVG'}
-                           </span>
-                           <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
-                           {prescription.items?.length ?? 0} medicines
-                           </span>
-                           <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
-                           Next: {prescription.next_visit_date ? formatDate(prescription.next_visit_date) : 'N/A'}
-                           </span>
-                        </div>
-                     </div>
-                     <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                        <div className="rounded-3xl bg-blue-50 p-4">
-                           <p className="text-xs uppercase tracking-[0.16em] text-blue-600 font-semibold">Complaints</p>
-                           <p className="mt-2 text-sm text-gray-800">{prescription.complaints || 'None'}</p>
-                        </div>
-                        <div className="rounded-3xl bg-emerald-50 p-4">
-                           <p className="text-xs uppercase tracking-[0.16em] text-emerald-700 font-semibold">Diagnosis</p>
-                           <p className="mt-2 text-sm text-gray-800">{prescription.diagnosis || 'None'}</p>
-                        </div>
-                        <div className="rounded-3xl bg-violet-50 p-4">
-                           <p className="text-xs uppercase tracking-[0.16em] text-violet-700 font-semibold">Next Visit</p>
-                           <p className="mt-2 text-sm text-gray-800">{prescription.next_visit_date ? formatDate(prescription.next_visit_date) : 'Not scheduled'}</p>
-                        </div>
-                        <div className="rounded-3xl bg-slate-50 p-4">
-                           <p className="text-xs uppercase tracking-[0.16em] text-slate-700 font-semibold">Treatment</p>
-                           <p className="mt-2 text-sm text-gray-800">{prescription.treatment_name || 'Not assigned'}</p>
-                        </div>
-                     </div>
-                     <div className="mt-5 flex flex-wrap gap-3">
-                        <button
-                           type="button"
-                           onClick={() =>
-                           handleViewPrescription(prescription)}
-                           className="inline-flex items-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:border-blue-300 hover:text-blue-700 transition"
-                           >
-                           <Eye className="w-4 h-4" />
-                           View
-                        </button>
-                        <button
-                           type="button"
-                           onClick={() =>
-                           handleEditPrescription(prescription)}
-                           className="inline-flex items-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:border-blue-300 hover:text-blue-700 transition"
-                           >
-                           <Edit className="w-4 h-4" />
-                           Edit
-                        </button>
-                        <button
-                           type="button"
-                           onClick={() =>
-                           handlePrintPrescription(prescription)}
-                           className="inline-flex items-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:border-blue-300 hover:text-blue-700 transition"
-                           >
-                           <Printer className="w-4 h-4" />
-                           Print
-                        </button>
-                        {prescription.pdf_url && (
-                        <button
-                           type="button"
-                           onClick={() =>
-                           handleViewPDF(prescription)}
-                           className="inline-flex items-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:border-blue-300 hover:text-blue-700 transition"
-                           >
-                           <FileText className="w-4 h-4" />
-                           PDF
-                        </button>
-                        )}
-                        <button
-                           type="button"
-                           onClick={() =>
-                           handleDeletePrescription(prescription)}
-                           className="inline-flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 transition"
-                           >
-                           <Trash2 className="w-4 h-4" />
-                           Delete
-                        </button>
-                     </div>
-                  </div>
-                  ))}
-               </div>
-               )}
-            </div>
-            )}
-         </div>
-   </main>
-   </div>
-*/}
    {isPrescriptionModalOpen && (
    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 backdrop-blur-sm sm:p-4">
       <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-2xl">
