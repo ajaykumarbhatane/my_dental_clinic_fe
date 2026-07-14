@@ -438,12 +438,22 @@ const Treatments = () => {
               ) : (
                 treatments.map((treatment) => (
                   <tr
-                    key={treatment.id}
-                    onClick={() => handleViewTreatment(treatment)}
-                    className="hover:bg-blue-50 cursor-pointer transition"
-                  >
+  key={treatment.id}
+  onClick={() => handleViewTreatment(treatment)}
+  className="
+    group
+    cursor-pointer
+    transition-all
+    duration-300
+    hover:bg-gradient-to-r
+    hover:from-blue-50
+    hover:to-cyan-50
+    hover:shadow-md
+    hover:scale-[1.002]
+  "
+>
                     <td className="px-5 py-3">
-                      <span className="font-medium text-gray-900">
+                      <span className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
                         {treatment.patient_first_name || treatment.patient?.first_name || treatment.patient_name || 'N/A'}
                         {treatment.patient_last_name || treatment.patient?.last_name ? (
                           <><br />{treatment.patient_last_name || treatment.patient?.last_name}</>
@@ -486,19 +496,20 @@ const Treatments = () => {
                           onClick={() => handleViewTreatment(treatment)}
                           className="text-blue-600 hover:text-blue-900"
                         >
-                          <Eye className="w-4 h-4" />
+                          <Eye className="w-4 h-4 hover:scale-125 transition-transform duration-200" />
                         </button>
                         <button
                           onClick={() => handleViewTreatment(treatment)}
                           className="text-yellow-600 hover:text-yellow-900"
                         >
-                          <Edit3 className="w-4 h-4" />
+                          <Edit3 className="w-4 h-4 hover:scale-125 transition-transform duration-200" />
+
                         </button>
                         <button
                           onClick={() => handleDeleteTreatment(treatment)}
                           className="text-red-600 hover:text-red-900"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-4 h-4 hover:scale-125 transition-transform duration-200" />
                         </button>
                       </div>
                     </td>

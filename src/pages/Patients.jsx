@@ -824,12 +824,11 @@ useEffect(() => {
                       search: params.toString() ? `?${params.toString()}` : '' 
                     });
                   }}
-                  className="hover:bg-blue-50 cursor-pointer transition"
-                >
+                  className="group cursor-pointer transition-all duration-300 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 hover:shadow-md hover:scale-[1.002]">
 
                   {/* Patient */}
                   <td className="px-5 py-3">
-                    <span className="font-medium text-gray-900">
+                    <span className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
                       {patient.first_name} <br /> {patient.last_name}
                     </span>
                   </td>
@@ -874,17 +873,11 @@ useEffect(() => {
                   >
                     <div className="flex gap-3">
 
-                      <Eye className="w-4 h-4 text-blue-600 cursor-pointer" />
+                      <Eye className="w-4 h-4 text-blue-600 cursor-pointer hover:scale-125 transition-transform" />
 
-                      <Edit className="w-4 h-4 text-yellow-600 cursor-pointer" />
+<Edit className="w-4 h-4 text-amber-600 cursor-pointer hover:scale-125 transition-transform" />
 
-                      <Trash2
-                        className="w-4 h-4 text-red-600 cursor-pointer"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteClick(patient);
-                        }}
-                      />
+<Trash2 className="w-4 h-4 text-red-600 cursor-pointer hover:scale-125 transition-transform" />
 
                     </div>
                   </td>

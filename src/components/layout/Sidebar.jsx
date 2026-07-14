@@ -61,7 +61,7 @@ const Sidebar = ({ isOpen, onClose, isExpanded, setIsExpanded }) => {
 >
 
   {/* HEADER */}
-  <div className="relative px-3 pt-2 pb-1 border-b border-white/10">
+  <div className="relative px-3 pt-2 pb-1">
     {/* Brand */}
 <div className="relative px-3 pt-5 pb-4 border-b border-white/10">
 

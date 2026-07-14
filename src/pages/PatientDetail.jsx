@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import {
-  Edit, ArrowLeft, ArrowRight, Plus, Users, X, UploadCloud, Eye, Printer, Trash2, Check, ChevronDown, FileText, Phone, MapPin, CalendarDays, ClipboardCheck, CircleDollarSign, Wallet, Heart
+  Edit, ArrowLeft, ArrowRight, Plus, Users, X, UploadCloud, Eye, Printer, Trash2, Check, ChevronDown, FileText, Phone, MapPin, CalendarDays, ClipboardCheck, CircleDollarSign, Wallet, Heart, MoreVertical
 } from 'lucide-react';
 import { patientApi } from '../api/patientApi';
 import { treatmentApi } from '../api/treatmentApi';
@@ -85,88 +85,173 @@ const HistoryCard = ({ title, value, tone, icon: Icon, iconTone }) => (
   </div>
 );
 
-const TreatmentCard = ({ treatment, onOpen, onEdit, onAddVisit, onView, progress, totalAmount, paidAmount, remainingAmount, visitsLength, statusClass }) => (
-  <div
-    onClick={onOpen}
-    className="group rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+// const TreatmentCard = ({ treatment, onOpen, onEdit, onAddVisit, onView, progress, totalAmount, paidAmount, remainingAmount, visitsLength, statusClass }) => (
+const TreatmentCard = ({
+  treatment,
+  onOpen,
+  onEdit,
+  onAddVisit,
+  onView,
+  progress,
+  totalAmount,
+  paidAmount,
+  remainingAmount,
+  visitsLength,
+  statusClass,
+  actionMenuOpen,
+  setActionMenuOpen
+}) => (
+   <div
+  onClick={onOpen}
+  className="
+group
+relative
+overflow-hidden
+cursor-pointer
+rounded-[28px]
+border-2
+border-slate-100
+bg-white
+p-5
+shadow-md
+transition-all
+duration-300
+hover:-translate-y-1
+hover:border-blue-300
+hover:shadow-xl
+hover:shadow-blue-100
+"
+>
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+         <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+               <h3 className="text-lg font-semibold text-slate-900 transition-colors group-hover:text-blue-600">{treatment.type_of_treatment_name || 'Untitled'}</h3>
+               <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusClass}`}>
+                  {treatment.status || 'N/A'}
+               </span>
+            </div>
+            <p className="text-sm leading-6 text-slate-600">
+               {treatment.treatment_plan ? (treatment.treatment_plan.length > 120 ? `${treatment.treatment_plan.slice(0, 120)}...` : treatment.treatment_plan) : 'No plan provided.'}
+            </p>
+         </div>
+         <div className="relative">
+  <button
+    type="button"
+    onClick={(e) => {
+      e.stopPropagation();
+      setActionMenuOpen(
+        actionMenuOpen === treatment.id
+          ? null
+          : treatment.id
+      );
+    }}
+    className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
   >
-    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-lg font-semibold text-slate-900">{treatment.type_of_treatment_name || 'Untitled'}</h3>
-          <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusClass}`}>
-            {treatment.status || 'N/A'}
-          </span>
-        </div>
-        <p className="text-sm leading-6 text-slate-600">
-          {treatment.treatment_plan ? (treatment.treatment_plan.length > 120 ? `${treatment.treatment_plan.slice(0, 120)}...` : treatment.treatment_plan) : 'No plan provided.'}
-        </p>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); onEdit(treatment); }}
-          className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-blue-300 hover:text-blue-700"
-        >
-          <Edit className="h-3.5 w-3.5" />
-          Edit
-        </button>
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); onAddVisit(treatment); }}
-          className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Add Visit
-        </button>
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); onView(treatment); }}
-          className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-blue-300 hover:text-blue-700"
-        >
-          <Eye className="h-3.5 w-3.5" />
-          View
-        </button>
-      </div>
-    </div>
+    <MoreVertical className="h-4 w-4" />
+    Take Action
+    <ChevronDown className="h-4 w-4" />
+  </button>
 
-    <div className="mt-5 grid gap-3 sm:grid-cols-3">
-      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">Total Amount</p>
-        <p className="mt-2 text-base font-semibold text-slate-900">{totalAmount}</p>
-      </div>
-      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">Paid</p>
-        <p className="mt-2 text-base font-semibold text-slate-900">{paidAmount}</p>
-      </div>
-      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">Remaining</p>
-        <p className="mt-2 text-base font-semibold text-slate-900">{remainingAmount}</p>
-      </div>
-    </div>
+  {actionMenuOpen === treatment.id && (
+    <div className="absolute right-0 top-12 z-50 min-w-[220px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setActionMenuOpen(null);
+          onEdit(treatment);
+        }}
+        className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm hover:bg-slate-50"
+      >
+        <Edit className="h-4 w-4" />
+        Edit Treatment
+      </button>
 
-    <div className="mt-5">
-      <div className="mb-2 flex items-center justify-between text-xs text-slate-500">
-        <span>Progress</span>
-        <span>{progress}%</span>
-      </div>
-      <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-        <div className="h-full rounded-full bg-gradient-to-r from-blue-600 to-indigo-500 transition-all duration-500" style={{ width: `${progress}%` }} />
-      </div>
-      <div className="mt-3 flex items-center justify-between text-sm text-slate-500">
-        <span>{visitsLength} visits</span>
-        <span>{treatment.estimated_duration_months ? `${treatment.estimated_duration_months} months` : 'Timeline pending'}</span>
-      </div>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setActionMenuOpen(null);
+          onAddVisit(treatment);
+        }}
+        className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm hover:bg-slate-50"
+      >
+        <Plus className="h-4 w-4" />
+        Add Visit
+      </button>
+
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setActionMenuOpen(null);
+          onView(treatment);
+        }}
+        className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm hover:bg-slate-50"
+      >
+        <Eye className="h-4 w-4" />
+        View Treatment
+      </button>
     </div>
-  </div>
+  )}
+</div>
+      </div>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-3">
+         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">Total Amount</p>
+            <p className="mt-2 text-base font-semibold text-slate-900">{totalAmount}</p>
+         </div>
+         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">Paid</p>
+            <p className="mt-2 text-base font-semibold text-slate-900">{paidAmount}</p>
+         </div>
+         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">Remaining</p>
+            <p className="mt-2 text-base font-semibold text-slate-900">{remainingAmount}</p>
+         </div>
+      </div>
+
+      <div className="mt-5">
+         <div className="mb-2 flex items-center justify-between text-xs text-slate-500">
+            <span>Progress</span>
+            <span>{progress}%</span>
+         </div>
+         <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+            <div className="h-full rounded-full bg-gradient-to-r from-blue-600 to-indigo-500 transition-all duration-500" style={{ width: `${progress}%` }} />
+         </div>
+         <div className="mt-3 flex items-center justify-between text-sm text-slate-500">
+            <span>{visitsLength} visits</span>
+            <span>{treatment.estimated_duration_months ? `${treatment.estimated_duration_months} months` : 'Timeline pending'}</span>
+         </div>
+      </div>
+   </div>
 );
-
 const PrescriptionCard = ({ prescription, onView, onEdit, onPrint, onPdf, onDelete, formatDateValue }) => (
-  <article className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+  <article
+  className="
+  group
+  cursor-pointer
+  rounded-[28px]
+  border-2
+  border-slate-100
+  bg-white
+  p-5
+  shadow-md
+  transition-all
+  duration-300
+  hover:-translate-y-1
+  hover:border-blue-300
+  hover:shadow-xl
+  hover:shadow-blue-100
+  "
+>
     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <div className="space-y-2">
         <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-400">{formatDateValue(prescription.created_at || prescription.next_visit_date)}</p>
-        <h3 className="text-lg font-semibold text-slate-900">Prescription #{prescription.id}</h3>
+        <h3 className="text-lg font-semibold text-slate-900 transition-colors group-hover:text-blue-600">
+  Prescription #{prescription.id}
+</h3>
         <p className="text-sm leading-6 text-slate-600">
           {prescription.diagnosis || prescription.complaints || 'No summary available'}
         </p>
@@ -287,6 +372,7 @@ dental_history: '',
 user: ''
 });
 const [submittingPatient, setSubmittingPatient] = useState(false);
+const [actionMenuOpen, setActionMenuOpen] = useState(null);
 const formatAmount = (amount) => {
 if (amount === 0 || amount) {
 return new Intl.NumberFormat('en-IN', {
@@ -1150,6 +1236,8 @@ return (
                   remainingAmount={formatAmount(remainingAmount)}
                   visitsLength={visits.length}
                   statusClass={statusClass}
+                  actionMenuOpen={actionMenuOpen}
+                  setActionMenuOpen={setActionMenuOpen}
                />
                );
                })}
@@ -1210,10 +1298,7 @@ return (
             {activeTab === 'prescription' && (
             <div className="space-y-4">
                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                     <p className="text-sm text-slate-500">Prescription history</p>
-                     <h2 className="text-2xl font-semibold tracking-tight text-slate-900">Prescriptions</h2>
-                  </div>
+                  
                   <button
                      type="button"
                      onClick={() => openPrescriptionModal('create')}
