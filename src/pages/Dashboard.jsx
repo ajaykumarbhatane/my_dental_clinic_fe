@@ -372,9 +372,12 @@ const Dashboard = () => {
         params.end_date = revenueEndDate;
       }
 
-      if (revenueTreatmentIds.length && !revenueTreatmentIds.includes('all')) {
-        params.treatment_ids = revenueTreatmentIds;
-      }
+      if (
+  revenueTreatmentIds[0] &&
+  revenueTreatmentIds[0] !== 'all'
+) {
+  params.treatment_ids = [revenueTreatmentIds[0]];
+}
 
       const response = await dashboardApi.revenueTrend(params);
       const data = response.data || {};
@@ -685,22 +688,16 @@ const Dashboard = () => {
               <div className="min-w-[180px]">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Treatments</label>
                 <select
-                  multiple
-                  value={revenueTreatmentIds}
-                  onChange={(e) => {
-                    const selected = Array.from(e.target.selectedOptions).map((option) => option.value);
-                    if (selected.includes('all') && selected.length > 1) {
-                      setRevenueTreatmentIds(['all']);
-                    } else if (selected.length === 0) {
-                      setRevenueTreatmentIds(['all']);
-                    } else {
-                      setRevenueTreatmentIds(selected);
-                    }
-                  }}
-                  className="w-full min-h-[5rem] rounded-2xl border border-gray-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  value={revenueTreatmentIds[0] || 'all'}
+                  onChange={(e) => setRevenueTreatmentIds([e.target.value])}
+                  className="w-full rounded-2xl border border-gray-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 >
                   {availableRevenueTreatments.map((option) => (
-                    <option key={option} value={option}>{option === 'all' ? 'All Treatments' : option}</option>
+                    <option key={option} value={option}>
+                      {option === 'all'
+                        ? 'All Treatments'
+                        : option}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -788,9 +785,13 @@ const Dashboard = () => {
                   />
                   <RechartsLegend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ paddingBottom: 16 }} />
                   <RechartsTooltip
-                    formatter={(value, name) => [formatAmount(value), name === 'revenue' ? 'Current' : 'Previous']}
-                    contentStyle={{ borderRadius: '1rem', borderColor: '#E5E7EB', backgroundColor: '#fff' }}
-                  />
+  formatter={(value) => formatAmount(value)}
+  contentStyle={{
+    borderRadius: '1rem',
+    borderColor: '#E5E7EB',
+    backgroundColor: '#fff'
+  }}
+/>
                   <RechartsLine
                     type="monotone"
                     dataKey="previous_revenue"

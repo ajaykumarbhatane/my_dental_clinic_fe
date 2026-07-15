@@ -877,7 +877,12 @@ useEffect(() => {
 
 <Edit className="w-4 h-4 text-amber-600 cursor-pointer hover:scale-125 transition-transform" />
 
-<Trash2 className="w-4 h-4 text-red-600 cursor-pointer hover:scale-125 transition-transform" />
+<Trash2
+  onClick={(e) => {
+    e.stopPropagation();
+    handleDeleteClick(patient);
+  }}
+  className="w-4 h-4 text-red-600 cursor-pointer hover:scale-125 transition-transform" />
 
                     </div>
                   </td>

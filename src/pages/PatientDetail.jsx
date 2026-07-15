@@ -92,6 +92,7 @@ const TreatmentCard = ({
   onEdit,
   onAddVisit,
   onView,
+   onDelete,
   progress,
   totalAmount,
   paidAmount,
@@ -192,6 +193,19 @@ hover:shadow-blue-100
         <Eye className="h-4 w-4" />
         View Treatment
       </button>
+         <button
+            type="button"
+            onClick={(e) => {
+               e.stopPropagation();
+               setActionMenuOpen(null);
+               // delegate delete to parent
+               if (typeof onDelete === 'function') onDelete(treatment);
+            }}
+            className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm hover:bg-slate-50"
+         >
+            <Trash2 className="h-4 w-4 text-red-600" />
+            Delete Treatment
+         </button>
     </div>
   )}
 </div>
@@ -373,6 +387,9 @@ user: ''
 });
 const [submittingPatient, setSubmittingPatient] = useState(false);
 const [actionMenuOpen, setActionMenuOpen] = useState(null);
+const [treatmentToDelete, setTreatmentToDelete] = useState(null);
+const [showDeleteModal, setShowDeleteModal] = useState(false);
+const [isDeleting, setIsDeleting] = useState(false);
 const formatAmount = (amount) => {
 if (amount === 0 || amount) {
 return new Intl.NumberFormat('en-IN', {
@@ -1033,6 +1050,23 @@ const closeDrawer = () => {
 setTreatmentDrawerOpen(false);
 setSelectedTreatment(null);
 };
+
+const handleConfirmDeleteTreatment = async () => {
+   if (!treatmentToDelete) return;
+   setIsDeleting(true);
+   try {
+      await treatmentApi.delete(treatmentToDelete.id);
+      setShowDeleteModal(false);
+      setTreatmentToDelete(null);
+      showSuccess('Treatment deleted');
+      await loadData();
+   } catch (err) {
+      console.error('Error deleting treatment:', err);
+      showError(err.response?.data?.detail || 'Failed to delete treatment');
+   } finally {
+      setIsDeleting(false);
+   }
+};
 const handleViewTreatment = (treatment) => {
 navigate(`/app/treatments/${treatment.id}`, {
 state: {
@@ -1219,7 +1253,7 @@ return (
                ? 'bg-amber-100 text-amber-700'
                : 'bg-slate-100 text-slate-700';
                return (
-               <TreatmentCard
+                      <TreatmentCard
                   key={treatment.id}
                   treatment={treatment}
                   onOpen={() => handleViewTreatment(treatment)}
@@ -1230,6 +1264,10 @@ return (
                     setIsAddingVisit(true);
                   }}
                   onView={handleViewTreatment}
+                           onDelete={(t) => {
+                              setTreatmentToDelete(t);
+                              setShowDeleteModal(true);
+                           }}
                   progress={progress}
                   totalAmount={formatAmount(totalAmount)}
                   paidAmount={formatAmount(paidAmount)}
@@ -2071,7 +2109,56 @@ return (
          </form>
       </div>
    </div>
+    )}
+
+   {/* Delete Treatment Confirmation Modal */}
+   {showDeleteModal && treatmentToDelete && (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-gray-100">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-red-50 to-red-100 border-b border-red-200 px-6 py-4">
+               <h3 className="text-xl font-bold text-red-900">Delete Treatment</h3>
+            </div>
+
+            {/* Modal Content */}
+            <div className="px-6 py-6">
+               <div className="mb-4">
+                  <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                     <Trash2 className="w-6 h-6 text-red-600" />
+                  </div>
+               </div>
+               <p className="text-center text-gray-600 mb-2">
+                  Are you sure you want to delete this treatment for <span className="font-bold text-gray-900">{treatmentToDelete.patient_name}</span>?
+               </p>
+               <p className="text-center text-sm text-red-600 font-semibold mb-4">
+                  ⚠️ This action will also delete all associated visits and images. This cannot be undone.
+               </p>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
+               <button
+                  onClick={() => {
+                     setShowDeleteModal(false);
+                     setTreatmentToDelete(null);
+                  }}
+                  disabled={isDeleting}
+                  className="px-6 py-2.5 border-2 border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+               >
+                  Cancel
+               </button>
+               <button
+                  onClick={handleConfirmDeleteTreatment}
+                  disabled={isDeleting}
+                  className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold disabled:opacity-50 transition-colors shadow-md hover:shadow-lg"
+               >
+                  {isDeleting ? 'Deleting...' : 'Delete Treatment'}
+               </button>
+            </div>
+         </div>
+      </div>
    )}
+
 </div>
 );
 };
