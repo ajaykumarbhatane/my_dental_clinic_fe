@@ -103,6 +103,7 @@ const Dashboard = () => {
   const [treatmentFilterOptions, setTreatmentFilterOptions] = useState([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [dateError, setDateError] = useState('');
+  const [visitPeriod, setVisitPeriod] = useState('last_7_days');
 
   const [revenuePeriod, setRevenuePeriod] = useState('last_7_days');
   const [revenueGroupBy, setRevenueGroupBy] = useState('daily');
@@ -130,6 +131,10 @@ const Dashboard = () => {
   const [pickerMonth, setPickerMonth] = useState(today.getMonth());
   const [pickerYear, setPickerYear] = useState(today.getFullYear());
   const chartKey = `${selectedTreatment}-${selectedInterval}-${startDate}-${endDate}`;
+
+  const filterLabelClass = 'block text-sm font-medium text-gray-700 mb-2';
+  const filterSelectClass = 'w-full rounded-2xl border border-gray-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-100';
+  const filterButtonGroupClass = 'inline-flex rounded-full border border-gray-200 bg-gray-50 overflow-hidden';
 
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -206,6 +211,47 @@ const Dashboard = () => {
       setPickerYear(pickerYear - 1);
     } else {
       setPickerMonth(nextMonth);
+    }
+  };
+
+  const getLast7DaysRange = () => {
+    const end = new Date(today);
+    const start = new Date(today);
+    start.setDate(start.getDate() - 6);
+    return [toDateInputValue(start), toDateInputValue(end)];
+  };
+
+  const getCurrentMonthRange = () => [initialStartDate, initialEndDate];
+
+  const getYearToDateRange = () => [toDateInputValue(new Date(today.getFullYear(), 0, 1)), initialEndDate];
+
+  const handleVisitPeriodChange = (value) => {
+    setVisitPeriod(value);
+    if (value === 'last_7_days') {
+      const [start, end] = getLast7DaysRange();
+      setStartDate(start);
+      setEndDate(end);
+      setShowDatePicker(false);
+      return;
+    }
+    if (value === 'current_month') {
+      const [start, end] = getCurrentMonthRange();
+      setStartDate(start);
+      setEndDate(end);
+      setShowDatePicker(false);
+      return;
+    }
+    if (value === 'year_to_date') {
+      const [start, end] = getYearToDateRange();
+      setStartDate(start);
+      setEndDate(end);
+      setShowDatePicker(false);
+      return;
+    }
+    if (value === 'custom_date_range') {
+      setDraftStartDate(startDate);
+      setDraftEndDate(endDate);
+      setShowDatePicker(true);
     }
   };
 
@@ -449,47 +495,65 @@ const Dashboard = () => {
               <h3 className="text-lg font-bold text-gray-900">Patient Visits Trend</h3>
               <p className="text-sm text-gray-500">Filter by treatment and date range to compare visit trends.</p>
             </div>
-            <div className="flex flex-wrap gap-3 items-end">
-              <div className="flex items-center gap-2">
-                <label htmlFor="visitFilter" className="text-sm font-medium text-gray-700">Treatment:</label>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap">
+              <div className="min-w-[180px]">
+                <label className={filterLabelClass}>Period</label>
                 <select
-                  id="visitFilter"
-                  className="border border-gray-300 rounded-lg px-2 py-1 text-sm"
-                  value={selectedTreatment}
-                  onChange={(e) => setSelectedTreatment(e.target.value)}
+                  value={visitPeriod}
+                  onChange={(e) => handleVisitPeriodChange(e.target.value)}
+                  className={filterSelectClass}
                 >
-                  {treatmentFilterOptions.map((option) => (
-                    <option key={option} value={option}>{option === 'all' ? 'All Treatments' : option}</option>
-                  ))}
+                  <option value="last_7_days">Last 7 Days</option>
+                  <option value="current_month">Current Month</option>
+                  <option value="year_to_date">Year To Date</option>
+                  <option value="custom_date_range">Custom Date Range</option>
                 </select>
               </div>
-              <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-gray-700">Interval:</label>
-                <div className="inline-flex rounded-full border border-gray-200 bg-gray-50 overflow-hidden">
+
+              <div>
+                <label className={filterLabelClass}>Group</label>
+                <div className={filterButtonGroupClass}>
                   {['daily', 'weekly', 'monthly'].map((option) => (
                     <button
                       key={option}
                       type="button"
                       onClick={() => setSelectedInterval(option)}
-                      className={`px-3 py-1 text-sm font-medium transition ${selectedInterval === option ? 'bg-white text-slate-900 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}
+                      className={`px-3 py-2 text-sm font-medium transition ${selectedInterval === option ? 'bg-white text-slate-900 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}
                     >
                       {option.charAt(0).toUpperCase() + option.slice(1)}
                     </button>
                   ))}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowDatePicker(true)}
-                  className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100"
+
+              <div className="min-w-[180px]">
+                <label className={filterLabelClass}>Treatments</label>
+                <select
+                  value={selectedTreatment}
+                  onChange={(e) => setSelectedTreatment(e.target.value)}
+                  className={filterSelectClass}
                 >
-                  Date range trend
-                </button>
+                  {treatmentFilterOptions.map((option) => (
+                    <option key={option} value={option}> {option === 'all' ? 'All Treatments' : option} </option>
+                  ))}
+                </select>
               </div>
-              <div className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-medium">
-                {formatDate(startDate)} - {formatDate(endDate)}
-              </div>
+              {visitPeriod === 'custom_date_range' && (
+                <div className="min-w-[180px]">
+                  <label className={filterLabelClass}>Date Range</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDraftStartDate(startDate);
+                      setDraftEndDate(endDate);
+                      setShowDatePicker(true);
+                    }}
+                    className={`${filterSelectClass} text-left`}
+                  >
+                    {formatDate(startDate)} - {formatDate(endDate)}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
           {dateError && (
@@ -625,11 +689,17 @@ const Dashboard = () => {
                           return `${label}: ${value} visit${value === 1 ? '' : 's'}`;
                         },
                       },
+                      backgroundColor: '#fff',
+                      borderColor: '#E5E7EB',
+                      borderWidth: 1,
+                      titleColor: '#111827',
+                      bodyColor: '#374151',
+                      padding: 12,
                     },
                   },
                   scales: {
                     x: {
-                      grid: { display: false },
+                      grid: { color: '#E5E7EB' },
                       ticks: { color: '#374151', font: { size: 12 } },
                     },
                     y: {
@@ -639,6 +709,7 @@ const Dashboard = () => {
                         color: '#374151',
                         font: { size: 12 },
                       },
+                      grid: { color: '#E5E7EB' },
                     },
                   },
                 }}
