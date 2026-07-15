@@ -1,8 +1,20 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';import Pagination from '../components/Pagination';
+import { useNavigate } from 'react-router-dom';
+import Pagination from '../components/Pagination';
 import { Users, UserCheck, Calendar, TrendingUp, Phone } from 'lucide-react';
 import { dashboardApi } from '../api/dashboardApi';
+import { useNotification } from '../context/NotificationContext';
 import { formatDate, parseDateString } from '../utils/dateUtils';
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line as RechartsLine,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  Legend as RechartsLegend,
+} from 'recharts';
 
 // chart.js imports
 import {
@@ -67,9 +79,21 @@ const Dashboard = () => {
   const [error, setError] = useState(null);
 
   const navigate = useNavigate();
+  const { showError } = useNotification();
+
+  const toDateInputValue = (date) => {
+    const year = date.getFullYear();
+    const monthValue = String(date.getMonth() + 1).padStart(2, '0');
+    const dayValue = String(date.getDate()).padStart(2, '0');
+    return `${year}-${monthValue}-${dayValue}`;
+  };
+
+  const today = new Date();
+  const todayString = toDateInputValue(today);
+  const initialStartDate = toDateInputValue(new Date(today.getFullYear(), today.getMonth(), 1));
+  const initialEndDate = todayString;
 
   // chart data states
-  const today = new Date();
   const [visitChartData, setVisitChartData] = useState(null); // line chart data (visits per month)
   const [treatmentChartData, setTreatmentChartData] = useState(null);
   const [visitChartLabels, setVisitChartLabels] = useState([]);
@@ -80,16 +104,24 @@ const Dashboard = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [dateError, setDateError] = useState('');
 
-  const toDateInputValue = (date) => {
-    const year = date.getFullYear();
-    const monthValue = String(date.getMonth() + 1).padStart(2, '0');
-    const dayValue = String(date.getDate()).padStart(2, '0');
-    return `${year}-${monthValue}-${dayValue}`;
-  };
-
-  const todayString = toDateInputValue(today);
-  const initialStartDate = toDateInputValue(new Date(today.getFullYear(), today.getMonth(), 1));
-  const initialEndDate = todayString;
+  const [revenuePeriod, setRevenuePeriod] = useState('last_7_days');
+  const [revenueGroupBy, setRevenueGroupBy] = useState('daily');
+  const [revenueStartDate, setRevenueStartDate] = useState(initialStartDate);
+  const [revenueEndDate, setRevenueEndDate] = useState(initialEndDate);
+  const [revenueTreatmentIds, setRevenueTreatmentIds] = useState(['all']);
+  const [revenueData, setRevenueData] = useState([]);
+  const [revenueSummary, setRevenueSummary] = useState({
+    today_revenue: 0,
+    total_revenue: 0,
+    average_revenue: 0,
+    highest_revenue: 0,
+    previous_total_revenue: 0,
+    previous_average_revenue: 0,
+    previous_highest_revenue: 0,
+  });
+  const [revenueLoading, setRevenueLoading] = useState(false);
+  const [revenueError, setRevenueError] = useState(null);
+  const [availableRevenueTreatments, setAvailableRevenueTreatments] = useState(['all']);
 
   const [startDate, setStartDate] = useState(initialStartDate);
   const [endDate, setEndDate] = useState(initialEndDate);
@@ -204,6 +236,22 @@ const Dashboard = () => {
     }
   }, [showDatePicker, startDate, endDate]);
 
+  useEffect(() => {
+    const valid = !revenueStartDate || !revenueEndDate || revenueStartDate <= revenueEndDate;
+    if (!valid) {
+      setRevenueError('Start date must be before end date.');
+      return;
+    }
+
+    if (revenueStartDate > todayString || revenueEndDate > todayString) {
+      setRevenueError('Future dates are not allowed.');
+      return;
+    }
+
+    setRevenueError(null);
+    fetchRevenueTrend();
+  }, [revenuePeriod, revenueGroupBy, revenueStartDate, revenueEndDate, revenueTreatmentIds]);
+
   const fetchDashboardData = async () => {
       if (dateError) return;
       try {
@@ -233,6 +281,12 @@ const Dashboard = () => {
         setTreatmentFilterOptions(options);
         if (!options.includes(selectedTreatment)) {
           setSelectedTreatment('all');
+        }
+
+        const revenueOptions = [...new Set(['all', ...(summary.treatment_filter_options || [])])];
+        setAvailableRevenueTreatments(revenueOptions);
+        if (revenueTreatmentIds.some((id) => id !== 'all') && !revenueOptions.some((option) => revenueTreatmentIds.includes(option))) {
+          setRevenueTreatmentIds(['all']);
         }
 
         setStats([
@@ -302,6 +356,45 @@ const Dashboard = () => {
       } finally {
         setLoading(false);
       }
+  };
+
+  const fetchRevenueTrend = async () => {
+    if (revenueError) return;
+    try {
+      setRevenueLoading(true);
+      const params = {
+        period: revenuePeriod,
+        group_by: revenueGroupBy,
+        revenue_type: 'all',
+      };
+      if (revenuePeriod === 'custom_date_range') {
+        params.start_date = revenueStartDate;
+        params.end_date = revenueEndDate;
+      }
+
+      if (revenueTreatmentIds.length && !revenueTreatmentIds.includes('all')) {
+        params.treatment_ids = revenueTreatmentIds;
+      }
+
+      const response = await dashboardApi.revenueTrend(params);
+      const data = response.data || {};
+      setRevenueSummary({
+        today_revenue: data.today_revenue ?? 0,
+        total_revenue: data.total_revenue ?? 0,
+        average_revenue: data.average_revenue ?? 0,
+        highest_revenue: data.highest_revenue ?? 0,
+        previous_total_revenue: data.previous_total_revenue ?? 0,
+        previous_average_revenue: data.previous_average_revenue ?? 0,
+        previous_highest_revenue: data.previous_highest_revenue ?? 0,
+      });
+      setRevenueData(data.data || []);
+    } catch (err) {
+      console.error('Error fetching revenue trend:', err);
+      setRevenueError('Failed to load revenue trend data');
+      showError('Unable to load revenue trend data. Please try again.');
+    } finally {
+      setRevenueLoading(false);
+    }
   };
 
   const upcomingTotalPages = Math.max(1, Math.ceil(upcomingVisits.length / upcomingPerPage));
@@ -550,6 +643,179 @@ const Dashboard = () => {
             ) : (
               <div className="h-full flex items-center justify-center text-gray-500">
                 Loading chart...
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-lg transition-shadow">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
+            <div>
+              <h3 className="text-lg font-bold text-gray-900">Revenue Trend</h3>
+              <p className="text-sm text-gray-500">Track clinic revenue across selected period.</p>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap">
+              <div className="min-w-[180px]">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Period</label>
+                <select
+                  value={revenuePeriod}
+                  onChange={(e) => setRevenuePeriod(e.target.value)}
+                  className="w-full rounded-2xl border border-gray-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                >
+                  <option value="last_7_days">Last 7 Days</option>
+                  <option value="current_month">Current Month</option>
+                  <option value="year_to_date">Year To Date</option>
+                  <option value="custom_date_range">Custom Date Range</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Group</label>
+                <div className="inline-flex rounded-full border border-gray-200 bg-gray-50 overflow-hidden">
+                  {['daily', 'weekly', 'monthly'].map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => setRevenueGroupBy(option)}
+                      className={`px-3 py-1 text-sm font-medium transition ${revenueGroupBy === option ? 'bg-white text-slate-900 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}
+                    >
+                      {option.charAt(0).toUpperCase() + option.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="min-w-[180px]">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Treatments</label>
+                <select
+                  multiple
+                  value={revenueTreatmentIds}
+                  onChange={(e) => {
+                    const selected = Array.from(e.target.selectedOptions).map((option) => option.value);
+                    if (selected.includes('all') && selected.length > 1) {
+                      setRevenueTreatmentIds(['all']);
+                    } else if (selected.length === 0) {
+                      setRevenueTreatmentIds(['all']);
+                    } else {
+                      setRevenueTreatmentIds(selected);
+                    }
+                  }}
+                  className="w-full min-h-[5rem] rounded-2xl border border-gray-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                >
+                  {availableRevenueTreatments.map((option) => (
+                    <option key={option} value={option}>{option === 'all' ? 'All Treatments' : option}</option>
+                  ))}
+                </select>
+              </div>
+              {revenuePeriod === 'custom_date_range' && (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="text-sm font-medium text-gray-700">Start Date</span>
+                    <input
+                      type="date"
+                      value={revenueStartDate}
+                      max={todayString}
+                      onChange={(e) => setRevenueStartDate(e.target.value)}
+                      className="mt-2 w-full rounded-2xl border border-gray-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-sm font-medium text-gray-700">End Date</span>
+                    <input
+                      type="date"
+                      value={revenueEndDate}
+                      max={todayString}
+                      onChange={(e) => setRevenueEndDate(e.target.value)}
+                      className="mt-2 w-full rounded-2xl border border-gray-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                    />
+                  </label>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-6">
+            {[
+              { label: "Today's Revenue", value: revenueSummary.today_revenue, comparison: null },
+              { label: 'Total Revenue', value: revenueSummary.total_revenue, comparison: revenueSummary.previous_total_revenue },
+              { label: 'Average Revenue', value: revenueSummary.average_revenue, comparison: revenueSummary.previous_average_revenue },
+              { label: 'Highest Revenue', value: revenueSummary.highest_revenue, comparison: revenueSummary.previous_highest_revenue },
+            ].map((stat) => {
+              const diff = stat.comparison != null ? stat.value - stat.comparison : null;
+              const diffLabel = diff != null ? `${diff >= 0 ? '+' : '-'}${formatAmount(Math.abs(diff))}` : null;
+              const diffColor = diff != null ? (diff >= 0 ? 'text-emerald-700 bg-emerald-100' : 'text-rose-700 bg-rose-100') : '';
+
+              return (
+                <div key={stat.label} className="rounded-[24px] border border-gray-200 bg-slate-50 p-4 shadow-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">{stat.label}</p>
+                    {diffLabel && (
+                      <span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${diffColor}`}>
+                        {diffLabel}
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-3 text-2xl font-semibold text-slate-900">{formatAmount(stat.value)}</p>
+                  {stat.comparison != null && (
+                    <p className="mt-2 text-xs text-slate-500">Previous: {formatAmount(stat.comparison)}</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {revenueError && (
+            <div className="mb-4 text-sm text-red-600">{revenueError}</div>
+          )}
+
+          <div className="h-72">
+            {revenueLoading ? (
+              <div className="h-full animate-pulse rounded-3xl bg-slate-100" />
+            ) : revenueData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={revenueData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
+                  <CartesianGrid stroke="#E5E7EB" strokeDasharray="3 3" vertical={false} />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fill: '#6B7280', fontSize: 12 }}
+                    tickLine={false}
+                    axisLine={false}
+                    minTickGap={12}
+                  />
+                  <YAxis
+                    tickFormatter={(value) => formatAmount(value)}
+                    tick={{ fill: '#6B7280', fontSize: 12 }}
+                    tickLine={false}
+                    axisLine={false}
+                    width={90}
+                  />
+                  <RechartsLegend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ paddingBottom: 16 }} />
+                  <RechartsTooltip
+                    formatter={(value, name) => [formatAmount(value), name === 'revenue' ? 'Current' : 'Previous']}
+                    contentStyle={{ borderRadius: '1rem', borderColor: '#E5E7EB', backgroundColor: '#fff' }}
+                  />
+                  <RechartsLine
+                    type="monotone"
+                    dataKey="previous_revenue"
+                    name="Previous"
+                    stroke="#6366F1"
+                    strokeWidth={2}
+                    dot={false}
+                    strokeDasharray="5 5"
+                  />
+                  <RechartsLine
+                    type="monotone"
+                    dataKey="revenue"
+                    name="Current"
+                    stroke="#10B981"
+                    strokeWidth={3}
+                    dot={{ r: 4, fill: '#10B981', stroke: '#fff', strokeWidth: 2 }}
+                    activeDot={{ r: 6 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center rounded-3xl border border-dashed border-gray-200 bg-slate-50 p-6 text-center">
+                <div className="text-3xl mb-3">📉</div>
+                <p className="text-sm font-semibold text-slate-900">No revenue data available for selected period</p>
+                <p className="mt-2 text-sm text-slate-500">Try another date range or grouping to view revenue trends.</p>
               </div>
             )}
           </div>
