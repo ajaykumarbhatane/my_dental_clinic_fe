@@ -29,7 +29,7 @@ import {
   Legend,
   ArcElement,
 } from 'chart.js';
-import { Doughnut, Line } from 'react-chartjs-2';
+import { Doughnut } from 'react-chartjs-2';
 
 // register required chart components
 ChartJS.register(
@@ -90,14 +90,18 @@ const Dashboard = () => {
 
   const today = new Date();
   const todayString = toDateInputValue(today);
-  const initialStartDate = toDateInputValue(new Date(today.getFullYear(), today.getMonth(), 1));
+  const initialMonthStartDate = toDateInputValue(new Date(today.getFullYear(), today.getMonth(), 1));
   const initialEndDate = todayString;
+  const [initialVisitStartDate, initialVisitEndDate] = (() => {
+    const end = new Date(today);
+    const start = new Date(today);
+    start.setDate(start.getDate() - 6);
+    return [toDateInputValue(start), toDateInputValue(end)];
+  })();
 
   // chart data states
-  const [visitChartData, setVisitChartData] = useState(null); // line chart data (visits per month)
+  const [visitChartData, setVisitChartData] = useState([]);
   const [treatmentChartData, setTreatmentChartData] = useState(null);
-  const [visitChartLabels, setVisitChartLabels] = useState([]);
-  const [visitChartSeries, setVisitChartSeries] = useState({ all: [] });
   const [selectedTreatment, setSelectedTreatment] = useState('all');
   const [selectedInterval, setSelectedInterval] = useState('daily');
   const [treatmentFilterOptions, setTreatmentFilterOptions] = useState([]);
@@ -107,9 +111,13 @@ const Dashboard = () => {
 
   const [revenuePeriod, setRevenuePeriod] = useState('last_7_days');
   const [revenueGroupBy, setRevenueGroupBy] = useState('daily');
-  const [revenueStartDate, setRevenueStartDate] = useState(initialStartDate);
+  const [revenueStartDate, setRevenueStartDate] = useState(initialMonthStartDate);
   const [revenueEndDate, setRevenueEndDate] = useState(initialEndDate);
   const [revenueTreatmentIds, setRevenueTreatmentIds] = useState(['all']);
+  const [startDate, setStartDate] = useState(initialVisitStartDate);
+  const [endDate, setEndDate] = useState(initialVisitEndDate);
+  const [draftStartDate, setDraftStartDate] = useState(initialVisitStartDate);
+  const [draftEndDate, setDraftEndDate] = useState(initialVisitEndDate);
   const [revenueData, setRevenueData] = useState([]);
   const [revenueSummary, setRevenueSummary] = useState({
     today_revenue: 0,
@@ -123,11 +131,6 @@ const Dashboard = () => {
   const [revenueLoading, setRevenueLoading] = useState(false);
   const [revenueError, setRevenueError] = useState(null);
   const [availableRevenueTreatments, setAvailableRevenueTreatments] = useState(['all']);
-
-  const [startDate, setStartDate] = useState(initialStartDate);
-  const [endDate, setEndDate] = useState(initialEndDate);
-  const [draftStartDate, setDraftStartDate] = useState(initialStartDate);
-  const [draftEndDate, setDraftEndDate] = useState(initialEndDate);
   const [pickerMonth, setPickerMonth] = useState(today.getMonth());
   const [pickerYear, setPickerYear] = useState(today.getFullYear());
   const chartKey = `${selectedTreatment}-${selectedInterval}-${startDate}-${endDate}`;
@@ -363,24 +366,14 @@ const Dashboard = () => {
         ]);
 
         setUpcomingVisits(summary.upcoming_visits || []);
-        setVisitChartLabels(summary.visit_chart?.labels || []);
-        setVisitChartSeries(summary.visit_chart?.series || {});
-        setVisitChartData({
-          labels: summary.visit_chart?.labels || [],
-          datasets: [
-            {
-              label: selectedTreatment === 'all' ? 'All Visits' : `${selectedTreatment} Visits`,
-              data: summary.visit_chart?.series?.[selectedTreatment] || summary.visit_chart?.series?.all || [],
-              fill: false,
-              backgroundColor: 'rgba(59, 130, 246, 0.75)',
-              borderColor: 'rgba(37, 99, 235, 1)',
-              borderWidth: 2,
-              tension: 0.35,
-              pointRadius: 4,
-              pointHoverRadius: 6,
-            },
-          ],
-        });
+        const visitLabels = summary.visit_chart?.labels || [];
+        const visitSeries = summary.visit_chart?.series || {};
+        const selectedVisitSeries = visitSeries[selectedTreatment] || visitSeries.all || [];
+        const formattedVisitChartData = visitLabels.map((label, index) => ({
+          label,
+          visits: selectedVisitSeries[index] ?? 0,
+        }));
+        setVisitChartData(formattedVisitChartData);
         setTreatmentChartData({
           labels: summary.treatment_chart?.labels || [],
           datasets: [
@@ -670,53 +663,49 @@ const Dashboard = () => {
               </div>
             </div>
           )}
-          <div className="h-64">
-            {visitChartData ? (
-              <Line
-                key={chartKey}
-                data={visitChartData}
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: { display: false },
-                    title: { display: false },
-                    tooltip: {
-                      callbacks: {
-                        label: (context) => {
-                          const value = context.parsed.y;
-                          const label = context.label;
-                          return `${label}: ${value} visit${value === 1 ? '' : 's'}`;
-                        },
-                      },
-                      backgroundColor: '#fff',
+          <div className="h-72">
+            {loading ? (
+              <div className="h-full animate-pulse rounded-3xl bg-slate-100" />
+            ) : visitChartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={visitChartData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
+                  <CartesianGrid stroke="#E5E7EB" strokeDasharray="3 3" vertical={false} />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fill: '#6B7280', fontSize: 12 }}
+                    tickLine={false}
+                    axisLine={false}
+                    minTickGap={12}
+                  />
+                  <YAxis
+                    tick={{ fill: '#6B7280', fontSize: 12 }}
+                    tickLine={false}
+                    axisLine={false}
+                    width={40}
+                  />
+                  <RechartsTooltip
+                    formatter={(value) => `${value} visit${value === 1 ? '' : 's'}`}
+                    contentStyle={{
+                      borderRadius: '1rem',
                       borderColor: '#E5E7EB',
-                      borderWidth: 1,
-                      titleColor: '#111827',
-                      bodyColor: '#374151',
-                      padding: 12,
-                    },
-                  },
-                  scales: {
-                    x: {
-                      grid: { color: '#E5E7EB' },
-                      ticks: { color: '#374151', font: { size: 12 } },
-                    },
-                    y: {
-                      beginAtZero: true,
-                      ticks: {
-                        stepSize: 1,
-                        color: '#374151',
-                        font: { size: 12 },
-                      },
-                      grid: { color: '#E5E7EB' },
-                    },
-                  },
-                }}
-              />
+                      backgroundColor: '#fff',
+                    }}
+                  />
+                  <RechartsLine
+                    type="monotone"
+                    dataKey="visits"
+                    stroke="#2563EB"
+                    strokeWidth={3}
+                    dot={{ r: 4, fill: '#2563EB', stroke: '#fff', strokeWidth: 2 }}
+                    activeDot={{ r: 6 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
             ) : (
-              <div className="h-full flex items-center justify-center text-gray-500">
-                Loading chart...
+              <div className="h-full flex flex-col items-center justify-center rounded-3xl border border-dashed border-gray-200 bg-slate-50 p-6 text-center">
+                <div className="text-3xl mb-3">📉</div>
+                <p className="text-sm font-semibold text-slate-900">No visit data available for selected period</p>
+                <p className="mt-2 text-sm text-slate-500">Try another date range or grouping to view visits trends.</p>
               </div>
             )}
           </div>
