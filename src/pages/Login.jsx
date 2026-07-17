@@ -53,12 +53,12 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 flex items-center justify-center py-8 px-3 sm:px-6 lg:px-8 relative overflow-hidden box-border">
       {/* Animated background elements */}
       <div className="absolute top-0 left-0 w-96 h-96 bg-white rounded-full opacity-5 -translate-x-1/2 -translate-y-1/2"></div>
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-white rounded-full opacity-5 translate-x-1/2 translate-y-1/2"></div>
 
-      <div className="max-w-md w-full space-y-8 relative z-10">
+      <div className="w-full max-w-md space-y-6 sm:space-y-8 relative z-10">
         {/* Header with animation */}
         <div className="text-center space-y-3">
 
@@ -85,7 +85,7 @@ const Login = () => {
         </div>
 
         {/* Login Form */}
-        <div className="bg-white py-10 px-8 shadow-2xl rounded-2xl backdrop-blur-sm border border-white border-opacity-20">
+        <div className="bg-white py-6 px-4 sm:py-10 sm:px-8 shadow-2xl rounded-2xl backdrop-blur-sm border border-white border-opacity-20">
           <form className="space-y-6" onSubmit={handleSubmit}>
             {/* Email Field */}
             <div>

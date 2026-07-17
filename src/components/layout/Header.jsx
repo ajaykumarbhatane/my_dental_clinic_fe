@@ -90,7 +90,7 @@ const Header = ({ onMenuClick }) => {
 
   return (
     <header className="fixed top-0 left-0 right-0 h-14 md:h-16 z-50 bg-white border-b border-gray-200 shadow-sm">
-      <div className="h-full px-3 sm:px-4 md:px-6 flex items-center justify-between">
+      <div className="h-full w-full max-w-full px-3 sm:px-4 md:px-6 flex items-center justify-between gap-2 overflow-hidden">
 
         {/* Left Section */}
         <div className="flex items-center gap-2 sm:gap-3">
@@ -105,9 +105,9 @@ const Header = ({ onMenuClick }) => {
           </button>
 
           {/* Clinic Info */}
-          <div className="min-w-[120px]">
+          <div className="min-w-0 max-w-[55vw] sm:max-w-[220px]">
             <p className="text-xs text-gray-500">Welcome to,</p>
-            <p className="text-sm font-semibold text-gray-900 truncate max-w-[200px]">
+            <p className="truncate text-sm font-semibold text-gray-900">
               {getUserClinicName()}
             </p>
           </div>
@@ -126,7 +126,7 @@ const Header = ({ onMenuClick }) => {
                 {getUserDisplayName().charAt(0).toUpperCase()}
               </div>
 
-              <div className="hidden sm:block text-left">
+              <div className="hidden sm:block min-w-0 text-left">
                 <p className="text-sm font-semibold text-gray-900">
                   {getUserRole()}
                 </p>
@@ -144,7 +144,7 @@ const Header = ({ onMenuClick }) => {
 
             {/* Dropdown */}
             {showDropdown && (
-              <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50">
+              <div className="absolute right-0 mt-2 w-[min(88vw,14rem)] max-w-[14rem] bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50">
 
                 <div className="px-4 py-3 border-b border-gray-100">
                   <p className="text-sm font-semibold text-gray-900">{getUserDisplayName()}</p>

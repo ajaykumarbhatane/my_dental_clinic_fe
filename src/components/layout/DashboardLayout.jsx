@@ -15,7 +15,7 @@ const DashboardLayout = ({ children }) => {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen w-full max-w-full overflow-x-hidden bg-gray-50 box-border">
 
       {/* Sidebar */}
       <Sidebar
@@ -36,14 +36,14 @@ const DashboardLayout = ({ children }) => {
       {/* Main Section */}
       <div
         className={`
-          flex-1 flex flex-col overflow-hidden pt-14 md:pt-16
+          flex-1 flex flex-col min-w-0 overflow-hidden pt-14 md:pt-16
           transition-all duration-300
           ${isExpanded ? 'md:ml-64' : 'md:ml-16'}
         `}
       >
         <Header onMenuClick={handleMenuClick} />
 
-        <main className="flex-1 overflow-y-auto bg-gradient-to-br from-gray-50 via-gray-50 to-blue-50 p-3 sm:p-4 md:p-6">
+        <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden bg-gradient-to-br from-gray-50 via-gray-50 to-blue-50 p-3 sm:p-4 md:p-6">
           {children}
         </main>
       </div>

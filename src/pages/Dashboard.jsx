@@ -957,7 +957,7 @@ const Dashboard = () => {
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
+            <div className="w-full overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
                   <tr>
