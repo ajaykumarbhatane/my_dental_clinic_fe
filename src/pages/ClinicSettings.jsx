@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { Edit, Save, AlertCircle, Check, Plus, Pill, Trash2 } from 'lucide-react';
 import { userApi } from '../api/userApi';
 import { clinicApi } from '../api/clinicApi';
+import { clinicDoctorApi } from '../api/clinicDoctorApi';
 import { prescriptionApi } from '../api/prescriptionApi';
+import ChoiceSelect from '../components/ChoiceSelect';
 import { formatDate } from '../utils/dateUtils';
 
 const InfoRow = ({ label, value }) => (
@@ -29,7 +31,6 @@ const ClinicSettings = () => {
   const [success, setSuccess] = useState(false);
   const [originalUserData, setOriginalUserData] = useState({});
   const [userData, setUserData] = useState({
-    clinic_name: '',
     first_name: '',
     last_name: '',
     email: '',
@@ -41,6 +42,25 @@ const ClinicSettings = () => {
   });
   const [clinic, setClinic] = useState(null);
   const [clinicLoading, setClinicLoading] = useState(false);
+  const [clinicEditing, setClinicEditing] = useState(false);
+  const [members, setMembers] = useState([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+  const [addMemberStep, setAddMemberStep] = useState('createUser');
+  const [newMember, setNewMember] = useState({ doctor_id: '', role: 'ASSOCIATE' });
+  const [newUserForm, setNewUserForm] = useState({ 
+    first_name: '', 
+    last_name: '', 
+    email: '', 
+    gender: '', 
+    phone_number: '', 
+    secondary_phone_number: '', 
+    role: 'Staff', 
+    password: '',
+    date_of_birth: '',
+    qualification: ''
+  });
+  const [createdUser, setCreatedUser] = useState(null);
 
   // Clinic Medicine state
   const [medicines, setMedicines] = useState([]);
@@ -56,47 +76,106 @@ const ClinicSettings = () => {
   });
 
   useEffect(() => {
-    if (activeTab === 'profile') {
+    if (activeTab === 'profile' || activeTab === 'clinic_info') {
       fetchUserProfile();
       fetchClinicInfo();
+      fetchClinicMembers();
     } else if (activeTab === 'medicines') {
       fetchClinicMedicines();
     }
   }, [activeTab]);
+
+  useEffect(() => {
+    // refetch members only when clinic ID changes, not when fields are edited
+    if (clinic && clinic.id && activeTab === 'clinic_info') fetchClinicMembers();
+  }, [clinic?.id, activeTab]);
+
+  const handleCreateUser = async () => {
+    try {
+      setMembersLoading(true);
+      setError(null);
+      
+      // Validate mandatory fields
+      if (!newUserForm.first_name.trim()) {
+        setError('First Name is required');
+        setMembersLoading(false);
+        return;
+      }
+      if (!newUserForm.last_name.trim()) {
+        setError('Last Name is required');
+        setMembersLoading(false);
+        return;
+      }
+      if (!newUserForm.email.trim()) {
+        setError('Email is required');
+        setMembersLoading(false);
+        return;
+      }
+      if (!newUserForm.gender) {
+        setError('Gender is required');
+        setMembersLoading(false);
+        return;
+      }
+      if (!newUserForm.password.trim()) {
+        setError('Password is required');
+        setMembersLoading(false);
+        return;
+      }
+      
+      const payload = {
+        first_name: newUserForm.first_name,
+        last_name: newUserForm.last_name,
+        email: newUserForm.email,
+        gender: newUserForm.gender,
+        role: newUserForm.role,
+        password: newUserForm.password,
+      };
+      
+      if (newUserForm.phone_number) payload.phone_number = newUserForm.phone_number;
+      if (newUserForm.secondary_phone_number) payload.secondary_phone_number = newUserForm.secondary_phone_number;
+      if (newUserForm.date_of_birth) payload.date_of_birth = newUserForm.date_of_birth;
+      if (newUserForm.qualification) payload.qualification = newUserForm.qualification;
+      
+      const res = await userApi.create(payload);
+      const user = res.data;
+      setCreatedUser(user);
+      // move to assign step
+      setAddMemberStep('assignMember');
+    } catch (err) {
+      console.error('Error creating user:', err);
+      setError('Failed to create user');
+    } finally {
+      setMembersLoading(false);
+    }
+  };
 
   const fetchUserProfile = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const response = await userApi.getAll();
-      const users = response.data?.results || response.data || [];
+      const response = await userApi.getMe();
+      const user = response.data;
       
-      if (users.length > 0) {
-        const user = users[0];
-        const profileData = {
-          clinic_name: user.clinic_name || user.clinic || '',
-          first_name: user.first_name || '',
-          last_name: user.last_name || '',
-          email: user.email || '',
-          phone_number: user.phone_number || '',
-          role: user.role || '',
-          joining_date: user.joining_date || '',
-          qualification: user.qualification || '',
-          registration_number: user.registration_number || '',
-        };
+      const profileData = {
+        first_name: user.first_name || '',
+        last_name: user.last_name || '',
+        email: user.email || '',
+        phone_number: user.phone_number || '',
+        role: user.role || '',
+        joining_date: user.joining_date || '',
+        qualification: user.qualification || '',
+        registration_number: user.registration_number || '',
+      };
 
-        setUserData((prev) => ({
-          ...prev,
-          ...profileData,
-          clinic_name: prev.clinic_name || profileData.clinic_name,
-        }));
-        setOriginalUserData((prev) => ({
-          ...prev,
-          ...profileData,
-          clinic_name: prev.clinic_name || profileData.clinic_name,
-        }));
-      }
+      setUserData((prev) => ({
+        ...prev,
+        ...profileData,
+      }));
+      setOriginalUserData((prev) => ({
+        ...prev,
+        ...profileData,
+      }));
     } catch (err) {
       console.error('Error fetching user profile:', err);
       setError('Failed to load user profile');
@@ -125,17 +204,6 @@ const ClinicSettings = () => {
       const clinics = response.data?.results || response.data || [];
       const activeClinic = clinics[0] || null;
       setClinic(activeClinic);
-
-      if (activeClinic) {
-        setUserData((prev) => ({
-          ...prev,
-          clinic_name: activeClinic.name || prev.clinic_name,
-        }));
-        setOriginalUserData((prev) => ({
-          ...prev,
-          clinic_name: activeClinic.name || prev.clinic_name,
-        }));
-      }
     } catch (err) {
       console.error('Error fetching clinic info:', err);
       setError('Failed to load clinic information');
@@ -144,14 +212,29 @@ const ClinicSettings = () => {
     }
   };
 
+  const fetchClinicMembers = async () => {
+    try {
+      setMembersLoading(true);
+      setError(null);
+      const params = clinic?.id ? { clinic: clinic.id } : {};
+      const response = await clinicDoctorApi.getAll(params);
+      const data = response.data?.results || response.data || [];
+      setMembers(data);
+    } catch (err) {
+      console.error('Error fetching clinic members:', err);
+      setError('Failed to load clinic members');
+    } finally {
+      setMembersLoading(false);
+    }
+  };
+
   const handleSave = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const allUsers = await userApi.getAll();
-      const users = allUsers.data?.results || allUsers.data || [];
-      const currentUser = users[0];
+      const response = await userApi.getMe();
+      const currentUser = response.data;
       
       if (currentUser?.id) {
         const userChangedFields = {};
@@ -162,18 +245,8 @@ const ClinicSettings = () => {
           }
         });
 
-        const clinicChanged = clinic && userData.clinic_name !== originalUserData.clinic_name;
-
         if (Object.keys(userChangedFields).length > 0) {
           await userApi.update(currentUser.id, userChangedFields);
-        }
-
-        if (clinicChanged) {
-          await clinicApi.update(clinic.id, { name: userData.clinic_name });
-          setClinic((prev) => prev ? { ...prev, name: userData.clinic_name } : prev);
-        }
-
-        if (Object.keys(userChangedFields).length > 0 || clinicChanged) {
           setOriginalUserData(userData); // Update original data with new values
           setIsEditing(false);
           setSuccess(true);
@@ -259,8 +332,94 @@ const ClinicSettings = () => {
 
   const tabs = [
     { id: 'profile', label: 'Profile', icon: Edit },
+    { id: 'clinic_info', label: 'Clinic Information', icon: Edit },
     { id: 'medicines', label: 'Clinic Medicines', icon: Pill }
   ];
+
+  const handleClinicInputChange = (field, value) => {
+    setClinic((prev) => ({ ...(prev || {}), [field]: value }));
+  };
+
+  const handleClinicSave = async () => {
+    try {
+      setClinicLoading(true);
+      setError(null);
+      if (clinic && clinic.id) {
+        const payload = {
+          name: clinic.name,
+          contact_number: clinic.contact_number,
+          address: clinic.address,
+          city: clinic.city,
+          description: clinic.description,
+        };
+        await clinicApi.update(clinic.id, payload);
+        setSuccess(true);
+        setTimeout(() => setSuccess(false), 3000);
+      }
+    } catch (err) {
+      console.error('Error saving clinic info:', err);
+      setError('Failed to save clinic information');
+    } finally {
+      setClinicLoading(false);
+    }
+  };
+
+  const handleAssignMember = async () => {
+    try {
+      setMembersLoading(true);
+      setError(null);
+      if (!clinic?.id || !createdUser?.id) {
+        setError('Clinic or user not available');
+        return;
+      }
+      const payload = {
+        clinic_id: clinic.id,
+        doctor_id: createdUser.id,
+        role: newMember.role,
+      };
+      await clinicDoctorApi.create(payload);
+      setShowAddMemberModal(false);
+      setNewMember({ doctor_id: '', role: 'ASSOCIATE' });
+      setNewUserForm({ 
+        first_name: '', 
+        last_name: '', 
+        email: '', 
+        gender: '',
+        phone_number: '', 
+        secondary_phone_number: '', 
+        role: 'Staff', 
+        password: '',
+        date_of_birth: '',
+        qualification: ''
+      });
+      setCreatedUser(null);
+      setAddMemberStep('createUser');
+      fetchClinicMembers();
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err) {
+      console.error('Error assigning clinic member:', err);
+      setError('Failed to add member to clinic');
+    } finally {
+      setMembersLoading(false);
+    }
+  };
+
+  const handleRemoveMember = async (id) => {
+    if (!confirm('Remove this member from clinic?')) return;
+    try {
+      setMembersLoading(true);
+      await clinicDoctorApi.delete(id);
+      fetchClinicMembers();
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err) {
+      console.error('Error removing member:', err);
+      setError('Failed to remove member');
+    } finally {
+      setMembersLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -357,15 +516,6 @@ const ClinicSettings = () => {
                   {isEditing ? (
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="rounded-[24px] border border-slate-100 bg-slate-50 p-4">
-                        <label className="block text-sm font-semibold text-slate-600 mb-2">Clinic Name</label>
-                        <input
-                          type="text"
-                          value={userData.clinic_name}
-                          onChange={(e) => handleInputChange('clinic_name', e.target.value)}
-                          className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
-                        />
-                      </div>
-                      <div className="rounded-[24px] border border-slate-100 bg-slate-50 p-4">
                         <label className="block text-sm font-semibold text-slate-600 mb-2">First Name</label>
                         <input
                           type="text"
@@ -427,7 +577,6 @@ const ClinicSettings = () => {
                     </div>
                   ) : (
                     <div className="grid gap-0 md:grid-cols-2">
-                      <InfoRow label="Clinic Name" value={userData.clinic_name} />
                       <InfoRow label="First Name" value={userData.first_name} />
                       <InfoRow label="Last Name" value={userData.last_name} />
                       <InfoRow label="Email" value={userData.email} />
@@ -689,6 +838,252 @@ const ClinicSettings = () => {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Clinic Information Tab */}
+        {activeTab === 'clinic_info' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-slate-400">CLINIC INFORMATION</p>
+              </div>
+              {!clinicEditing ? (
+                <button
+                  onClick={() => setClinicEditing(true)}
+                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-lg flex items-center gap-2 font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
+                  disabled={clinicLoading}
+                >
+                  <Edit className="w-5 h-5" />
+                  <span>Edit Clinic</span>
+                </button>
+              ) : (
+                <button
+                  onClick={handleClinicSave}
+                  className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-3 rounded-lg flex items-center gap-2 font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
+                  disabled={clinicLoading}
+                >
+                  <Save className="w-5 h-5" />
+                  <span>{clinicLoading ? 'Saving...' : 'Save Changes'}</span>
+                </button>
+              )}
+            </div>
+
+            <div className="grid gap-6 xl:grid-cols-[1.3fr_0.9fr]">
+              <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+                {clinicLoading && !clinic ? (
+                  <div className="flex flex-col items-center justify-center h-64">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+                    <p className="text-gray-600 font-medium">Loading clinic info...</p>
+                  </div>
+                ) : (
+                  (clinicEditing) ? (
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="rounded-[24px] border border-slate-100 bg-slate-50 p-4">
+                        <label className="block text-sm font-semibold text-slate-600 mb-2">Clinic Name</label>
+                        <input type="text" value={clinic?.name || ''} onChange={(e) => handleClinicInputChange('name', e.target.value)} className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+                      </div>
+                      <div className="rounded-[24px] border border-slate-100 bg-slate-50 p-4">
+                        <label className="block text-sm font-semibold text-slate-600 mb-2">Contact Number</label>
+                        <input type="tel" value={clinic?.contact_number || ''} onChange={(e) => handleClinicInputChange('contact_number', e.target.value)} className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+                      </div>
+                      <div className="md:col-span-2 rounded-[24px] border border-slate-100 bg-slate-50 p-4">
+                        <label className="block text-sm font-semibold text-slate-600 mb-2">Address</label>
+                        <textarea value={clinic?.address || ''} onChange={(e) => handleClinicInputChange('address', e.target.value)} className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" rows={3} />
+                      </div>
+                      <div className="rounded-[24px] border border-slate-100 bg-slate-50 p-4">
+                        <label className="block text-sm font-semibold text-slate-600 mb-2">City</label>
+                        <input type="text" value={clinic?.city || ''} onChange={(e) => handleClinicInputChange('city', e.target.value)} className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+                      </div>
+                      <div className="md:col-span-2 rounded-[24px] border border-slate-100 bg-slate-50 p-4">
+                        <label className="block text-sm font-semibold text-slate-600 mb-2">Description</label>
+                        <textarea value={clinic?.description || ''} onChange={(e) => handleClinicInputChange('description', e.target.value)} className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" rows={3} />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid gap-0 md:grid-cols-2">
+                      <InfoRow label="Clinic Name" value={clinic?.name} />
+                      <InfoRow label="Contact Number" value={clinic?.contact_number} />
+                      <InfoRow label="Address" value={clinic?.address} />
+                      <InfoRow label="City" value={clinic?.city} />
+                      <InfoRow label="Description" value={clinic?.description} />
+                      <InfoRow label="Status" value={clinic?.status} />
+                    </div>
+                  )
+                )}
+              </div>
+
+              <div className="space-y-6">
+                <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+                  <p className="text-sm uppercase tracking-[0.28em] text-slate-500">Clinic Details</p>
+                  <div className="mt-5 grid gap-4">
+                    <div className="rounded-[24px] bg-slate-50 p-4">
+                      <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Status</p>
+                      <p className="mt-2 text-xl font-semibold text-slate-900">{clinic?.status || 'N/A'}</p>
+                    </div>
+                    <div className="rounded-[24px] bg-slate-50 p-4">
+                      <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Doctors</p>
+                      <p className="mt-2 text-xl font-semibold text-slate-900">{clinic?.doctors?.length || members.length || 0}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Assigned Members List */}
+        {activeTab === 'clinic_info' && (
+          <div className="mt-6 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex justify-between items-center mb-4">
+              <p className="text-sm uppercase tracking-[0.28em] text-slate-500">Assigned Members</p>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setShowAddMemberModal(true)} className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-lg">Add Member</button>
+              </div>
+            </div>
+
+            {membersLoading && members.length === 0 ? (
+              <div className="py-8 text-center text-slate-600">Loading members...</div>
+            ) : members.length === 0 ? (
+              <div className="py-8 text-center text-slate-600">No members assigned yet.</div>
+            ) : (
+              <div className="grid gap-3">
+                {members.map((m) => (
+                  <div key={m.id} className="flex items-center justify-between p-3 rounded-md border border-slate-100">
+                    <div>
+                      <div className="font-semibold">{m.doctor?.first_name} {m.doctor?.last_name}</div>
+                      <div className="text-sm text-slate-500">{m.doctor?.email}</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-sm text-slate-700 mr-4">{m.role}</div>
+                      <button onClick={() => handleRemoveMember(m.id)} className="text-red-600">Remove</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Add Member Modal (Two-step: Create User -> Assign to Clinic) */}
+        {showAddMemberModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="w-full max-w-2xl rounded-[28px] border border-white/10 bg-white p-8 shadow-2xl backdrop-blur-xl max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-2xl font-bold text-slate-900">Add Clinic Member</h3>
+                <button onClick={() => { setShowAddMemberModal(false); setAddMemberStep('createUser'); setCreatedUser(null); setError(null); }} className="text-slate-400 hover:text-slate-600">✕</button>
+              </div>
+
+              {addMemberStep === 'createUser' ? (
+                <div>
+                  {error && <div className="mb-6 rounded-lg bg-red-50 border border-red-200 p-4 text-sm text-red-700 flex items-center gap-2"><AlertCircle size={18} /> {error}</div>}
+                  
+                  <div className="grid grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-3">First Name <span className="text-red-500">*</span></label>
+                      <input type="text" required value={newUserForm.first_name} onChange={(e) => setNewUserForm(prev => ({ ...prev, first_name: e.target.value }))} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" placeholder="Enter first name" />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-3">Last Name <span className="text-red-500">*</span></label>
+                      <input type="text" required value={newUserForm.last_name} onChange={(e) => setNewUserForm(prev => ({ ...prev, last_name: e.target.value }))} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" placeholder="Enter last name" />
+                    </div>
+
+                    <div className="col-span-2">
+                      <label className="block text-sm font-semibold text-slate-700 mb-3">Email <span className="text-red-500">*</span></label>
+                      <input type="email" required value={newUserForm.email} onChange={(e) => setNewUserForm(prev => ({ ...prev, email: e.target.value }))} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" placeholder="user@example.com" />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-3">Gender <span className="text-red-500">*</span></label>
+                      <ChoiceSelect
+                        which="user/gender"
+                        required
+                        value={newUserForm.gender}
+                        onChange={(e) => setNewUserForm(prev => ({ ...prev, gender: e.target.value }))}
+                        className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
+                        placeholder="Select Gender"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-3">Phone Number</label>
+                      <input type="tel" value={newUserForm.phone_number} onChange={(e) => setNewUserForm(prev => ({ ...prev, phone_number: e.target.value }))} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" placeholder="+91 XXXXX XXXXX" />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-3">Secondary Phone Number</label>
+                      <input type="tel" value={newUserForm.secondary_phone_number} onChange={(e) => setNewUserForm(prev => ({ ...prev, secondary_phone_number: e.target.value }))} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" placeholder="+91 XXXXX XXXXX" />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-3">Date of Birth</label>
+                      <input type="date" value={newUserForm.date_of_birth} onChange={(e) => setNewUserForm(prev => ({ ...prev, date_of_birth: e.target.value }))} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-3">Qualification</label>
+                      <input type="text" value={newUserForm.qualification} onChange={(e) => setNewUserForm(prev => ({ ...prev, qualification: e.target.value }))} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" placeholder="e.g., BDS, MDS" />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-3">Role <span className="text-red-500">*</span></label>
+                      <ChoiceSelect
+                        which="clinic/clinic-role"
+                        value={newUserForm.role}
+                        onChange={(e) => setNewUserForm(prev => ({ ...prev, role: e.target.value }))}
+                        className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
+                        placeholder="Select Role"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-3">Password <span className="text-red-500">*</span></label>
+                      <input type="password" required value={newUserForm.password} onChange={(e) => setNewUserForm(prev => ({ ...prev, password: e.target.value }))} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" placeholder="Enter secure password" />
+                    </div>
+                  </div>
+
+                  <div className="mt-8 flex justify-end gap-3">
+                    <button onClick={() => { setShowAddMemberModal(false); setAddMemberStep('createUser'); setCreatedUser(null); setError(null); }} className="rounded-lg border border-slate-300 bg-white px-6 py-2.5 font-medium text-slate-700 hover:bg-slate-50 transition">Cancel</button>
+                    <button onClick={handleCreateUser} disabled={membersLoading} className="rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-6 py-2.5 font-medium text-white hover:shadow-lg transition disabled:opacity-50">{membersLoading ? 'Creating...' : 'Next'}</button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div className="rounded-lg border border-blue-200 bg-blue-50 p-5 mb-6">
+                    <div className="font-bold text-slate-900 text-lg">{createdUser?.first_name} {createdUser?.last_name}</div>
+                    <div className="text-sm text-slate-600 mt-1">{createdUser?.email}</div>
+                    <div className="text-xs text-slate-500 mt-2 bg-white rounded px-3 py-1 inline-block">User created successfully</div>
+                  </div>
+
+                  <div className="grid gap-6">
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-3">Clinic</label>
+                      <input type="text" readOnly value={clinic?.name || ''} className="w-full rounded-lg border border-slate-300 bg-slate-100 px-4 py-3 text-slate-700 cursor-not-allowed" />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-3">Role in Clinic <span className="text-red-500">*</span></label>
+                      <ChoiceSelect
+                        which="clinic/clinic-role"
+                        value={newMember.role}
+                        onChange={(e) => setNewMember(prev => ({ ...prev, role: e.target.value }))}
+                        className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
+                        placeholder="Select clinic role"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-8 flex justify-between">
+                    <button onClick={() => { setAddMemberStep('createUser'); setCreatedUser(null); setError(null); }} className="rounded-lg border border-slate-300 bg-white px-6 py-2.5 font-medium text-slate-700 hover:bg-slate-50 transition">Back</button>
+                    <div className="flex gap-3">
+                      <button onClick={() => { setShowAddMemberModal(false); setAddMemberStep('createUser'); setCreatedUser(null); setError(null); }} className="rounded-lg border border-slate-300 bg-white px-6 py-2.5 font-medium text-slate-700 hover:bg-slate-50 transition">Cancel</button>
+                      <button onClick={handleAssignMember} disabled={membersLoading} className="rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-6 py-2.5 font-medium text-white hover:shadow-lg transition disabled:opacity-50">{membersLoading ? 'Assigning...' : 'Assign'}</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

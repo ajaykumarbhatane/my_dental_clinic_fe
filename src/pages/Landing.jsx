@@ -12,6 +12,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { clinicApi } from "../api/clinicApi";
+import ChoiceSelect from "../components/ChoiceSelect";
 import { toISODate, toDDMMYYYY } from '../utils/dateUtils';
 import dashboardimg from "../assets/dashboard.png";
 import treatmentsimg from "../assets/treatments.png";
@@ -76,7 +77,7 @@ const Landing = () => {
     first_name: '',
     last_name: '',
     email: '',
-    gender: 'Male',
+    gender: '',
     mobile: '',
     secondary_phone_number: '',
     date_of_birth: '',
@@ -544,15 +545,14 @@ const Landing = () => {
 
                   <div>
                     <label className="label">Gender *</label>
-                    <select
+                    <ChoiceSelect
+                      which="user/gender"
                       value={signupForm.gender}
                       onChange={(e) => handleSignupInput('gender', e.target.value)}
                       className="input2"
-                    >
-                      <option>Male</option>
-                      <option>Female</option>
-                      <option>Other</option>
-                    </select>
+                      required
+                      placeholder="Select Gender"
+                    />
                   </div>
                 </div>
 

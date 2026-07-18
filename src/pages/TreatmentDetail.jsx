@@ -5,6 +5,7 @@ import { treatmentApi } from '../api/treatmentApi';
 import { visitsApi, visitImagesApi } from '../api/visitsApi';
 import { compressImage } from '../utils/imageOptimizer';
 import { formatDate, toISODate } from '../utils/dateUtils';
+import ChoiceSelect from '../components/ChoiceSelect';
 
 const treatmentDetailRequestCache = new Map();
 

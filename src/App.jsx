@@ -1,4 +1,7 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
+import { App as CapacitorApp } from '@capacitor/app';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 import NotificationContainer from './components/NotificationContainer';
@@ -14,6 +17,38 @@ import TreatmentVideos from './pages/TreatmentVideos';
 import Settings from './pages/Settings';
 import ClinicSettings from './pages/ClinicSettings';
 import CustomerCare from './pages/CustomerCare';
+
+// Handle native Android back button using the same history stack as React Router.
+const NativeBackHandler = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) {
+      return undefined;
+    }
+
+    let listener = null;
+
+    const registerBackHandler = async () => {
+      listener = await CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+        if (canGoBack) {
+          navigate(-1);
+        } else {
+          CapacitorApp.exitApp();
+        }
+      });
+    };
+
+    registerBackHandler();
+
+    return () => {
+      listener?.remove();
+    };
+  }, [navigate, location.key]);
+
+  return null;
+};
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
@@ -38,6 +73,7 @@ const AppRoutes = () => {
 
   return (
     <Router>
+      <NativeBackHandler />
       <Routes>
         <Route
           path="/"

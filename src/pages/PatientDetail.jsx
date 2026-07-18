@@ -10,6 +10,7 @@ import { userApi } from '../api/userApi';
 import { prescriptionApi } from '../api/prescriptionApi';
 import { useApiWithErrorHandling } from '../utils/apiUtils';
 import { useNotification } from '../context/NotificationContext';
+import ChoiceSelect from '../components/ChoiceSelect';
 import { formatDate, parseDateString, toISODate, toDDMMYYYY } from '../utils/dateUtils';
 
 const HeroCard = ({ patient, patientInitials, patientAge, doctorLabel, onAddTreatment }) => (
@@ -1558,12 +1559,12 @@ return (
                            <option>14 Days</option>
                            <option>15 Days</option>
                         </select>
-                        <select className="input-ui" value={item.before_after_food} onChange={(e) => handlePrescriptionItemChange(index, 'before_after_food', e.target.value)}>
-                           <option value="before_food">जेवणाआगोदर</option>
-                           <option value="afternoon">दुपारी</option>
-                           <option value="after_food">जेवणानंतर</option>
-                           <option value="anytime">कधीही</option>
-                        </select>
+                        <ChoiceSelect
+                          which="prescription/before-after-food"
+                          className="input-ui"
+                          value={item.before_after_food}
+                          onChange={(e) => handlePrescriptionItemChange(index, 'before_after_food', e.target.value)}
+                        />
                         <button type="button" onClick={() => handleRemovePrescriptionRow(index)} className="flex h-10 w-10 items-center justify-center rounded-2xl bg-red-50 text-red-600 transition hover:bg-red-100">
                            <Trash2 className="h-4 w-4" />
                         </button>
@@ -1646,18 +1647,15 @@ return (
                   </div>
                   <div>
                      <label className="block text-sm font-medium text-gray-700">Gender</label>
-                     <select
-                        required
+                     <ChoiceSelect
+                        which="user/gender"
                         value={patientFormData.gender}
                         onChange={(e) =>
                         setPatientFormData({ ...patientFormData, gender: e.target.value })}
                         className="mt-1 block w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                        >
-                        <option value="">Select gender</option>
-                        <option value="male">Male</option>
-                        <option value="female">Female</option>
-                        <option value="other">Other</option>
-                     </select>
+                        required
+                        placeholder="Select gender"
+                     />
                   </div>
                </div>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1879,53 +1877,42 @@ return (
                treatmentTypes.find(type => String(type.id) === String(treatmentFormData.type_of_treatment))?.name?.toLowerCase().includes('braces') && (
                <div className="mt-3">
                   <label className="block text-sm font-medium text-gray-700">Braces Type</label>
-                  <select
+                  <ChoiceSelect
+                     which="treatment/braces-type"
                      value={treatmentFormData.braces_type}
                      onChange={(e) =>
                      setTreatmentFormData({...treatmentFormData, braces_type: e.target.value})}
                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                     >
-                     <option value="">Select Type</option>
-                     <option value="metal">Metal</option>
-                     <option value="ceramic">Ceramic</option>
-                  </select>
+                     placeholder="Select Type"
+                  />
                </div>
                )}
                {treatmentTypes.find(type => String(type.id) === String(treatmentFormData.type_of_treatment))?.name?.toLowerCase().includes('root canal') && (
                <div className="mt-3">
                   <label className="block text-sm font-medium text-gray-700">Cap Type</label>
-                  <select
+                  <ChoiceSelect
+                     which="treatment/cap-type"
                      value={treatmentFormData.cap_type}
                      onChange={(e) =>
                      setTreatmentFormData({...treatmentFormData, cap_type: e.target.value})}
                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                     >
-                     <option value="">Select Type</option>
-                     <option value="metal">Metal</option>
-                     <option value="ceramic">Ceramic</option>
-                     <option value="cadcam">CAD/CAM</option>
-                     <option value="zirconia">Zirconia</option>
-                     <option value="other">Other</option>
-                  </select>
+                     placeholder="Select Type"
+                  />
                </div>
                )}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                <div>
                   <label className="block text-sm font-medium text-gray-700">Status *</label>
-                  <select
-                     required
+                  <ChoiceSelect
+                     which="treatment/status"
                      value={treatmentFormData.status}
                      onChange={(e) =>
                      setTreatmentFormData({...treatmentFormData, status: e.target.value})}
                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                     >
-                     <option value="scheduled">Scheduled</option>
-                     <option value="ongoing">Ongoing</option>
-                     <option value="completed">Completed</option>
-                     <option value="cancelled">Cancelled</option>
-                     <option value="on_hold">On Hold</option>
-                  </select>
+                     required
+                     placeholder="Select Status"
+                  />
                </div>
                <div>
                   <label className="block text-sm font-medium text-gray-700">
@@ -2069,15 +2056,14 @@ return (
                </div>
                <div>
                   <label className="block text-sm font-medium text-gray-700">Payment Type</label>
-                  <select
-                     value={visitFormData.patient_payment_type}
-                     onChange={(e) =>
-                     setVisitFormData({...visitFormData, patient_payment_type: e.target.value})}
-                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                     >
-                     <option value="cash">Cash</option>
-                     <option value="online">Online</option>
-                  </select>
+                  <ChoiceSelect
+                    which="treatment/payment-type"
+                    value={visitFormData.patient_payment_type}
+                    onChange={(e) =>
+                    setVisitFormData({...visitFormData, patient_payment_type: e.target.value})}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Select Payment Type"
+                  />
                </div>
             </div>
             <div>

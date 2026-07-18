@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { routeTo } from '../utils/routerNavigation';
 
 // Error categorization helper
 const categorizeError = (error) => {
@@ -188,7 +189,7 @@ apiClient.interceptors.response.use(
           sessionStorage.removeItem('user');
         } catch (e2) {}
       }
-      window.location.href = '/';
+      routeTo('/', { replace: true });
     }
     
     return Promise.reject(error);

@@ -4,6 +4,7 @@ import { Search, Filter, Eye, Edit3, Plus, X, Trash2 } from 'lucide-react';
 import { treatmentApi } from '../api/treatmentApi';
 import { patientApi } from '../api/patientApi';
 import { visitsApi } from '../api/visitsApi';
+import ChoiceSelect from '../components/ChoiceSelect';
 import Pagination from '../components/Pagination';
 import { formatDate, toISODate, toDDMMYYYY } from '../utils/dateUtils';
 
@@ -589,32 +590,25 @@ const Treatments = () => {
               {(selectedTypeName.toLowerCase().includes('ortho') || selectedTypeName.toLowerCase().includes('braces')) && (
                 <div className="mt-3">
                   <label className="block text-sm font-medium text-gray-700">Braces Type</label>
-                  <select
+                  <ChoiceSelect
+                    which="treatment/braces-type"
                     value={formData.braces_type}
                     onChange={(e) => setFormData({...formData, braces_type: e.target.value})}
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="">Select Type</option>
-                    <option value="metal">Metal</option>
-                    <option value="ceramic">Ceramic</option>
-                  </select>
+                    placeholder="Select Type"
+                  />
                 </div>
               )}
               {selectedTypeName.toLowerCase().includes('root canal') && (
                 <div className="mt-3">
                   <label className="block text-sm font-medium text-gray-700">Cap Type</label>
-                  <select
+                  <ChoiceSelect
+                    which="treatment/cap-type"
                     value={formData.cap_type}
                     onChange={(e) => setFormData({...formData, cap_type: e.target.value})}
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="">Select Type</option>
-                    <option value="metal">Metal</option>
-                    <option value="ceramic">Ceramic</option>
-                    <option value="cadcam">CAD/CAM</option>
-                    <option value="zirconia">Zirconia</option>
-                    <option value="other">Other</option>
-                  </select>
+                    placeholder="Select Type"
+                  />
                 </div>
               )}
                 </div>
@@ -623,18 +617,14 @@ const Treatments = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Status *</label>
-                  <select
+                  <ChoiceSelect
+                    which="treatment/status"
                     required
                     value={formData.status}
                     onChange={(e) => setFormData({...formData, status: e.target.value})}
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="scheduled">Scheduled</option>
-                    <option value="ongoing">Ongoing</option>
-                    <option value="completed">Completed</option>
-                    <option value="cancelled">Cancelled</option>
-                    <option value="on_hold">On Hold</option>
-                  </select>
+                    placeholder="Select Status"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
@@ -882,14 +872,13 @@ const Treatments = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Payment Type</label>
-                  <select
+                  <ChoiceSelect
+                    which="treatment/payment-type"
                     value={visitFormData.patient_payment_type}
                     onChange={(e) => setVisitFormData({...visitFormData, patient_payment_type: e.target.value})}
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="cash">Cash</option>
-                    <option value="online">Online</option>
-                  </select>
+                    placeholder="Select Payment Type"
+                  />
                 </div>
               </div>
 

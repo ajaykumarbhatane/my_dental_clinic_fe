@@ -224,7 +224,7 @@ const Dashboard = () => {
     return [toDateInputValue(start), toDateInputValue(end)];
   };
 
-  const getCurrentMonthRange = () => [initialStartDate, initialEndDate];
+  const getCurrentMonthRange = () => [initialMonthStartDate, initialEndDate];
 
   const getYearToDateRange = () => [toDateInputValue(new Date(today.getFullYear(), 0, 1)), initialEndDate];
 

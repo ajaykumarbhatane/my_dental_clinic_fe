@@ -9,6 +9,7 @@ import { visitsApi } from '../api/visitsApi';
 import { prescriptionApi } from '../api/prescriptionApi';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
+import ChoiceSelect from '../components/ChoiceSelect';
 import Pagination from '../components/Pagination';
 import { formatDate } from '../utils/dateUtils';
 
@@ -789,9 +790,9 @@ useEffect(() => {
               <tr className="text-sm text-gray-600">
                 <th className="px-5 py-3 text-left font-semibold">Patient</th>
                 <th className="px-5 py-3 text-left font-semibold">Mobile</th>
-                <th className="px-5 py-3 text-left font-semibold">Doctor</th>
+                {/* <th className="px-5 py-3 text-left font-semibold">Doctor</th> */}
                 <th className="px-5 py-3 text-left font-semibold">Treatments</th>
-                <th className="px-5 py-3 text-left font-semibold">Date</th>
+                {/* <th className="px-5 py-3 text-left font-semibold">Date</th> */}
                 <th className="px-5 py-3 text-left font-semibold">Actions</th>
               </tr>
             </thead>
@@ -852,9 +853,9 @@ useEffect(() => {
                   </td>
 
                   {/* Doctor */}
-                  <td className="px-5 py-3 text-gray-600">
+                  {/* <td className="px-5 py-3 text-gray-600">
                     {patient.assigned_doctor || 'N/A'}
-                  </td>
+                  </td> */}
 
                   {/* Treatments */}
                   <td className="px-5 py-3 text-gray-600">
@@ -862,7 +863,7 @@ useEffect(() => {
                   </td>
 
                   {/* Date */}
-                  <td className="px-5 py-3 text-gray-600">
+                  {/* <td className="px-5 py-3 text-gray-600">
                     {formatDate(patient.created_at)}
                   </td>
 
@@ -1021,18 +1022,15 @@ useEffect(() => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Gender *</label>
-                    <select
+                    <ChoiceSelect
+                      which="user/gender"
                       name="gender"
                       value={formData.gender}
                       onChange={handleInputChange}
-                      required
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Select Gender</option>
-                      <option value="male">Male</option>
-                      <option value="female">Female</option>
-                      <option value="other">Other</option>
-                    </select>
+                      required
+                      placeholder="Select Gender"
+                    />
                   </div>
 
                   <div className="md:col-span-2">
@@ -1106,52 +1104,42 @@ useEffect(() => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Status *</label>
-                    <select
+                    <ChoiceSelect
+                      which="treatment/status"
                       name="status"
                       value={treatmentFormData.status}
                       onChange={handleTreatmentChange}
                       className="mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="scheduled">Scheduled</option>
-                      <option value="ongoing">Ongoing</option>
-                      <option value="completed">Completed</option>
-                      <option value="cancelled">Cancelled</option>
-                      <option value="on_hold">On Hold</option>
-                    </select>
+                      required
+                      placeholder="Select Status"
+                    />
                   </div>
 
                   {(selectedTreatmentTypeName.toLowerCase().includes('ortho') || selectedTreatmentTypeName.toLowerCase().includes('braces')) && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Braces Type</label>
-                      <select
+                      <ChoiceSelect
+                        which="treatment/braces-type"
                         name="braces_type"
                         value={treatmentFormData.braces_type}
                         onChange={handleTreatmentChange}
                         className="mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <option value="">Select Type</option>
-                        <option value="metal">Metal</option>
-                        <option value="ceramic">Ceramic</option>
-                      </select>
+                        placeholder="Select Type"
+                      />
                     </div>
                   )}
 
                   {selectedTreatmentTypeName.toLowerCase().includes('root canal') && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Cap Type</label>
-                      <select
+                      <ChoiceSelect
+                        which="treatment/cap-type"
                         name="cap_type"
                         value={treatmentFormData.cap_type}
                         onChange={handleTreatmentChange}
                         className="mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <option value="">Select Type</option>
-                        <option value="metal">Metal</option>
-                        <option value="ceramic">Ceramic</option>
-                        <option value="cadcam">CAD/CAM</option>
-                        <option value="zirconia">Zirconia</option>
-                        <option value="other">Other</option>
-                      </select>
+                        placeholder="Select Type"
+                      />
                     </div>
                   )}
 
@@ -1261,15 +1249,14 @@ useEffect(() => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Payment Type</label>
-                    <select
+                    <ChoiceSelect
+                      which="treatment/payment-type"
                       name="patient_payment_type"
                       value={visitFormData.patient_payment_type}
                       onChange={handleVisitChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="cash">Cash</option>
-                      <option value="online">Online</option>
-                    </select>
+                      placeholder="Select Payment Type"
+                    />
                   </div>
 
                   <div className="md:col-span-2">
@@ -1497,18 +1484,14 @@ useEffect(() => {
                             <option>15 Days</option>
                           </select>
 
-                          <select
+                          <ChoiceSelect
+                            which="prescription/before-after-food"
                             className="input-ui min-w-0"
                             value={item.before_after_food}
                             onChange={(e) =>
                               handlePrescriptionItemChange(index, 'before_after_food', e.target.value)
                             }
-                          >
-                            <option value="before_food">जेवणाआगोदर</option>
-                            <option value="afternoon">दुपारी</option>
-                            <option value="after_food">जेवणानंतर</option>
-                            <option value="anytime">कधीही</option>
-                          </select>
+                          />
 
                           <button
                             type="button"
