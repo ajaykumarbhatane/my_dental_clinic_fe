@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { Search, Filter, Eye, Edit3, Plus, X, Trash2 } from 'lucide-react';
+import { Search, Filter, Eye, Edit3, Plus, X, Trash2, Phone } from 'lucide-react';
 import { treatmentApi } from '../api/treatmentApi';
 import { patientApi } from '../api/patientApi';
 import { visitsApi } from '../api/visitsApi';
 import ChoiceSelect from '../components/ChoiceSelect';
 import Pagination from '../components/Pagination';
 import { formatDate, toISODate, toDDMMYYYY } from '../utils/dateUtils';
+import FilterSelect from "../components/FilterSelect";
 
 const Treatments = () => {
   const navigate = useNavigate();
@@ -372,30 +373,40 @@ const Treatments = () => {
             )}
           </div>
 
-          <div className="flex gap-3 w-full lg:w-auto">
-            <select
-              value={currentType}
-              onChange={(e) => handleFilterChange('type', e.target.value)}
-              className="flex-1 lg:flex-none px-4 py-3 text-sm border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200 shadow-sm bg-white"
-            >
-              <option value="all">All Treatment Types</option>
-              {treatmentTypes.map((type) => (
-                <option key={type.id} value={type.id}>{type.name}</option>
-              ))}
-            </select>
+          <div className="flex gap-3 w-full lg:w-auto min-w-0">
+            <FilterSelect
+  value={currentType === "all" ? "" : currentType}
+  placeholder="All Treatment Types"
+  options={[
+    {
+      value: "",
+      label: "All Treatment Types",
+    },
+    ...treatmentTypes.map((type) => ({
+      value: type.id,
+      label: type.name,
+    })),
+  ]}
+  onChange={(value) =>
+    handleFilterChange("type", value || "all")
+  }
+/>
 
-            <select
-              value={currentStatus}
-              onChange={(e) => handleFilterChange('status', e.target.value)}
-              className="flex-1 lg:flex-none px-4 py-3 text-sm border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200 shadow-sm bg-white"
-            >
-              <option value="all">All Status</option>
-              <option value="scheduled">Scheduled</option>
-              <option value="ongoing">Ongoing</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-              <option value="on_hold">On Hold</option>
-            </select>
+            <FilterSelect
+  value={currentStatus === "all" ? "" : currentStatus}
+  placeholder="All Status"
+  options={[
+    { value: "", label: "All Status" },
+    { value: "scheduled", label: "Scheduled" },
+    { value: "ongoing", label: "Ongoing" },
+    { value: "completed", label: "Completed" },
+    { value: "cancelled", label: "Cancelled" },
+    { value: "on_hold", label: "On Hold" },
+  ]}
+  onChange={(value) =>
+    handleFilterChange("status", value || "all")
+  }
+/>
           </div>
         </div>
 
@@ -416,15 +427,16 @@ const Treatments = () => {
           <table className="min-w-full">
 
             {/* Header */}
-            <thead className="bg-gray-50 sticky top-0 z-10">
+            <thead className="sticky top-0 z-10 bg-blue-50 border-b border-blue-100">
               <tr className="text-sm text-gray-600">
                 <th className="px-5 py-3 text-left font-semibold">Patient Name</th>
+                <th className="px-5 py-3 text-left font-semibold">Mobile</th>
                 <th className="px-5 py-3 text-left font-semibold">Treatment Type</th>
                 <th className="px-5 py-3 text-left font-semibold">Status</th>
-                <th className="px-5 py-3 text-left font-semibold">Option</th>
-                <th className="px-5 py-3 text-left font-semibold">Estimated Duration / Visits</th>
-                <th className="px-5 py-3 text-left font-semibold">Planned Amount</th>
-                <th className="px-5 py-3 text-left font-semibold">Actions</th>
+                {/* <th className="px-5 py-3 text-left font-semibold">Option</th> */}
+                {/* <th className="px-5 py-3 text-left font-semibold">Estimated Duration / Visits</th> */}
+                {/* <th className="px-5 py-3 text-left font-semibold">Planned Amount</th> */}
+                {/* <th className="px-5 py-3 text-left font-semibold">Actions</th> */}
               </tr>
             </thead>
 
@@ -461,6 +473,25 @@ const Treatments = () => {
                         ) : null}
                       </span>
                     </td>
+                    <td className="px-5 py-3">
+                      {(treatment.patient_mobile || treatment.patient?.mobile) ? (
+                        <a
+                          href={`tel:${treatment.patient_mobile || treatment.patient?.mobile}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-3 group"
+                        >
+                          <div className="w-8 h-8 flex items-center justify-center bg-blue-500 text-white rounded-md group-hover:bg-blue-600 transition-colors">
+                            <Phone className="w-4 h-4" />
+                          </div>
+
+                          <span className="text-gray-600 group-hover:text-blue-600 transition-colors">
+                            {treatment.patient_mobile || treatment.patient?.mobile}
+                          </span>
+                        </a>
+                      ) : (
+                        <span className="text-gray-400">N/A</span>
+                      )}
+                    </td>
                     <td className="px-5 py-3 text-gray-600">
                       {treatment.type_of_treatment_name}
                     </td>
@@ -475,7 +506,7 @@ const Treatments = () => {
                         {treatment.status}
                       </span>
                     </td>
-                    <td className="px-5 py-3 text-gray-600">
+                    {/* <td className="px-5 py-3 text-gray-600">
                       {treatment.braces_type || treatment.cap_type || 'N/A'}
                     </td>
                     <td className="px-5 py-3 text-gray-600">
@@ -513,7 +544,7 @@ const Treatments = () => {
                           <Trash2 className="w-4 h-4 hover:scale-125 transition-transform duration-200" />
                         </button>
                       </div>
-                    </td>
+                    </td> */}
                   </tr>
                 ))
               )}

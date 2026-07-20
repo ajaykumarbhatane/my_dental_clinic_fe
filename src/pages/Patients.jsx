@@ -12,6 +12,7 @@ import { useNotification } from '../context/NotificationContext';
 import ChoiceSelect from '../components/ChoiceSelect';
 import Pagination from '../components/Pagination';
 import { formatDate } from '../utils/dateUtils';
+import FilterSelect from "../components/FilterSelect";
 
 const Patients = () => {
   const [patients, setPatients] = useState([]);
@@ -734,38 +735,44 @@ useEffect(() => {
   </div>
 
   {/* RIGHT: Filters */}
-  <div className="flex gap-3 w-full lg:w-auto">
+  <div className="flex gap-3 w-full lg:w-auto min-w-0">
     {/* Treatment Filter */}
-    <select
-      value={treatmentFilter}
-      onChange={(e) => handleFilterChange('treatment', e.target.value)}
-      className="flex-1 lg:flex-none px-4 py-3 text-sm border-2 border-gray-200 rounded-xl
-                 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100
-                 transition-all duration-200 shadow-sm bg-white"
-    >
-      <option value="">All Treatments</option>
-      {filterTreatments.map((treatment) => (
-        <option key={treatment.id} value={treatment.id}>
-          {treatment.name}
-        </option>
-      ))}
-    </select>
+    <FilterSelect
+    value={treatmentFilter}
+    placeholder="All Treatments"
+    options={[
+        {
+            value: "",
+            label: "All Treatments",
+        },
+        ...filterTreatments.map((t) => ({
+            value: t.id,
+            label: t.name,
+        })),
+    ]}
+    onChange={(value) =>
+        handleFilterChange("treatment", value)
+    }
+/>
 
     {/* Doctor Filter */}
-    <select
-      value={doctorFilter}
-      onChange={(e) => handleFilterChange('doctor', e.target.value)}
-      className="flex-1 lg:flex-none px-4 py-3 text-sm border-2 border-gray-200 rounded-xl
-                 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100
-                 transition-all duration-200 shadow-sm bg-white"
-    >
-      <option value="">All Doctors</option>
-      {filterDoctors.map((doctor) => (
-        <option key={doctor.id} value={doctor.id}>
-          {doctor.first_name} {doctor.last_name}
-        </option>
-      ))}
-    </select>
+    <FilterSelect
+    value={doctorFilter}
+    placeholder="All Doctors"
+    options={[
+        {
+            value: "",
+            label: "All Doctors",
+        },
+        ...filterDoctors.map((d) => ({
+            value: d.id,
+            label: `${d.first_name} ${d.last_name}`,
+        })),
+    ]}
+    onChange={(value) =>
+        handleFilterChange("doctor", value)
+    }
+/>
   </div>
 
   <button
@@ -786,8 +793,8 @@ useEffect(() => {
           <table className="min-w-full">
 
             {/* Header */}
-            <thead className="bg-gray-50 sticky top-0 z-10">
-              <tr className="text-sm text-gray-600">
+            <thead className="sticky top-0 z-10 bg-blue-50 border-b border-blue-100">
+              <tr className="text-sm text-slate-700">
                 <th className="px-5 py-3 text-left font-semibold">Patient</th>
                 <th className="px-5 py-3 text-left font-semibold">Mobile</th>
                 {/* <th className="px-5 py-3 text-left font-semibold">Doctor</th> */}
@@ -836,20 +843,23 @@ useEffect(() => {
 
                   {/* Mobile */}
                   <td className="px-5 py-3">
-                    <div className="flex items-center gap-3">
-                      {patient.mobile && (
-                        <a
-                          href={`tel:${patient.mobile}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="w-8 h-8 flex items-center justify-center bg-blue-500 text-white rounded-md hover:bg-blue-600"
-                        >
+                    {patient.mobile ? (
+                      <a
+                        href={`tel:${patient.mobile}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center gap-3 group"
+                      >
+                        <div className="w-8 h-8 flex items-center justify-center bg-blue-500 text-white rounded-md group-hover:bg-blue-600 transition-colors">
                           <Phone className="w-4 h-4" />
-                        </a>
-                      )}
-                      <span className="text-gray-600">
-                        {patient.mobile || 'N/A'}
-                      </span>
-                    </div>
+                        </div>
+
+                        <span className="text-gray-600 group-hover:text-blue-600 transition-colors">
+                          {patient.mobile}
+                        </span>
+                      </a>
+                    ) : (
+                      <span className="text-gray-400">N/A</span>
+                    )}
                   </td>
 
                   {/* Doctor */}

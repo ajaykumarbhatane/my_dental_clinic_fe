@@ -395,13 +395,25 @@ const TreatmentDetail = () => {
   };
 
   const formatAmount = (amount) => {
-    if (!amount) return '₹0';
+    if (amount == null) return '₹0';
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
       maximumFractionDigits: 0
     }).format(amount);
   };
+
+  // Compute total paid from visits and remaining amount for the treatment
+  const totalPaid = (visits || []).reduce((sum, v) => sum + (Number(v.patient_payment_amount) || 0), 0);
+  const plannedAmount = Number(treatment?.planned_amount) || 0;
+  const remainingAmount = Math.max(plannedAmount - totalPaid, 0);
+
+  // Derive patient first/last and display name from treatment object safely
+  const patientFirst = treatment?.patient_first_name || treatment?.patient?.first_name || (treatment?.patient_name ? treatment.patient_name.split(' ')[0] : '') || '';
+  const patientLast = treatment?.patient_last_name || treatment?.patient?.last_name || (treatment?.patient_name ? treatment.patient_name.split(' ').slice(1).join(' ') : '') || '';
+  const patientDisplayName = (patientFirst || patientLast)
+    ? `${patientFirst} ${patientLast}`.trim()
+    : (treatment?.patient_full_name || treatment?.patient_name || 'Patient');
 
   if (loading) {
     return <div className="text-center py-10">Loading...</div>;
@@ -417,8 +429,22 @@ const TreatmentDetail = () => {
         <div className="bg-gradient-to-r from-slate-900 via-indigo-800 to-sky-700 text-white px-6 py-6 md:px-10 md:py-8">
           <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
             <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-slate-300">Treatment Summary</p>
-              <h1 className="mt-2 text-4xl font-semibold tracking-tight text-white">{treatment.treatment_name || treatment.type_of_treatment_name || 'Treatment'}</h1>
+              <div>
+                <div className="flex items-baseline gap-3 flex-wrap">
+                  <span className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-300">
+                    Treatment Summary:
+                  </span>
+
+                  <h1 className="text-sm  font-bold leading-none text-white">
+                    {patientDisplayName}
+                  </h1>
+                </div>
+
+                <h2 className="mt-3 text-xl font-semibold text-white/90">
+                  {treatment.treatment_name || treatment.type_of_treatment_name}
+                </h2>
+              </div>       
+              {/* <h2 className="mt-1 text-lg font-semibold text-white/90">{treatment.treatment_name || treatment.type_of_treatment_name || 'Treatment'}</h2> */}
               <div className="mt-3 flex items-center gap-3">
                 {/* <div className="rounded-full bg-white/10 px-3 py-1 text-sm text-white/90">
                   {formatAmount(treatment.planned_amount)} · {treatment.estimated_duration_months || 'N/A'} months
@@ -428,7 +454,7 @@ const TreatmentDetail = () => {
                 </div>
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
               <div className="rounded-3xl bg-white/10 p-4 border border-white/10 backdrop-blur-sm">
                 <p className="text-[10px] uppercase tracking-[0.3em] text-slate-200/80">Status</p>
                 <p className="mt-2 text-lg font-semibold text-white">{treatment.status || 'Ongoing'}</p>
@@ -436,6 +462,11 @@ const TreatmentDetail = () => {
               <div className="rounded-3xl bg-white/10 p-4 border border-white/10 backdrop-blur-sm">
                 <p className="text-[10px] uppercase tracking-[0.3em] text-slate-200/80">Total Amount</p>
                 <p className="mt-2 text-lg font-semibold text-white">{formatAmount(treatment.planned_amount)}</p>
+              </div>
+              <div className="rounded-3xl bg-white/10 p-4 border border-white/10 backdrop-blur-sm">
+                <p className="text-[10px] uppercase tracking-[0.3em] text-slate-200/80">Remaining</p>
+                <p className="mt-2 text-lg font-semibold text-white">{formatAmount(remainingAmount)}</p>
+                <p className="text-xs text-white/70 mt-1">Paid: {formatAmount(totalPaid)}</p>
               </div>
               <div className="rounded-3xl bg-white/10 p-4 border border-white/10 backdrop-blur-sm">
                 <p className="text-[10px] uppercase tracking-[0.3em] text-slate-200/80">Duration</p>
