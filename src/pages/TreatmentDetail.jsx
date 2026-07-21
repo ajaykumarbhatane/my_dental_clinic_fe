@@ -415,6 +415,15 @@ const TreatmentDetail = () => {
     ? `${patientFirst} ${patientLast}`.trim()
     : (treatment?.patient_full_name || treatment?.patient_name || 'Patient');
 
+  const statusText = treatment?.status || 'Ongoing';
+  const statusIsOngoing = String(statusText).toLowerCase() === 'ongoing';
+  const bracesOrCapValue = treatment?.braces_type || treatment?.cap_type || null;
+
+  const treatmentPlanLines = treatment?.treatment_plan ? treatment.treatment_plan.split('\n').map((line) => line.trim()).filter(Boolean) : [];
+  const initialFindingsLines = treatment?.initial_findings ? treatment.initial_findings.split('\n').map((line) => line.trim()).filter(Boolean) : [];
+  const treatmentPlanEmpty = !treatment?.treatment_plan?.trim();
+  const treatmentNotesEmpty = !treatment?.treatment_notes?.trim();
+
   if (loading) {
     return <div className="text-center py-10">Loading...</div>;
   }
@@ -427,50 +436,95 @@ const TreatmentDetail = () => {
     <div className="space-y-8">
       <div className="rounded-[32px] bg-white shadow-2xl border border-slate-200 overflow-hidden sticky top-4 z-30">
         <div className="bg-gradient-to-r from-slate-900 via-indigo-800 to-sky-700 text-white px-6 py-6 md:px-10 md:py-8">
-          <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
-            <div>
-              <div>
-                <div className="flex items-baseline gap-3 flex-wrap">
-                  <span className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-300">
-                    Treatment Summary:
-                  </span>
-
-                  <h1 className="text-sm  font-bold leading-none text-white">
-                    {patientDisplayName}
-                  </h1>
-                </div>
-
-                <h2 className="mt-3 text-xl font-semibold text-white/90">
+          <div className="space-y-4">
+            <div className="flex flex-col gap-1">
+              <div className="flex flex-wrap items-center gap-3">
+                <h2 className="text-2xl font-semibold tracking-tight text-white">
                   {treatment.treatment_name || treatment.type_of_treatment_name}
                 </h2>
-              </div>       
-              {/* <h2 className="mt-1 text-lg font-semibold text-white/90">{treatment.treatment_name || treatment.type_of_treatment_name || 'Treatment'}</h2> */}
-              <div className="mt-3 flex items-center gap-3">
-                {/* <div className="rounded-full bg-white/10 px-3 py-1 text-sm text-white/90">
-                  {formatAmount(treatment.planned_amount)} · {treatment.estimated_duration_months || 'N/A'} months
-                </div> */}
-                <div className="text-sm text-white/90 hidden md:block">
-                  {treatment.treatment_plan ? (treatment.treatment_plan.length > 80 ? `${treatment.treatment_plan.slice(0,80)}...` : treatment.treatment_plan) : ''}
-                </div>
+                <span className={`inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs uppercase tracking-[0.3em] text-white/90 ${statusIsOngoing ? 'text-emerald-200' : 'text-slate-200'}`}>
+                  <span className={statusIsOngoing ? 'text-emerald-300' : 'text-slate-300'}>•</span>
+                  {statusText}
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-300">Treatment Summary</p>
+                <p className="text-lg font-semibold text-white">{patientDisplayName}</p>
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-              <div className="rounded-3xl bg-white/10 p-4 border border-white/10 backdrop-blur-sm">
-                <p className="text-[10px] uppercase tracking-[0.3em] text-slate-200/80">Status</p>
-                <p className="mt-2 text-lg font-semibold text-white">{treatment.status || 'Ongoing'}</p>
+
+            <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+              <div className="min-h-[72px] rounded-xl border border-white/10 bg-white/10 p-4 shadow-sm shadow-slate-900/5">
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-300">Total Amount</p>
+                <p className="mt-2 text-base font-semibold text-white">{formatAmount(treatment.planned_amount)}</p>
               </div>
-              <div className="rounded-3xl bg-white/10 p-4 border border-white/10 backdrop-blur-sm">
-                <p className="text-[10px] uppercase tracking-[0.3em] text-slate-200/80">Total Amount</p>
-                <p className="mt-2 text-lg font-semibold text-white">{formatAmount(treatment.planned_amount)}</p>
+              <div className="min-h-[72px] rounded-xl border border-white/10 bg-white/10 p-4 shadow-sm shadow-slate-900/5">
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-300">Paid</p>
+                <p className="mt-2 text-base font-semibold text-white">{formatAmount(totalPaid)}</p>
               </div>
-              <div className="rounded-3xl bg-white/10 p-4 border border-white/10 backdrop-blur-sm">
-                <p className="text-[10px] uppercase tracking-[0.3em] text-slate-200/80">Remaining</p>
-                <p className="mt-2 text-lg font-semibold text-white">{formatAmount(remainingAmount)}</p>
-                <p className="text-xs text-white/70 mt-1">Paid: {formatAmount(totalPaid)}</p>
+              <div className="min-h-[72px] rounded-xl border border-white/10 bg-white/10 p-4 shadow-sm shadow-slate-900/5">
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-300">Remaining</p>
+                <p className="mt-2 text-base font-semibold text-white">{formatAmount(remainingAmount)}</p>
               </div>
-              <div className="rounded-3xl bg-white/10 p-4 border border-white/10 backdrop-blur-sm">
-                <p className="text-[10px] uppercase tracking-[0.3em] text-slate-200/80">Duration</p>
-                <p className="mt-2 text-lg font-semibold text-white">{treatment.estimated_duration_months || 'N/A'} months</p>
+              <div className="min-h-[72px] rounded-xl border border-white/10 bg-white/10 p-4 shadow-sm shadow-slate-900/5">
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-300">Duration</p>
+                <p className="mt-2 text-base font-semibold text-white">{treatment.estimated_duration_months || 'N/A'} months</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-4">
+              {bracesOrCapValue && (
+                <div className="rounded-xl border border-white/10 bg-white/10 p-4 shadow-sm shadow-slate-900/5">
+                  <p className="text-xs uppercase tracking-[0.3em] text-slate-300">Braces / Cap Type</p>
+                  <p className="mt-2 text-base font-semibold text-white">{bracesOrCapValue}</p>
+                </div>
+              )}
+
+              {initialFindingsLines.length > 0 && (
+                <div className="rounded-xl border border-white/10 bg-white/10 p-4 shadow-sm shadow-slate-900/5">
+                  <p className="text-xs uppercase tracking-[0.3em] text-slate-300">Initial Findings</p>
+                  <div className="mt-3 space-y-2 text-sm leading-6 text-white">
+                    {initialFindingsLines.length > 1 ? (
+                      <ul className="space-y-2">
+                        {initialFindingsLines.map((line, index) => (
+                          <li key={index} className="flex gap-2">
+                            <span className="text-white/80">•</span>
+                            <span>{line}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p>{initialFindingsLines[0]}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="rounded-xl border border-white/10 bg-white/10 p-4 shadow-sm shadow-slate-900/5">
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-300">Treatment Plan</p>
+                <div className="mt-3 space-y-2 text-sm leading-6 text-white">
+                  {treatmentPlanEmpty ? (
+                    <p className="text-slate-200">No treatment plan available.</p>
+                  ) : treatmentPlanLines.length > 1 ? (
+                    <ul className="space-y-2">
+                      {treatmentPlanLines.map((line, index) => (
+                        <li key={index} className="flex gap-2">
+                          <span className="text-white/80">•</span>
+                          <span>{line}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p>{treatment.treatment_plan}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-white/10 bg-white/10 p-4 shadow-sm shadow-slate-900/5">
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-300">Treatment Notes</p>
+                <p className="mt-3 text-sm leading-6 text-white">
+                  {treatmentNotesEmpty ? 'No treatment notes recorded.' : treatment.treatment_notes}
+                </p>
               </div>
             </div>
           </div>
