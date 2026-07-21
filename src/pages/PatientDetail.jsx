@@ -13,7 +13,7 @@ import { useNotification } from '../context/NotificationContext';
 import ChoiceSelect from '../components/ChoiceSelect';
 import { formatDate, parseDateString, toISODate, toDDMMYYYY } from '../utils/dateUtils';
 
-const HeroCard = ({ patient, patientInitials, patientAge, doctorLabel, onAddTreatment }) => (
+const HeroCard = ({ patient, patientInitials, patientAge, doctorLabel, actionLabel, actionIcon: ActionIcon, onAction }) => (
    <section className="relative overflow-hidden rounded-[32px] bg-gradient-to-r from-blue-800 to-cyan-500 p-5 text-white sm:p-7 lg:p-8">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.24),_transparent_32%)]" />
       <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
@@ -32,13 +32,15 @@ font-semibold
                </div>
             </div>
          </div>
-         <button
-            onClick={onAddTreatment}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-900 shadow-xl shadow-slate-950/10 transition hover:bg-slate-100"
-         >
-            <Plus className="h-4 w-4" />
-            Add Treatment
-         </button>
+         {actionLabel && onAction && (
+            <button
+               onClick={onAction}
+               className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-900 shadow-xl shadow-slate-950/10 transition hover:bg-slate-100"
+            >
+               {ActionIcon && <ActionIcon className="h-4 w-4" />}
+               {actionLabel}
+            </button>
+         )}
       </div>
    </section>
 );
@@ -1128,9 +1130,29 @@ const PatientDetail = () => {
                   patientInitials={patientInitials}
                   patientAge={patientAge}
                   doctorLabel={patient.assigned_doctor || (patient.user && `${patient.user.first_name || ''} ${patient.user.last_name || ''}`.trim()) || 'N/A'}
-                  onAddTreatment={() => {
-                     closeTreatmentModal();
-                     setIsAddingTreatment(true);
+                  actionLabel={
+                     activeTab === 'patient_info'
+                        ? 'Edit Patient'
+                        : activeTab === 'treatments'
+                           ? 'Add Treatment'
+                           : activeTab === 'prescription'
+                              ? 'Add Prescription'
+                              : null
+                  }
+                  actionIcon={
+                     activeTab === 'patient_info'
+                        ? Edit
+                        : Plus
+                  }
+                  onAction={() => {
+                     if (activeTab === 'patient_info') {
+                        openEditPatientModal();
+                     } else if (activeTab === 'treatments') {
+                        closeTreatmentModal();
+                        setIsAddingTreatment(true);
+                     } else if (activeTab === 'prescription') {
+                        openPrescriptionModal('create');
+                     }
                   }}
                />
 
@@ -1169,20 +1191,6 @@ const PatientDetail = () => {
                         {/* <StatCard icon={ClipboardCheck} label="Rx" value={prescriptions.length} /> */}
                      </div>
 
-                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        {/* <div>
-               <p id="patient-info-heading" className="text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-400">Patient overview</p>
-               <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Clinical profile</h2>
-            </div> */}
-                        <button
-                           type="button"
-                           onClick={openEditPatientModal}
-                           className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-200/50 transition hover:bg-blue-700"
-                        >
-                           <Edit className="h-4 w-4" />
-                           Edit Patient
-                        </button>
-                     </div>
 
                      <div className="grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
                         <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
@@ -1344,17 +1352,6 @@ const PatientDetail = () => {
                   )}
                   {activeTab === 'prescription' && (
                      <div className="space-y-4">
-                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-
-                           <button
-                              type="button"
-                              onClick={() => openPrescriptionModal('create')}
-                              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-sky-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-200/50 transition hover:from-blue-700 hover:to-sky-700"
-                           >
-                              <Plus className="h-4 w-4" />
-                              Add Prescription
-                           </button>
-                        </div>
                         {prescriptions.length === 0 ? (
                            <div className="rounded-[28px] border border-dashed border-slate-200 bg-white p-8 text-center shadow-sm">
                               <p className="text-lg font-semibold text-slate-900">No prescriptions yet</p>
