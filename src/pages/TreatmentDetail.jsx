@@ -19,7 +19,7 @@ const TreatmentDetail = () => {
   const [treatment, setTreatment] = useState(null);
   const [visits, setVisits] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [expandedVisit, setExpandedVisit] = useState(null);
+  const [expandedVisits, setExpandedVisits] = useState([]);
   const [showAddVisitModal, setShowAddVisitModal] = useState(false);
   const [submittingVisit, setSubmittingVisit] = useState(false);
   const [showDeleteVisitModal, setShowDeleteVisitModal] = useState(false);
@@ -81,6 +81,12 @@ const TreatmentDetail = () => {
   const fetchVisits = async () => {
     const res = await visitsApi.getByTreatment(id);
     setVisits(res.data?.results || res.data || []);
+  };
+
+  const toggleVisitExpanded = (visitId) => {
+    setExpandedVisits((prev) =>
+      prev.includes(visitId) ? prev.filter((id) => id !== visitId) : [...prev, visitId]
+    );
   };
 
   const handleDeleteVisit = (visit) => {
@@ -570,10 +576,13 @@ const TreatmentDetail = () => {
 
         {visits.map((visit) => (
           <div key={visit.id} className="mb-6 border-l-2 border-transparent hover:border-blue-400 pl-4 relative group">
-
+ 
             <div className="absolute left-[-6px] top-2 w-3 h-3 bg-blue-600 rounded-full"></div>
-
-            <div className="bg-gray-50 p-4 rounded-xl transition-all duration-200 group-hover:bg-blue-50 group-hover:shadow-md group-hover:translate-y-0.5 cursor-pointer">
+ 
+            <div
+              onClick={() => toggleVisitExpanded(visit.id)}
+              className="bg-gray-50 p-4 rounded-xl transition-all duration-200 group-hover:bg-blue-50 group-hover:shadow-md group-hover:translate-y-0.5 cursor-pointer"
+            >
 
               <div className="flex justify-between">
                 <div className="flex flex-col">
@@ -593,15 +602,16 @@ const TreatmentDetail = () => {
               </p>
 
               <button
-                onClick={() =>
-                  setExpandedVisit(expandedVisit === visit.id ? null : visit.id)
-                }
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleVisitExpanded(visit.id);
+                }}
                 className="text-blue-600 text-xs mt-2"
               >
-                {expandedVisit === visit.id ? 'Hide' : 'View Details'}
+                {expandedVisits.includes(visit.id) ? 'Hide' : 'View Details'}
               </button>
 
-              {expandedVisit === visit.id && (
+              {expandedVisits.includes(visit.id) && (
                 <div className="mt-3">
 
                   {/* Images */}
@@ -612,10 +622,16 @@ const TreatmentDetail = () => {
                           src={img.image_url}
                           className="rounded-lg h-28 w-full object-cover cursor-pointer"
                           alt={img.caption || `Visit image ${img.id}`}
-                          onClick={() => setPreviewImageUrl(img.image_url)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPreviewImageUrl(img.image_url);
+                          }}
                         />
                         <button
-                          onClick={() => handleDeleteImage(img)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteImage(img);
+                          }}
                           className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded opacity-0 group-hover:opacity-100"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -626,20 +642,29 @@ const TreatmentDetail = () => {
 
                   <div className="mt-3 flex flex-wrap gap-3">
                     <button
-                      onClick={() => openUploadModal(visit)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openUploadModal(visit);
+                      }}
                       className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm flex gap-2 items-center"
                     >
                       <Plus className="w-4 h-4" />
                       Upload Image
                     </button>
                     <button
-                      onClick={() => openEditVisitModal(visit)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEditVisitModal(visit);
+                      }}
                       className="bg-yellow-100 text-yellow-700 px-4 py-2 rounded-lg text-sm flex gap-2 items-center"
                     >
                       Edit Visit
                     </button>
                     <button
-                      onClick={() => handleDeleteVisit(visit)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteVisit(visit);
+                      }}
                       className="text-red-600 text-sm mt-2"
                     >
                       Delete Visit
