@@ -30,6 +30,21 @@ const TreatmentDetail = () => {
   const [isDeletingImage, setIsDeletingImage] = useState(false);
   const [showDeleteTreatmentModal, setShowDeleteTreatmentModal] = useState(false);
   const [isDeletingTreatment, setIsDeletingTreatment] = useState(false);
+  const [showEditTreatmentModal, setShowEditTreatmentModal] = useState(false);
+  const [editingTreatment, setEditingTreatment] = useState(null);
+  const [treatmentFormData, setTreatmentFormData] = useState({
+    type_of_treatment: '',
+    status: 'scheduled',
+    estimated_duration_months: '',
+    planned_amount: '',
+    initial_findings: '',
+    treatment_plan: '',
+    treatment_notes: '',
+    braces_type: '',
+    cap_type: ''
+  });
+  const [submittingTreatment, setSubmittingTreatment] = useState(false);
+  const [treatmentTypes, setTreatmentTypes] = useState([]);
   const [showUploadImageModal, setShowUploadImageModal] = useState(false);
   const [selectedVisitForUpload, setSelectedVisitForUpload] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -54,6 +69,16 @@ const TreatmentDetail = () => {
 
   useEffect(() => {
     fetchTreatmentDetail();
+    // fetch treatment types for the edit form
+    (async () => {
+      try {
+        const res = await treatmentApi.getTypes();
+        const data = res.data?.results || res.data || [];
+        setTreatmentTypes(data);
+      } catch (err) {
+        console.warn('Failed to load treatment types', err);
+      }
+    })();
   }, [id]);
 
   const fetchTreatmentDetail = async () => {
@@ -192,6 +217,60 @@ const TreatmentDetail = () => {
 
   const handleDeleteTreatment = () => {
     setShowDeleteTreatmentModal(true);
+  };
+
+  const openEditTreatmentModal = (t) => {
+    const source = t || treatment;
+    if (!source) return;
+    setEditingTreatment(source);
+    setTreatmentFormData({
+      type_of_treatment: source.type_of_treatment ? String(source.type_of_treatment) : (source.type_of_treatment_id ? String(source.type_of_treatment_id) : ''),
+      status: source.status || 'scheduled',
+      estimated_duration_months: source.estimated_duration_months || '',
+      planned_amount: source.planned_amount || '',
+      initial_findings: source.initial_findings || '',
+      treatment_plan: source.treatment_plan || '',
+      treatment_notes: source.treatment_notes || '',
+      braces_type: source.braces_type || '',
+      cap_type: source.cap_type || ''
+    });
+    setShowEditTreatmentModal(true);
+  };
+
+  const handleSaveTreatment = async (e) => {
+    e && e.preventDefault();
+    if (!editingTreatment) return;
+    setSubmittingTreatment(true);
+    try {
+      if (!treatmentFormData.type_of_treatment) {
+        alert('Please select a treatment type');
+        setSubmittingTreatment(false);
+        return;
+      }
+
+      const payload = {
+        type_of_treatment: treatmentFormData.type_of_treatment,
+        status: treatmentFormData.status,
+        estimated_duration_months: treatmentFormData.estimated_duration_months ? parseInt(treatmentFormData.estimated_duration_months, 10) : null,
+        planned_amount: treatmentFormData.planned_amount ? parseFloat(treatmentFormData.planned_amount) : null,
+        initial_findings: treatmentFormData.initial_findings || null,
+        treatment_plan: treatmentFormData.treatment_plan || null,
+        treatment_notes: treatmentFormData.treatment_notes || null,
+        braces_type: treatmentFormData.braces_type || null,
+        cap_type: treatmentFormData.cap_type || null
+      };
+
+      await treatmentApi.update(editingTreatment.id, payload);
+      alert('Treatment updated successfully!');
+      setShowEditTreatmentModal(false);
+      setEditingTreatment(null);
+      await fetchTreatmentDetail();
+    } catch (err) {
+      console.error('Error saving treatment:', err);
+      alert(err.response?.data?.detail || 'Failed to update treatment');
+    } finally {
+      setSubmittingTreatment(false);
+    }
   };
 
   const handleConfirmDeleteTreatment = async () => {
@@ -443,21 +522,64 @@ const TreatmentDetail = () => {
       <div className="rounded-[32px] bg-white shadow-2xl border border-slate-200 overflow-hidden sticky top-4 z-30">
         <div className="bg-gradient-to-r from-slate-900 via-indigo-800 to-sky-700 text-white px-6 py-6 md:px-10 md:py-8">
           <div className="space-y-4">
-            <div className="flex flex-col gap-1">
-              <div className="flex flex-wrap items-center gap-3">
-                <h2 className="text-2xl font-semibold tracking-tight text-white">
-                  {treatment.treatment_name || treatment.type_of_treatment_name}
-                </h2>
-                <span className={`inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs uppercase tracking-[0.3em] text-white/90 ${statusIsOngoing ? 'text-emerald-200' : 'text-slate-200'}`}>
-                  <span className={statusIsOngoing ? 'text-emerald-300' : 'text-slate-300'}>•</span>
-                  {statusText}
+            <div className="flex items-start justify-between">
+
+    {/* LEFT */}
+
+    <div className="flex flex-col gap-2">
+
+        <div className="flex items-center gap-3">
+
+            <h2 className="text-2xl font-semibold tracking-tight text-white">
+                {treatment.treatment_name || treatment.type_of_treatment_name}
+            </h2>
+
+            <span
+                className={`inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs uppercase tracking-[0.3em] text-white ${
+                    statusIsOngoing
+                        ? "text-emerald-200"
+                        : "text-slate-200"
+                }`}
+            >
+                <span
+                    className={
+                        statusIsOngoing
+                            ? "text-emerald-300"
+                            : "text-slate-300"
+                    }
+                >
+                    •
                 </span>
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <p className="text-xs uppercase tracking-[0.3em] text-slate-300">Treatment Summary</p>
-                <p className="text-lg font-semibold text-white">{patientDisplayName}</p>
-              </div>
-            </div>
+
+                {statusText}
+            </span>
+
+        </div>
+
+        <div className="flex items-center gap-3">
+
+            <p className="text-xs uppercase tracking-[0.3em] text-slate-300">
+                Treatment Summary
+            </p>
+
+            <p className="text-lg font-semibold text-white">
+                {patientDisplayName}
+            </p>
+
+        </div>
+
+    </div>
+
+    {/* RIGHT */}
+
+    <button
+      onClick={() => openEditTreatmentModal(treatment)}
+      className="inline-flex items-center gap-2 rounded-2xl bg-white/10 border border-white/20 px-5 py-3 text-sm font-semibold text-white hover:bg-white hover:text-slate-900 transition-all shadow-lg"
+    >
+      Edit Treatment
+    </button>
+
+</div>
 
             <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
               <div className="min-h-[72px] rounded-xl border border-white/10 bg-white/10 p-4 shadow-sm shadow-slate-900/5">
@@ -1038,6 +1160,141 @@ const TreatmentDetail = () => {
       )}
 
       {/* Delete Treatment Confirmation Modal */}
+      {showEditTreatmentModal && editingTreatment && (
+        <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/50 p-3 sm:p-4 overflow-y-auto">
+          <div className="relative my-4 w-full max-w-[95vw] sm:max-w-lg md:max-w-xl lg:max-w-2xl rounded-2xl border border-gray-200 bg-white p-4 shadow-xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Edit Treatment</h3>
+              <button
+                onClick={() => {
+                  setShowEditTreatmentModal(false);
+                  setEditingTreatment(null);
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveTreatment} className="space-y-4">
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Treatment Type</label>
+                  <input
+                    type="text"
+                    disabled
+                    value={
+                      (treatmentTypes.find((tt) => String(tt.id) === String(treatmentFormData.type_of_treatment))?.name) ||
+                      editingTreatment?.treatment_name ||
+                      editingTreatment?.type_of_treatment_name ||
+                      ''
+                    }
+                    className="mt-1 block w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Cap Type</label>
+                    <ChoiceSelect
+                      which="treatment/cap-type"
+                      value={treatmentFormData.cap_type}
+                      onChange={(e) => setTreatmentFormData({ ...treatmentFormData, cap_type: e.target.value })}
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Select cap type"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Status</label>
+                    <ChoiceSelect
+                      which="treatment/status"
+                      value={treatmentFormData.status}
+                      onChange={(e) => setTreatmentFormData({ ...treatmentFormData, status: e.target.value })}
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Select status"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Estimated Visits</label>
+                    <input
+                      type="number"
+                      value={treatmentFormData.estimated_duration_months}
+                      onChange={(e) => setTreatmentFormData({ ...treatmentFormData, estimated_duration_months: e.target.value })}
+                      className="mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Planned Amount (₹)</label>
+                    <input
+                      type="number"
+                      value={treatmentFormData.planned_amount}
+                      onChange={(e) => setTreatmentFormData({ ...treatmentFormData, planned_amount: e.target.value })}
+                      className="mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Initial Findings</label>
+                <textarea
+                  rows={3}
+                  value={treatmentFormData.initial_findings}
+                  onChange={(e) => setTreatmentFormData({ ...treatmentFormData, initial_findings: e.target.value })}
+                  className="mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Initial findings"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Treatment Plan</label>
+                <textarea
+                  rows={4}
+                  value={treatmentFormData.treatment_plan}
+                  onChange={(e) => setTreatmentFormData({ ...treatmentFormData, treatment_plan: e.target.value })}
+                  className="mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Treatment plan"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Treatment Notes</label>
+                <textarea
+                  rows={3}
+                  value={treatmentFormData.treatment_notes}
+                  onChange={(e) => setTreatmentFormData({ ...treatmentFormData, treatment_notes: e.target.value })}
+                  className="mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Add any additional notes..."
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditTreatmentModal(false);
+                    setEditingTreatment(null);
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingTreatment}
+                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {submittingTreatment ? 'Saving...' : 'Update Treatment'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {showDeleteTreatmentModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-gray-100">

@@ -112,7 +112,7 @@ const retryAsync = async (fn, maxRetries = 3, delay = 1000, backoff = 2) => {
 console.log("API BASE URL:", import.meta.env.VITE_API_BASE_URL);
 
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL, // "https://mydentalclinicpro.com/api", //  // 'http://127.0.0.1:8000/api' for local development
+  baseURL: "https://mydentalclinicpro.com/api", // import.meta.env.VITE_API_BASE_URL, // 'http://127.0.0.1:8000/api' for local development
   headers: {
     'Content-Type': 'application/json',
   },
