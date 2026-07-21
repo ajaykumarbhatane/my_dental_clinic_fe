@@ -105,13 +105,39 @@ const Header = ({ onMenuClick }) => {
           </button>
 
           {/* Clinic Info */}
-          <div className="min-w-0 max-w-[55vw] sm:max-w-[220px]">
+          <div className="relative min-w-0 max-w-[55vw] sm:max-w-[220px] group">
             <p className="text-xs text-gray-500">Welcome to,</p>
+
             <p className="truncate text-sm font-semibold text-gray-900">
               {getUserClinicName()}
             </p>
-          </div>
 
+            <div
+              className="
+                invisible
+                absolute
+                top-full
+                left-0
+                mt-2
+                z-50
+                rounded-lg
+                bg-slate-900
+                px-3
+                py-2
+                text-xs
+                text-white
+                opacity-0
+                shadow-xl
+                transition-all
+                duration-200
+                whitespace-nowrap
+                group-hover:visible
+                group-hover:opacity-100
+              "
+            >
+              {getUserClinicName()}
+            </div>
+          </div>
         </div>
 
         {/* Right Section */}

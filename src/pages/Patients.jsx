@@ -706,84 +706,92 @@ useEffect(() => {
   return (
     <div className="h-[calc(100vh-80px)] flex flex-col space-y-4">
 
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div className="flex flex-col lg:flex-row lg:items-center gap-4 w-full">
-          {/* LEFT: Search */}
-          <div className="relative w-full lg:flex-1">
-    <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+    {/* Header */}
+    <div className="space-y-3">
 
-    <input
-      type="text"
-      placeholder="Search patients by name or mobile..."
-      value={searchTerm}
-      onChange={(e) => setSearchTerm(e.target.value)}
-      className="w-full pl-12 pr-10 py-3 text-sm border-2 border-gray-200 rounded-xl
-                 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100
-                 transition-all duration-200 shadow-sm"
-    />
+      <div className="flex flex-wrap items-center gap-3">
 
-    {/* ❌ Clear Button */}
-    {searchTerm && (
-      <button
-        onClick={() => setSearchTerm('')}
-        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
-      >
-        ✕
-      </button>
-    )}
-  </div>
+        {/* Search */}
+        <div className="min-w-0 flex-1 lg:w-auto md:w-full">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder={
+                window.innerWidth < 640
+                  ? "Search..."
+                  : "Search patients by name or mobile..."
+              }
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-3 py-3 border-2 border-gray-200 rounded-xl"
+            />
+          </div>
+        </div>
 
-  {/* RIGHT: Filters */}
-  <div className="flex gap-3 w-full lg:w-auto min-w-0">
-    {/* Treatment Filter */}
-    <FilterSelect
-    value={treatmentFilter}
-    placeholder="All Treatments"
-    options={[
-        {
-            value: "",
-            label: "All Treatments",
-        },
-        ...filterTreatments.map((t) => ({
-            value: t.id,
-            label: t.name,
-        })),
-    ]}
-    onChange={(value) =>
-        handleFilterChange("treatment", value)
-    }
-/>
+        {/* Treatment */}
+        <div className="shrink-0 w-[88px] sm:w-[90px] md:w-[170px]">
+          <FilterSelect
+            value={treatmentFilter}
+            placeholder="All Treatments"
+            options={[
+              { value: "", label: "All Treatments" },
+              ...filterTreatments.map((t) => ({ value: t.id, label: t.name })),
+            ]}
+            onChange={(value) => handleFilterChange("treatment", value)}
+          />
+        </div>
 
-    {/* Doctor Filter */}
-    <FilterSelect
-    value={doctorFilter}
-    placeholder="All Doctors"
-    options={[
-        {
-            value: "",
-            label: "All Doctors",
-        },
-        ...filterDoctors.map((d) => ({
-            value: d.id,
-            label: `${d.first_name} ${d.last_name}`,
-        })),
-    ]}
-    onChange={(value) =>
-        handleFilterChange("doctor", value)
-    }
-/>
-  </div>
+        {/* Doctor */}
+        <div className="shrink-0 w-[88px] sm:w-[90px] md:w-[170px]">
+          <FilterSelect
+            value={doctorFilter}
+            placeholder="All Doctors"
+            options={[
+              { value: "", label: "All Doctors" },
+              ...filterDoctors.map((d) => ({
+                value: d.id,
+                label: `${d.first_name} ${d.last_name}`,
+              })),
+            ]}
+            onChange={(value) => handleFilterChange("doctor", value)}
+          />
+        </div>
 
-  <button
-    onClick={() => setShowAddModal(true)}
-    className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-5 py-2.5 rounded-lg flex items-center gap-2 text-sm shadow hover:shadow-lg transition-shadow w-full lg:w-auto"
-  >
-    <Plus className="w-4 h-4" />
-    Add Patient
-  </button>
-  </div>
-</div>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="
+shrink-0
+w-full
+md:w-auto
+px-6
+lg:px-7
+py-3
+min-w-[170px]
+rounded-xl
+bg-gradient-to-r
+from-blue-600
+to-blue-700
+text-white
+font-medium
+flex
+items-center
+justify-center
+gap-2
+shadow-sm
+hover:shadow-lg
+hover:from-blue-700
+hover:to-blue-800
+transition-all
+duration-200
+"
+        >
+          <Plus className="w-4 h-4" />
+          Add Patient
+        </button>
+      </div>
+
+    </div>
 
       {/* Table Container */}
       <div className="flex flex-col flex-1 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
