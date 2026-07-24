@@ -54,7 +54,7 @@ const Patients = () => {
   });
   const [treatmentFormData, setTreatmentFormData] = useState({
     type_of_treatment: '',
-    status: 'scheduled',
+    status: 'ongoing',
     estimated_duration_months: '',
     planned_amount: '',
     initial_findings: '',
@@ -83,6 +83,8 @@ const Patients = () => {
   });
   const [prescriptionItems, setPrescriptionItems] = useState([]);
   const [clinicMedicines, setClinicMedicines] = useState([]);
+  const [clinicLanguage, setClinicLanguage] = useState('english');
+  const [medicineFilter, setMedicineFilter] = useState('');
   const [itemSearchOpenId, setItemSearchOpenId] = useState(null);
   const [createdPatientId, setCreatedPatientId] = useState(null);
   const [createdTreatmentId, setCreatedTreatmentId] = useState(null);
@@ -250,7 +252,10 @@ useEffect(() => {
   const fetchClinics = async () => {
     try {
       const response = await clinicApi.getAll();
-      setClinics(normalizeListResponse(response.data));
+      const clinicsList = normalizeListResponse(response.data);
+      setClinics(clinicsList);
+      const preferredClinic = clinicsList[0] || null;
+      setClinicLanguage(preferredClinic?.prescription_language || 'english');
     } catch (error) {
       console.error('Error fetching clinics:', error);
     }
@@ -470,20 +475,8 @@ useEffect(() => {
             instructions: treatmentInstruction,
           }));
 
-          // Initialize prescription items with one empty row
-          setPrescriptionItems([{
-            localId: Math.random().toString(36).substr(2, 9),
-            medicine: null,
-            custom_medicine_name: '',
-            search: '',
-            dosage: '6',
-            frequency: '1-0-1',
-            duration: '3 Days',
-            before_after_food: 'after_food',
-            notes: '',
-            sequence: 1,
-            highlightedId: null
-          }]);
+          // Start with no prescription rows; only checked medicines are sent
+          setPrescriptionItems([]);
 
           // Move to step 4
           setCurrentStep(4);
@@ -509,17 +502,19 @@ useEffect(() => {
 
       setIsSubmitting(true);
       try {
-        // Prepare prescription items
-        const prescriptionItemsPayload = prescriptionItems.map((item, index) => ({
-          medicine: item.medicine?.id ?? null,
-          custom_medicine_name: item.custom_medicine_name || null,
-          dosage: item.dosage,
-          frequency: item.frequency,
-          duration: item.duration,
-          before_after_food: item.before_after_food,
-          notes: item.notes || null,
-          sequence: index + 1
-        }));
+        // Prepare only selected prescription items; ignore blank rows
+        const prescriptionItemsPayload = prescriptionItems
+          .filter((item) => item.medicine?.id || (item.custom_medicine_name || '').trim())
+          .map((item, index) => ({
+            medicine: item.medicine?.id ?? null,
+            custom_medicine_name: item.custom_medicine_name?.trim() || null,
+            dosage: item.dosage,
+            frequency: item.frequency,
+            duration: item.duration,
+            before_after_food: item.before_after_food,
+            notes: item.notes || null,
+            sequence: index + 1
+          }));
 
         // Create prescription
         const prescriptionPayload = {
@@ -659,6 +654,47 @@ useEffect(() => {
 
   const handleRemovePrescriptionRow = (index) => {
     setPrescriptionItems(items => items.filter((_, idx) => idx !== index));
+  };
+
+  // Medicine selection helpers (checkbox list)
+  const isMedicineSelected = (medId) => {
+    return prescriptionItems.some((i) => String(i.medicine?.id) === String(medId));
+  };
+
+  const handleToggleMedicine = (med, qty = 1) => {
+    const exists = isMedicineSelected(med.id);
+    if (exists) {
+      setPrescriptionItems(items => items.filter(i => String(i.medicine?.id) !== String(med.id)));
+    } else {
+      setPrescriptionItems(items => [
+        ...items,
+        {
+          localId: Math.random().toString(36).substr(2, 9),
+          medicine: med,
+          custom_medicine_name: '',
+          search: med.medicine_name,
+          dosage: String(qty),
+          frequency: '1-0-1',
+          duration: '3 Days',
+          before_after_food: 'after_food',
+          notes: '',
+          sequence: items.length + 1,
+          highlightedId: null
+        }
+      ]);
+    }
+  };
+
+  const handleMedicineQtyChange = (medId, qty) => {
+    setPrescriptionItems(items =>
+      items.map(it =>
+        String(it.medicine?.id) === String(medId) ? { ...it, dosage: String(Math.max(1, qty)) } : it
+      )
+    );
+  };
+
+  const getSelectedPrescriptionItem = (medId) => {
+    return prescriptionItems.find((item) => String(item.medicine?.id) === String(medId));
   };
 
   // Fetch clinic medicines when modal opens
@@ -929,8 +965,25 @@ duration-200
 
       {/* Add Patient Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-gray-600/50 p-3 sm:p-4 overflow-y-auto">
-          <div className="relative my-4 w-full max-w-[95vw] sm:max-w-lg md:max-w-xl lg:max-w-2xl rounded-2xl border border-gray-200 bg-white p-4 shadow-xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-gray-600/50 p-3 sm:p-20 overflow-y-auto">
+          <div
+  className="
+    relative
+    my-4
+    w-full
+    max-w-[95vw]
+    lg:max-w-5xl
+    xl:max-w-4xl
+    rounded-3xl
+    border
+    border-gray-200
+    bg-white
+    p-6
+    shadow-xl
+    max-h-[200vh]
+    overflow-y-auto
+  "
+>
             <div className="flex justify-between items-center mb-4">
               <div>
                 <h3 className="text-lg font-medium text-gray-900">Step {currentStep}: {currentStep === 1 ? 'Patient Information' : currentStep === 2 ? 'Treatment Details' : currentStep === 3 ? 'Initial Visit' : 'Create Prescription'}</h3>
@@ -981,8 +1034,8 @@ duration-200
 
             <form onSubmit={handleAddPatient} className="space-y-4">
               {currentStep === 1 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div className="sm:col-span-2 lg:col-span-1">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Doctor Selection *</label>
                     <select
                       name="user"
@@ -1027,18 +1080,6 @@ duration-200
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Mobile</label>
-                    <input
-                      type="tel"
-                      name="mobile"
-                      value={formData.mobile}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Enter patient mobile"
-                    />
-                  </div>
-
-                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Gender *</label>
                     <ChoiceSelect
                       which="user/gender"
@@ -1051,7 +1092,19 @@ duration-200
                     />
                   </div>
 
-                  <div className="md:col-span-2">
+                  <div className="sm:col-span-2 lg:col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Mobile</label>
+                    <input
+                      type="tel"
+                      name="mobile"
+                      value={formData.mobile}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter patient mobile"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2 lg:col-span-1">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
                     <input
                       type="date"
@@ -1328,15 +1381,15 @@ duration-200
                     />
                   </div>
 
-                  {/* Instructions */}
+                  {/* Advice */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Instructions</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{clinicLanguage === 'marathi' ? 'सल्ला' : clinicLanguage === 'hindi' ? 'सलाह' : 'Advice'}</label>
                     <textarea
                       value={prescriptionFormData.instructions}
                       onChange={(e) => setPrescriptionFormData(prev => ({...prev, instructions: e.target.value}))}
                       rows={2}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Enter instructions..."
+                      placeholder={clinicLanguage === 'marathi' ? 'सल्ला प्रविष्ट करा...' : clinicLanguage === 'hindi' ? 'सलाह दर्ज करें...' : 'Enter advice...'}
                     />
                   </div>
 
@@ -1356,178 +1409,146 @@ duration-200
                     <div className="flex justify-between items-center mb-4">
                       <h3 className="text-lg font-semibold">Medicines</h3>
                     </div>
-                    <div className="space-y-3">
-                      {prescriptionItems.map((item, index) => (
-                        <div
-                          key={item.localId}
-                          className="grid grid-cols-1 md:grid-cols-[2fr,1fr,1fr,1fr,1fr,auto] gap-3 border rounded-2xl p-3 bg-slate-50 items-center"
-                        >
-                          {/* ===== MODERN MEDICINE DROPDOWN ===== */}
-                          <div className="relative md:col-span-2">
-                            <input
-                              ref={itemSearchOpenId === index ? newItemRef : null}
-                              type="text"
-                              placeholder="Search Medicine..."
-                              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium shadow-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition"
-                              value={item.search}
-                              onChange={(e) => {
-                                handlePrescriptionItemChange(index, 'search', e.target.value);
-                                setItemSearchOpenId(index);
-                              }}
-                              onFocus={() => setItemSearchOpenId(index)}
-                              onKeyDown={(e) => {
-                                const filtered = getClinicMedicineOptions(item.search);
-                                if (!filtered.length) return;
-                                let current = filtered.findIndex(
-                                  (m) => String(m.id) === String(item.highlightedId)
-                                );
-                                if (e.key === 'ArrowDown') {
-                                  e.preventDefault();
-                                  const next = filtered[current + 1] || filtered[0];
-                                  updatePrescriptionItem(index, { highlightedId: next.id });
-                                }
-                                if (e.key === 'ArrowUp') {
-                                  e.preventDefault();
-                                  const prev = filtered[current - 1] || filtered[filtered.length - 1];
-                                  updatePrescriptionItem(index, { highlightedId: prev.id });
-                                }
-                                if (e.key === 'Enter') {
-                                  e.preventDefault();
-                                  const selected = filtered.find(
-                                    (m) => String(m.id) === String(item.highlightedId)
-                                  ) || filtered[0];
-                                  handleMedicineSelect(index, selected);
-                                }
-                                if (e.key === 'Escape') {
-                                  setItemSearchOpenId(null);
-                                }
-                              }}
-                            />
-                            {/* Dropdown */}
-                            {itemSearchOpenId === index && (
-                              <div className="absolute z-50 mt-2 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl animate-in fade-in zoom-in-95">
-                                <div className="h-48 overflow-y-scroll py-2 custom-scrollbar">
-                                  {getClinicMedicineOptions(item.search).length > 0 ? (
-                                    getClinicMedicineOptions(item.search).map((medicine) => {
-                                      const active = String(item.highlightedId) === String(medicine.id);
-                                      return (
-                                        <button
-                                          key={medicine.id}
-                                          type="button"
-                                          onMouseDown={(e) => {
-                                            e.preventDefault();
-                                            handleMedicineSelect(index, medicine);
-                                          }}
-                                          onMouseEnter={() =>
-                                            updatePrescriptionItem(index, {
-                                              highlightedId: medicine.id,
-                                            })
-                                          }
-                                          className={`w-full px-4 py-3 text-left transition ${
-                                            active
-                                              ? 'bg-blue-600 text-white'
-                                              : 'hover:bg-slate-50 text-slate-800'
-                                          }`}
-                                        >
-                                          <div className="font-semibold">
-                                            {medicine.medicine_name}
-                                          </div>
-                                          <div
-                                            className={`text-xs mt-1 ${
-                                              active
-                                                ? 'text-blue-100'
-                                                : 'text-slate-500'
-                                            }`}
-                                          >
-                                            {medicine.strength || 'Standard'} •{' '}
-                                            {medicine.form || 'Tablet'}
-                                          </div>
-                                        </button>
-                                      );
-                                    })
-                                  ) : (
-                                    <div className="px-4 py-4 text-sm text-slate-500 text-center">
-                                      No medicine found
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            )}
+
+                    <div className="mb-3">
+                      <input
+                        type="text"
+                        placeholder="Filter medicines..."
+                        value={medicineFilter}
+                        onChange={(e) => setMedicineFilter(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-md mb-2"
+                      />
+
+                      <div className="overflow-x-auto">
+                        <div className="min-w-[760px] space-y-2">
+                          <div className="grid grid-cols-[56px,1.6fr,0.8fr,1fr,1fr,1fr] gap-2 items-center px-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                            <div>Select</div>
+                            <div>Medicine</div>
+                            <div>Qty</div>
+                            <div>Frequency</div>
+                            <div>Duration</div>
+                            <div>{clinicLanguage === 'marathi' ? 'अन्न' : clinicLanguage === 'hindi' ? 'खाना' : 'Food'}</div>
                           </div>
 
-                          <input
-                            placeholder="Enter Qty"
-                            className="input-ui min-w-0"
-                            value={item.dosage}
-                            onChange={(e) => handlePrescriptionItemChange(index, 'dosage', e.target.value)}
-                          />
+                          {clinicMedicines
+                            .filter((med) => {
+                              if (!medicineFilter) return true;
+                              const t = `${med.medicine_name} ${med.strength || ''} ${med.form || ''}`.toLowerCase();
+                              return t.includes(medicineFilter.toLowerCase());
+                            })
+                            .map((med) => {
+                              const selectedItem = getSelectedPrescriptionItem(med.id);
 
-                          <select
-                            className="input-ui min-w-0"
-                            value={item.frequency}
-                            onChange={(e) =>
-                              handlePrescriptionItemChange(index, 'frequency', e.target.value)
-                            }
-                          >
-                            <option>1-0-1</option>
-                            <option>0-1-0</option>
-                            <option>1-0-0</option>
-                            <option>0-0-1</option>
-                            <option>1-1-1</option>
-                            <option>1-1-0</option>
-                            <option>0-1-1</option>
-                          </select>
+                              return (
+                                <div
+                                  key={med.id}
+                                  className="grid grid-cols-[56px,1.6fr,0.8fr,1fr,1fr,1fr] gap-2 items-center rounded-xl border border-slate-200 bg-slate-50 px-2 py-2"
+                                >
+                                  <label className="flex items-center justify-center">
+                                    <input
+                                      type="checkbox"
+                                      checked={Boolean(selectedItem)}
+                                      onChange={() => handleToggleMedicine(med, 1)}
+                                      className="w-4 h-4"
+                                    />
+                                  </label>
 
-                          <select
-                            className="input-ui min-w-0"
-                            value={item.duration}
-                            onChange={(e) =>
-                              handlePrescriptionItemChange(index, 'duration', e.target.value)
-                            }
-                          >
-                            <option>1 Day</option>
-                            <option>2 Days</option>
-                            <option>3 Days</option>
-                            <option>4 Days</option>
-                            <option>5 Days</option>
-                            <option>6 Days</option>
-                            <option>7 Days</option>
-                            <option>8 Days</option>
-                            <option>9 Days</option>
-                            <option>10 Days</option>
-                            <option>11 Days</option>
-                            <option>12 Days</option>
-                            <option>13 Days</option>
-                            <option>14 Days</option>
-                            <option>15 Days</option>
-                          </select>
+                                  <div className="min-w-0">
+                                    <div className="font-semibold text-sm text-slate-800 truncate">{med.medicine_name}</div>
+                                    <div className="text-xs text-slate-500 truncate">{med.strength || 'Standard'} • {med.form || 'Tablet'}</div>
+                                  </div>
 
-                          <ChoiceSelect
-                            which="prescription/before-after-food"
-                            className="input-ui min-w-0"
-                            value={item.before_after_food}
-                            onChange={(e) =>
-                              handlePrescriptionItemChange(index, 'before_after_food', e.target.value)
-                            }
-                          />
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    value={selectedItem?.dosage || 1}
+                                    onChange={(e) => handleMedicineQtyChange(med.id, Number(e.target.value || 1))}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="input-ui min-w-0"
+                                  />
 
-                          <button
-                            type="button"
-                            onClick={() => handleRemovePrescriptionRow(index)}
-                            className="flex items-center justify-center h-10 w-10 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                                  <select
+                                    className="input-ui min-w-0"
+                                    value={selectedItem?.frequency || '1-0-1'}
+                                    onChange={(e) => {
+                                      const targetItem = getSelectedPrescriptionItem(med.id);
+                                      if (!targetItem) {
+                                        handleToggleMedicine(med, 1);
+                                        return;
+                                      }
+                                      handlePrescriptionItemChange(
+                                        prescriptionItems.findIndex((item) => String(item.medicine?.id) === String(med.id)),
+                                        'frequency',
+                                        e.target.value
+                                      );
+                                    }}
+                                  >
+                                    <option>1-0-1</option>
+                                    <option>0-1-0</option>
+                                    <option>1-0-0</option>
+                                    <option>0-0-1</option>
+                                    <option>1-1-1</option>
+                                    <option>1-1-0</option>
+                                    <option>0-1-1</option>
+                                  </select>
+
+                                  <select
+                                    className="input-ui min-w-0"
+                                    value={selectedItem?.duration || '3 Days'}
+                                    onChange={(e) => {
+                                      const targetItem = getSelectedPrescriptionItem(med.id);
+                                      if (!targetItem) {
+                                        handleToggleMedicine(med, 1);
+                                        return;
+                                      }
+                                      handlePrescriptionItemChange(
+                                        prescriptionItems.findIndex((item) => String(item.medicine?.id) === String(med.id)),
+                                        'duration',
+                                        e.target.value
+                                      );
+                                    }}
+                                  >
+                                    <option>1 Day</option>
+                                    <option>2 Days</option>
+                                    <option>3 Days</option>
+                                    <option>4 Days</option>
+                                    <option>5 Days</option>
+                                    <option>6 Days</option>
+                                    <option>7 Days</option>
+                                    <option>8 Days</option>
+                                    <option>9 Days</option>
+                                    <option>10 Days</option>
+                                    <option>11 Days</option>
+                                    <option>12 Days</option>
+                                    <option>13 Days</option>
+                                    <option>14 Days</option>
+                                    <option>15 Days</option>
+                                  </select>
+
+                                  <ChoiceSelect
+                                    which="prescription/before-after-food"
+                                    language={clinicLanguage}
+                                    className="input-ui min-w-0"
+                                    value={selectedItem?.before_after_food || 'after_food'}
+                                    onChange={(e) => {
+                                      const targetItem = getSelectedPrescriptionItem(med.id);
+                                      if (!targetItem) {
+                                        handleToggleMedicine(med, 1);
+                                        return;
+                                      }
+                                      handlePrescriptionItemChange(
+                                        prescriptionItems.findIndex((item) => String(item.medicine?.id) === String(med.id)),
+                                        'before_after_food',
+                                        e.target.value
+                                      );
+                                    }}
+                                  />
+                                </div>
+                              );
+                            })}
                         </div>
-                      ))}
+                      </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={handleAddPrescriptionRow}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm"
-                    >
-                      + Add Medicine
-                    </button>
                   </div>
                 </div>
               )}

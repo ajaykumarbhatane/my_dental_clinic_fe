@@ -7,6 +7,7 @@ import { patientApi } from '../api/patientApi';
 import { treatmentApi } from '../api/treatmentApi';
 import { visitsApi } from '../api/visitsApi';
 import { userApi } from '../api/userApi';
+import { clinicApi } from '../api/clinicApi';
 import { prescriptionApi } from '../api/prescriptionApi';
 import { useApiWithErrorHandling } from '../utils/apiUtils';
 import { useNotification } from '../context/NotificationContext';
@@ -444,6 +445,7 @@ const PatientDetail = () => {
       x_ray: false,
    });
    const [prescriptionItems, setPrescriptionItems] = useState([createPrescriptionItem(1)]);
+   const [clinicLanguage, setClinicLanguage] = useState('english');
    const [itemSearchOpenId, setItemSearchOpenId] = useState(null);
    const [prescriptionNotes, setPrescriptionNotes] = useState('');
    const [formErrors, setFormErrors] = useState({});
@@ -633,7 +635,7 @@ const PatientDetail = () => {
    };
    const preparePrescriptionItemPayload = (item, index) => ({
       medicine: item.medicine?.id ?? null,
-      custom_medicine_name: item.custom_medicine_name || null,
+      custom_medicine_name: item.custom_medicine_name?.trim() || null,
       dosage: item.dosage,
       frequency: item.frequency,
       duration: item.duration,
@@ -864,7 +866,9 @@ const PatientDetail = () => {
          instructions: prescriptionFormData.instructions || null,
          next_visit_date: prescriptionFormData.next_visit_date || null,
          x_ray: prescriptionFormData.x_ray,
-         items: prescriptionItems.map(preparePrescriptionItemPayload),
+         items: prescriptionItems
+            .filter((item) => item.medicine?.id || (item.custom_medicine_name || '').trim())
+            .map(preparePrescriptionItemPayload),
       };
       try {
          let savedPrescription = activePrescription;
@@ -898,14 +902,18 @@ const PatientDetail = () => {
    };
    const loadPrescriptionData = async () => {
       try {
-         const [presResponse, medResponse] = await Promise.all([
+         const [presResponse, medResponse, clinicResponse] = await Promise.all([
             prescriptionApi.getByPatient(id, { page_size: 100 }),
             prescriptionApi.getClinicMedicines({ page_size: 200 }),
+            clinicApi.getAll(),
          ]);
          const presList = presResponse.data?.results || presResponse.data || [];
          const medicinesList = medResponse.data?.results || medResponse.data || [];
+         const clinicsList = clinicResponse.data?.results || clinicResponse.data || [];
+         const activeClinic = clinicsList.find((clinicItem) => String(clinicItem.id) === String(patient?.clinic)) || clinicsList[0] || null;
          setPrescriptions(presList);
          setClinicMedicines(medicinesList);
+         setClinicLanguage(activeClinic?.prescription_language || 'english');
          if (!prescriptionFormData.treatment && treatments.length > 0) {
             setPrescriptionFormData((prev) => ({ ...prev, treatment: String(treatments[0].id) }));
          }
@@ -1448,10 +1456,10 @@ const PatientDetail = () => {
                         </div>
 
                         <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
-                           <label className="mb-2 block text-sm font-semibold text-slate-700">Instructions</label>
+                           <label className="mb-2 block text-sm font-semibold text-slate-700">{clinicLanguage === 'marathi' ? 'सल्ला' : clinicLanguage === 'hindi' ? 'सलाह' : 'Advice'}</label>
                            <textarea rows="3"
                               className="input-ui resize-none"
-                              placeholder="Enter Instructions"
+                              placeholder={clinicLanguage === 'marathi' ? 'सल्ला प्रविष्ट करा' : clinicLanguage === 'hindi' ? 'सलाह दर्ज करें' : 'Enter Advice'}
                               value={prescriptionFormData.instructions}
                               onChange={(e) => handlePrescriptionFieldChange('instructions', e.target.value)}
                            />

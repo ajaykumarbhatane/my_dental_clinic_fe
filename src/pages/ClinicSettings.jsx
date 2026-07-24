@@ -351,6 +351,7 @@ const ClinicSettings = () => {
           address: clinic.address,
           city: clinic.city,
           description: clinic.description,
+          prescription_language: clinic.prescription_language,
         };
         await clinicApi.update(clinic.id, payload);
         setSuccess(true);
@@ -895,6 +896,17 @@ const ClinicSettings = () => {
                         <label className="block text-sm font-semibold text-slate-600 mb-2">City</label>
                         <input type="text" value={clinic?.city || ''} onChange={(e) => handleClinicInputChange('city', e.target.value)} className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
                       </div>
+                      <div className="rounded-[24px] border border-slate-100 bg-slate-50 p-4">
+                        <label className="block text-sm font-semibold text-slate-600 mb-2">Prescription Language</label>
+                        <ChoiceSelect
+                          which="clinic/prescription-language"
+                          language={clinic?.prescription_language || 'english'}
+                          value={clinic?.prescription_language || 'english'}
+                          onChange={(e) => handleClinicInputChange('prescription_language', e.target.value)}
+                          className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
+                          placeholder="Select prescription language"
+                        />
+                      </div>
                       <div className="md:col-span-2 rounded-[24px] border border-slate-100 bg-slate-50 p-4">
                         <label className="block text-sm font-semibold text-slate-600 mb-2">Description</label>
                         <textarea value={clinic?.description || ''} onChange={(e) => handleClinicInputChange('description', e.target.value)} className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" rows={3} />
@@ -906,6 +918,7 @@ const ClinicSettings = () => {
                       <InfoRow label="Contact Number" value={clinic?.contact_number} />
                       <InfoRow label="Address" value={clinic?.address} />
                       <InfoRow label="City" value={clinic?.city} />
+                      <InfoRow label="Prescription Language" value={clinic?.prescription_language} />
                       <InfoRow label="Description" value={clinic?.description} />
                       <InfoRow label="Status" value={clinic?.status} />
                     </div>

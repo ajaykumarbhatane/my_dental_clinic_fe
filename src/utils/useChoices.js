@@ -4,22 +4,23 @@ import { normalizeChoices } from './choiceUtils';
 
 const choiceCache = {};
 
-export const getChoiceOptions = async (which) => {
+export const getChoiceOptions = async (which, params = {}) => {
   if (!which) {
     return [];
   }
 
-  if (choiceCache[which]) {
-    return choiceCache[which];
+  const cacheKey = `${which}:${JSON.stringify(params || {})}`;
+  if (choiceCache[cacheKey]) {
+    return choiceCache[cacheKey];
   }
 
-  const response = await choiceApi.get(which);
+  const response = await choiceApi.get(which, params);
   const normalized = normalizeChoices(response.data?.choices || []);
-  choiceCache[which] = normalized;
+  choiceCache[cacheKey] = normalized;
   return normalized;
 };
 
-export const useChoiceOptions = (which) => {
+export const useChoiceOptions = (which, params = {}) => {
   const [choices, setChoices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -34,7 +35,7 @@ export const useChoiceOptions = (which) => {
     setError(null);
 
     try {
-      const normalized = await getChoiceOptions(which);
+      const normalized = await getChoiceOptions(which, params);
       setChoices(normalized);
     } catch (err) {
       setChoices([]);
@@ -42,7 +43,7 @@ export const useChoiceOptions = (which) => {
     } finally {
       setLoading(false);
     }
-  }, [which]);
+  }, [which, JSON.stringify(params)]);
 
   useEffect(() => {
     fetchChoices();

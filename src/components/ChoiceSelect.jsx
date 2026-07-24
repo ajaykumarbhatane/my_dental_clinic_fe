@@ -12,9 +12,10 @@ const ChoiceSelect = ({
   required = false,
   optionLabel = 'label',
   optionValue = 'value',
+  language = null,
   ...props
 }) => {
-  const { choices, loading } = useChoiceOptions(which);
+  const { choices, loading } = useChoiceOptions(which, language ? { language } : {});
   const normalizedChoices = useMemo(() => choices || [], [choices]);
 
   return (
