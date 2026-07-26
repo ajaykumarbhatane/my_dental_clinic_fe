@@ -414,10 +414,10 @@ const PatientDetail = () => {
    };
    const FREQUENCY_OPTIONS = ['1-0-1', '1-1-1', '0-1-0', '0-0-1', 'SOS', 'Custom'];
    const FOOD_TIMING_OPTIONS = [
-      { value: 'before_food', label: 'जेवणाआगोदर' },
-      { value: 'afternoon', label: 'दुपारी' },
-      { value: 'after_food', label: 'जेवणानंतर' },
-      { value: 'anytime', label: 'कधीही' },
+      { value: 'BEFORE_FOOD', label: 'जेवणाआगोदर' },
+      { value: 'AFTERNOON', label: 'दुपारी' },
+      { value: 'AFTER_FOOD', label: 'जेवणानंतर' },
+      { value: 'ANYTIME', label: 'कधीही' },
    ];
    const createPrescriptionItem = (sequence = 1) => ({
       localId: Math.random().toString(36).substr(2, 9),
@@ -427,7 +427,7 @@ const PatientDetail = () => {
       dosage: '',
       frequency: '1-0-1',
       duration: '',
-      before_after_food: 'after_food',
+      before_after_food: 'AFTER_FOOD',
       notes: '',
       sequence,
    });
@@ -617,6 +617,7 @@ const PatientDetail = () => {
       if (!treatmentId) return '';
       const treatment = treatments.find((t) => String(t.id) === String(treatmentId));
       return (
+         treatment?.treatment_translated_instruction ||
          treatment?.type_of_treatment_instruction ||
          treatment?.type_of_treatment?.treatment_instruction ||
          ''
@@ -692,7 +693,7 @@ const PatientDetail = () => {
                dosage: item.dosage || '',
                frequency: item.frequency || '1-0-1',
                duration: item.duration || '',
-               before_after_food: item.before_after_food || 'after_food',
+               before_after_food: item.before_after_food || 'AFTER_FOOD',
                notes: item.notes || '',
                sequence: index + 1,
             };

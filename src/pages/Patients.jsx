@@ -466,7 +466,7 @@ useEffect(() => {
           await visitsApi.create(visitPayload);
 
           // Initialize prescription form with auto-filled data (including treatment instruction)
-          const treatmentInstruction = treatmentResponse?.data?.type_of_treatment_instruction || treatmentResponse?.data?.type_of_treatment?.treatment_instruction || '';
+          const treatmentInstruction = treatmentResponse?.data?.treatment_translated_instruction || treatmentResponse?.data?.type_of_treatment_instruction || treatmentResponse?.data?.type_of_treatment?.treatment_instruction || '';
           setPrescriptionFormData(prev => ({
             ...prev,
             treatment: treatmentId,
@@ -644,7 +644,7 @@ useEffect(() => {
         dosage: '6',
         frequency: '1-0-1',
         duration: '3 Days',
-        before_after_food: 'after_food',
+        before_after_food: 'AFTER_FOOD',
         notes: '',
         sequence: items.length + 1,
         highlightedId: null
@@ -676,7 +676,7 @@ useEffect(() => {
           dosage: String(qty),
           frequency: '1-0-1',
           duration: '3 Days',
-          before_after_food: 'after_food',
+          before_after_food: 'AFTER_FOOD',
           notes: '',
           sequence: items.length + 1,
           highlightedId: null
