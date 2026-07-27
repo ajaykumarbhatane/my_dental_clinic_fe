@@ -1,15 +1,19 @@
-import { Menu, User, LogOut, ChevronDown } from 'lucide-react';
+import { Menu, User, LogOut, ChevronDown, Bell } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import { clinicApi } from '../../api/clinicApi';
+import { visitApi } from '../../api/visitApi';
 
 const Header = ({ onMenuClick }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showReminders, setShowReminders] = useState(false);
   const [clinicName, setClinicName] = useState('');
+  const [reminders, setReminders] = useState([]);
   const dropdownRef = useRef(null);
+  const reminderRef = useRef(null);
 
 
 
@@ -19,13 +23,14 @@ const Header = ({ onMenuClick }) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setShowDropdown(false);
       }
+      if (reminderRef.current && !reminderRef.current.contains(event.target)) {
+        setShowReminders(false);
+      }
     };
 
-    if (showDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [showDropdown]);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -86,6 +91,25 @@ const Header = ({ onMenuClick }) => {
     resolveClinicName();
   }, [user]);
 
+  useEffect(() => {
+    if (!user) return;
+
+    const loadReminders = async () => {
+      try {
+        const today = new Date().toISOString().slice(0, 10);
+        const response = await visitApi.getReminders(today);
+        const reminderResults = response?.data?.results || [];
+        setReminders(reminderResults);
+      } catch (error) {
+        console.warn('Could not load reminders:', error);
+      }
+    };
+
+    loadReminders();
+    const interval = window.setInterval(loadReminders, 60000);
+    return () => window.clearInterval(interval);
+  }, [user]);
+
 
 
   return (
@@ -142,6 +166,41 @@ const Header = ({ onMenuClick }) => {
 
         {/* Right Section */}
         <div className="flex items-center gap-2 sm:gap-3">
+          <div className="relative" ref={reminderRef}>
+            <button
+              onClick={() => setShowReminders(!showReminders)}
+              className="relative p-2 rounded-lg bg-gray-100 hover-common text-gray-600 hover:bg-gray-200 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              aria-label="Upcoming reminders"
+            >
+              <Bell className="w-5 h-5" />
+              {reminders.length > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white">
+                  {reminders.length}
+                </span>
+              )}
+            </button>
+
+            {showReminders && (
+              <div className="absolute right-0 mt-2 w-[min(90vw,20rem)] max-w-[20rem] bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50">
+                <div className="px-4 py-3 border-b border-gray-100">
+                  <p className="text-sm font-semibold text-gray-900">Upcoming visits</p>
+                  <p className="text-xs text-gray-500">Today and the next 2 days</p>
+                </div>
+                <div className="max-h-72 overflow-auto">
+                  {reminders.length === 0 ? (
+                    <p className="px-4 py-4 text-sm text-gray-500">No reminders for now.</p>
+                  ) : reminders.map((reminder) => (
+                    <div key={reminder.id} className="px-4 py-3 border-b border-gray-50 last:border-b-0">
+                      <p className="text-sm font-semibold text-gray-900">{reminder.patient_name}</p>
+                      <p className="text-xs text-gray-500">{reminder.treatment_name}</p>
+                      <p className="mt-1 text-xs text-blue-600">{reminder.message}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="relative" ref={dropdownRef}>
             
             <button
