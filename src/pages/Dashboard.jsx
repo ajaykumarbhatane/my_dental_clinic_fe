@@ -1,13 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Pagination from '../components/Pagination';
-import AnalyticsFilters from '../components/AnalyticsFilters';
-import PatientVisitsTrend from '../components/PatientVisitsTrend';
-import RevenueTrend from '../components/RevenueTrend';
 import { Users, UserCheck, Calendar, TrendingUp, Phone } from 'lucide-react';
 import { dashboardApi } from '../api/dashboardApi';
 import { useNotification } from '../context/NotificationContext';
-import { formatDate } from '../utils/dateUtils';
+import { formatDate, parseDateString } from '../utils/dateUtils';
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line as RechartsLine,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  Legend as RechartsLegend,
+} from 'recharts';
 
 // chart.js imports
 import {
@@ -95,12 +102,18 @@ const Dashboard = () => {
   // chart data states
   const [visitChartData, setVisitChartData] = useState([]);
   const [treatmentChartData, setTreatmentChartData] = useState(null);
-  const [treatmentOptions, setTreatmentOptions] = useState(['all']);
   const [selectedTreatment, setSelectedTreatment] = useState('all');
-  const [period, setPeriod] = useState('last_7_days');
-  const [group, setGroup] = useState('daily');
+  const [selectedInterval, setSelectedInterval] = useState('daily');
+  const [treatmentFilterOptions, setTreatmentFilterOptions] = useState([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [dateError, setDateError] = useState('');
+  const [visitPeriod, setVisitPeriod] = useState('last_7_days');
+
+  const [revenuePeriod, setRevenuePeriod] = useState('last_7_days');
+  const [revenueGroupBy, setRevenueGroupBy] = useState('daily');
+  const [revenueStartDate, setRevenueStartDate] = useState(initialMonthStartDate);
+  const [revenueEndDate, setRevenueEndDate] = useState(initialEndDate);
+  const [revenueTreatmentIds, setRevenueTreatmentIds] = useState(['all']);
   const [startDate, setStartDate] = useState(initialVisitStartDate);
   const [endDate, setEndDate] = useState(initialVisitEndDate);
   const [draftStartDate, setDraftStartDate] = useState(initialVisitStartDate);
@@ -117,9 +130,14 @@ const Dashboard = () => {
   });
   const [revenueLoading, setRevenueLoading] = useState(false);
   const [revenueError, setRevenueError] = useState(null);
+  const [availableRevenueTreatments, setAvailableRevenueTreatments] = useState(['all']);
   const [pickerMonth, setPickerMonth] = useState(today.getMonth());
   const [pickerYear, setPickerYear] = useState(today.getFullYear());
-  const chartKey = `${selectedTreatment}-${group}-${startDate}-${endDate}`;
+  const chartKey = `${selectedTreatment}-${selectedInterval}-${startDate}-${endDate}`;
+
+  const filterLabelClass = 'block text-sm font-medium text-gray-700 mb-2';
+  const filterSelectClass = 'w-full rounded-2xl border border-gray-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-100';
+  const filterButtonGroupClass = 'inline-flex rounded-full border border-gray-200 bg-gray-50 overflow-hidden';
 
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -206,12 +224,12 @@ const Dashboard = () => {
     return [toDateInputValue(start), toDateInputValue(end)];
   };
 
-  const getCurrentMonthRange = () => [initialMonthStartDate, initialEndDate];
+  const getCurrentMonthRange = () => [initialStartDate, initialEndDate];
 
   const getYearToDateRange = () => [toDateInputValue(new Date(today.getFullYear(), 0, 1)), initialEndDate];
 
-  const handlePeriodChange = (value) => {
-    setPeriod(value);
+  const handleVisitPeriodChange = (value) => {
+    setVisitPeriod(value);
     if (value === 'last_7_days') {
       const [start, end] = getLast7DaysRange();
       setStartDate(start);
@@ -258,7 +276,7 @@ const Dashboard = () => {
     }
     setDateError('');
     fetchDashboardData();
-  }, [selectedTreatment, group, startDate, endDate, period]);
+  }, [selectedTreatment, selectedInterval, startDate, endDate]);
 
   useEffect(() => {
     if (showDatePicker) {
@@ -268,20 +286,20 @@ const Dashboard = () => {
   }, [showDatePicker, startDate, endDate]);
 
   useEffect(() => {
-    const valid = !startDate || !endDate || startDate <= endDate;
+    const valid = !revenueStartDate || !revenueEndDate || revenueStartDate <= revenueEndDate;
     if (!valid) {
       setRevenueError('Start date must be before end date.');
       return;
     }
 
-    if (startDate > todayString || endDate > todayString) {
+    if (revenueStartDate > todayString || revenueEndDate > todayString) {
       setRevenueError('Future dates are not allowed.');
       return;
     }
 
     setRevenueError(null);
     fetchRevenueTrend();
-  }, [selectedTreatment, group, startDate, endDate, period]);
+  }, [revenuePeriod, revenueGroupBy, revenueStartDate, revenueEndDate, revenueTreatmentIds]);
 
   const fetchDashboardData = async () => {
       if (dateError) return;
@@ -291,7 +309,7 @@ const Dashboard = () => {
 
         const params = {
           treatment: selectedTreatment,
-          interval: group,
+          interval: selectedInterval,
           start_date: startDate,
           end_date: endDate,
         };
@@ -309,9 +327,15 @@ const Dashboard = () => {
         if (selectedTreatment !== 'all' && !options.includes(selectedTreatment)) {
           options.push(selectedTreatment);
         }
-        setTreatmentOptions(options);
+        setTreatmentFilterOptions(options);
         if (!options.includes(selectedTreatment)) {
           setSelectedTreatment('all');
+        }
+
+        const revenueOptions = [...new Set(['all', ...(summary.treatment_filter_options || [])])];
+        setAvailableRevenueTreatments(revenueOptions);
+        if (revenueTreatmentIds.some((id) => id !== 'all') && !revenueOptions.some((option) => revenueTreatmentIds.includes(option))) {
+          setRevenueTreatmentIds(['all']);
         }
 
         setStats([
@@ -378,18 +402,21 @@ const Dashboard = () => {
     try {
       setRevenueLoading(true);
       const params = {
-        period,
-        group_by: group,
+        period: revenuePeriod,
+        group_by: revenueGroupBy,
         revenue_type: 'all',
       };
-      if (period === 'custom_date_range') {
-        params.start_date = startDate;
-        params.end_date = endDate;
+      if (revenuePeriod === 'custom_date_range') {
+        params.start_date = revenueStartDate;
+        params.end_date = revenueEndDate;
       }
 
-      if (selectedTreatment && selectedTreatment !== 'all') {
-        params.treatment_ids = [selectedTreatment];
-      }
+      if (
+  revenueTreatmentIds[0] &&
+  revenueTreatmentIds[0] !== 'all'
+) {
+  params.treatment_ids = [revenueTreatmentIds[0]];
+}
 
       const response = await dashboardApi.revenueTrend(params);
       const data = response.data || {};
@@ -453,180 +480,450 @@ const Dashboard = () => {
         })}
       </div>
 
-      <AnalyticsFilters
-        period={period}
-        group={group}
-        selectedTreatment={selectedTreatment}
-        treatmentOptions={treatmentOptions}
-        onPeriodChange={handlePeriodChange}
-        onGroupChange={setGroup}
-        onTreatmentChange={setSelectedTreatment}
-        onOpenDateRange={() => {
-          setDraftStartDate(startDate);
-          setDraftEndDate(endDate);
-          setShowDatePicker(true);
-        }}
-        customDateRangeLabel={`${formatDate(startDate)} - ${formatDate(endDate)}`}
-      />
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 gap-6">
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-lg transition-shadow">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-3">
+            <div>
+              <h3 className="text-lg font-bold text-gray-900">Patient Visits Trend</h3>
+              <p className="text-sm text-gray-500">Filter by treatment and date range to compare visit trends.</p>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap">
+              <div className="min-w-[180px]">
+                <label className={filterLabelClass}>Period</label>
+                <select
+                  value={visitPeriod}
+                  onChange={(e) => handleVisitPeriodChange(e.target.value)}
+                  className={filterSelectClass}
+                >
+                  <option value="last_7_days">Last 7 Days</option>
+                  <option value="current_month">Current Month</option>
+                  <option value="year_to_date">Year To Date</option>
+                  <option value="custom_date_range">Custom Date Range</option>
+                </select>
+              </div>
 
-      {showDatePicker && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
-          onClick={() => setShowDatePicker(false)}
-        >
-          <div
-            className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl ring-1 ring-black/5 max-h-[calc(100vh-4rem)] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-sm uppercase tracking-[0.2em] text-slate-400">Select Date Range</p>
-                <h2 className="text-xl font-semibold text-slate-900">Date range trend</h2>
+                <label className={filterLabelClass}>Group</label>
+                <div className={filterButtonGroupClass}>
+                  {['daily', 'weekly', 'monthly'].map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => setSelectedInterval(option)}
+                      className={`px-3 py-2 text-sm font-medium transition ${selectedInterval === option ? 'bg-white text-slate-900 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}
+                    >
+                      {option.charAt(0).toUpperCase() + option.slice(1)}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowDatePicker(false)}
-                className="text-slate-500 hover:text-slate-900"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="flex items-center justify-center gap-4 mb-5">
-              <button
-                type="button"
-                onClick={previousPickerMonth}
-                className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-slate-600 hover:bg-slate-100"
-              >
-                ←
-              </button>
-              <div className="flex items-center gap-3 rounded-2xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">
-                <span>{monthNames[pickerMonth]}</span>
-                <span>{pickerYear}</span>
+
+              <div className="min-w-[180px]">
+                <label className={filterLabelClass}>Treatments</label>
+                <select
+                  value={selectedTreatment}
+                  onChange={(e) => setSelectedTreatment(e.target.value)}
+                  className={filterSelectClass}
+                >
+                  {treatmentFilterOptions.map((option) => (
+                    <option key={option} value={option}> {option === 'all' ? 'All Treatments' : option} </option>
+                  ))}
+                </select>
               </div>
-              <button
-                type="button"
-                onClick={nextPickerMonth}
-                className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-slate-600 hover:bg-slate-100"
-              >
-                →
-              </button>
-            </div>
-            <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 mb-3">
-              {['M','T','W','T','F','S','S'].map((day) => (
-                <div key={day}>{day}</div>
-              ))}
-            </div>
-            <div className="grid grid-cols-7 gap-2 mb-6">
-              {buildMonthGrid(pickerYear, pickerMonth).map((dateValue, index) => {
-                const dateString = dateValue ? formatDay(dateValue) : '';
-                const isSelected = dateValue && (dateString === draftStartDate || dateString === draftEndDate);
-                const isRangeSelected = dateValue && draftStartDate && draftEndDate && dateString >= draftStartDate && dateString <= draftEndDate;
-                const isRangeStart = dateValue && dateString === draftStartDate;
-                const isRangeEnd = dateValue && dateString === draftEndDate;
-                const rangeClass = isRangeSelected ? 'bg-orange-100 text-slate-900' : 'bg-slate-100 text-slate-700 hover:bg-slate-200';
-                const selectedClass = isSelected ? 'bg-orange-500 text-white shadow-lg' : rangeClass;
-                const roundedClass = isSelected
-                  ? 'rounded-full'
-                  : isRangeStart && !isRangeEnd
-                  ? 'rounded-l-full'
-                  : isRangeEnd && !isRangeStart
-                  ? 'rounded-r-full'
-                  : isRangeSelected
-                  ? 'rounded-none'
-                  : 'rounded-2xl';
-                return (
+              {visitPeriod === 'custom_date_range' && (
+                <div className="min-w-[180px]">
+                  <label className={filterLabelClass}>Date Range</label>
                   <button
-                    key={`${pickerYear}-${pickerMonth}-${index}`}
                     type="button"
-                    disabled={!dateValue || (dateValue && formatDay(dateValue) > todayString)}
-                    onClick={() => dateValue && handlePickerDayClick(dateValue)}
-                    className={`h-10 text-sm transition ${!dateValue ? 'cursor-default bg-transparent' : formatDay(dateValue) > todayString ? 'cursor-not-allowed opacity-40 bg-slate-100 text-slate-400' : `cursor-pointer ${selectedClass} ${roundedClass}`}`}
+                    onClick={() => {
+                      setDraftStartDate(startDate);
+                      setDraftEndDate(endDate);
+                      setShowDatePicker(true);
+                    }}
+                    className={`${filterSelectClass} text-left`}
                   >
-                    {dateValue ? dateValue.getDate() : ''}
+                    {formatDate(startDate)} - {formatDate(endDate)}
                   </button>
-                );
-              })}
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="space-y-1">
-                <p className="text-sm text-slate-500">Selected range</p>
-                <p className="text-sm font-medium text-slate-900">
-                  {formatDate(draftStartDate)} – {formatDate(draftEndDate)}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowDatePicker(false)}
-                  className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStartDate(draftStartDate);
-                    setEndDate(draftEndDate);
-                    setPickerMonth(new Date(draftStartDate).getMonth());
-                    setPickerYear(new Date(draftStartDate).getFullYear());
-                    setShowDatePicker(false);
-                  }}
-                  className="rounded-2xl bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600"
-                >
-                  Apply
-                </button>
-              </div>
+                </div>
+              )}
             </div>
           </div>
+          {dateError && (
+            <div className="mb-4 text-sm text-red-600">{dateError}</div>
+          )}
+          {showDatePicker && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
+              onClick={() => setShowDatePicker(false)}
+            >
+              <div
+                className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl ring-1 ring-black/5 max-h-[calc(100vh-4rem)] overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-sm uppercase tracking-[0.2em] text-slate-400">Select Date Range</p>
+                    <h2 className="text-xl font-semibold text-slate-900">Date range trend</h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowDatePicker(false)}
+                    className="text-slate-500 hover:text-slate-900"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="flex items-center justify-center gap-4 mb-5">
+                  <button
+                    type="button"
+                    onClick={previousPickerMonth}
+                    className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-slate-600 hover:bg-slate-100"
+                  >
+                    ←
+                  </button>
+                  <div className="flex items-center gap-3 rounded-2xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">
+                    <span>{monthNames[pickerMonth]}</span>
+                    <span>{pickerYear}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={nextPickerMonth}
+                    className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-slate-600 hover:bg-slate-100"
+                  >
+                    →
+                  </button>
+                </div>
+                <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 mb-3">
+                  {['M','T','W','T','F','S','S'].map((day) => (
+                    <div key={day}>{day}</div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-7 gap-2 mb-6">
+                  {buildMonthGrid(pickerYear, pickerMonth).map((dateValue, index) => {
+                    const dateString = dateValue ? formatDay(dateValue) : '';
+                    const isSelected = dateValue && (dateString === draftStartDate || dateString === draftEndDate);
+                    const isRangeSelected = dateValue && draftStartDate && draftEndDate && dateString >= draftStartDate && dateString <= draftEndDate;
+                    const isRangeStart = dateValue && dateString === draftStartDate;
+                    const isRangeEnd = dateValue && dateString === draftEndDate;
+                    const rangeClass = isRangeSelected ? 'bg-orange-100 text-slate-900' : 'bg-slate-100 text-slate-700 hover:bg-slate-200';
+                    const selectedClass = isSelected ? 'bg-orange-500 text-white shadow-lg' : rangeClass;
+                    const roundedClass = isSelected
+                      ? 'rounded-full'
+                      : isRangeStart && !isRangeEnd
+                      ? 'rounded-l-full'
+                      : isRangeEnd && !isRangeStart
+                      ? 'rounded-r-full'
+                      : isRangeSelected
+                      ? 'rounded-none'
+                      : 'rounded-2xl';
+                    return (
+                      <button
+                        key={`${pickerYear}-${pickerMonth}-${index}`}
+                        type="button"
+                        disabled={!dateValue || (dateValue && formatDay(dateValue) > todayString)}
+                        onClick={() => dateValue && handlePickerDayClick(dateValue)}
+                        className={`h-10 text-sm transition ${!dateValue ? 'cursor-default bg-transparent' : formatDay(dateValue) > todayString ? 'cursor-not-allowed opacity-40 bg-slate-100 text-slate-400' : `cursor-pointer ${selectedClass} ${roundedClass}`}`}
+                      >
+                        {dateValue ? dateValue.getDate() : ''}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm text-slate-500">Selected range</p>
+                    <p className="text-sm font-medium text-slate-900">
+                      {formatDate(draftStartDate)} – {formatDate(draftEndDate)}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowDatePicker(false)}
+                      className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStartDate(draftStartDate);
+                        setEndDate(draftEndDate);
+                        setPickerMonth(new Date(draftStartDate).getMonth());
+                        setPickerYear(new Date(draftStartDate).getFullYear());
+                        setShowDatePicker(false);
+                      }}
+                      className="rounded-2xl bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          <div className="h-72">
+            {loading ? (
+              <div className="h-full animate-pulse rounded-3xl bg-slate-100" />
+            ) : visitChartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={visitChartData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
+                  <CartesianGrid stroke="#E5E7EB" strokeDasharray="3 3" vertical={false} />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fill: '#6B7280', fontSize: 12 }}
+                    tickLine={false}
+                    axisLine={false}
+                    minTickGap={12}
+                  />
+                  <YAxis
+                    tick={{ fill: '#6B7280', fontSize: 12 }}
+                    tickLine={false}
+                    axisLine={false}
+                    width={40}
+                  />
+                  <RechartsTooltip
+                    formatter={(value) => `${value} visit${value === 1 ? '' : 's'}`}
+                    contentStyle={{
+                      borderRadius: '1rem',
+                      borderColor: '#E5E7EB',
+                      backgroundColor: '#fff',
+                    }}
+                  />
+                  <RechartsLine
+                    type="monotone"
+                    dataKey="visits"
+                    stroke="#2563EB"
+                    strokeWidth={3}
+                    dot={{ r: 4, fill: '#2563EB', stroke: '#fff', strokeWidth: 2 }}
+                    activeDot={{ r: 6 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center rounded-3xl border border-dashed border-gray-200 bg-slate-50 p-6 text-center">
+                <div className="text-3xl mb-3">📉</div>
+                <p className="text-sm font-semibold text-slate-900">No visit data available for selected period</p>
+                <p className="mt-2 text-sm text-slate-500">Try another date range or grouping to view visits trends.</p>
+              </div>
+            )}
+          </div>
         </div>
-      )}
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-lg transition-shadow">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
+            <div>
+              <h3 className="text-lg font-bold text-gray-900">Revenue Trend</h3>
+              <p className="text-sm text-gray-500">Track clinic revenue across selected period.</p>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap">
+              <div className="min-w-[180px]">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Period</label>
+                <select
+                  value={revenuePeriod}
+                  onChange={(e) => setRevenuePeriod(e.target.value)}
+                  className="w-full rounded-2xl border border-gray-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                >
+                  <option value="last_7_days">Last 7 Days</option>
+                  <option value="current_month">Current Month</option>
+                  <option value="year_to_date">Year To Date</option>
+                  <option value="custom_date_range">Custom Date Range</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Group</label>
+                <div className="inline-flex rounded-full border border-gray-200 bg-gray-50 overflow-hidden">
+                  {['daily', 'weekly', 'monthly'].map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => setRevenueGroupBy(option)}
+                      className={`px-3 py-1 text-sm font-medium transition ${revenueGroupBy === option ? 'bg-white text-slate-900 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}
+                    >
+                      {option.charAt(0).toUpperCase() + option.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="min-w-[180px]">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Treatments</label>
+                <select
+                  value={revenueTreatmentIds[0] || 'all'}
+                  onChange={(e) => setRevenueTreatmentIds([e.target.value])}
+                  className="w-full rounded-2xl border border-gray-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                >
+                  {availableRevenueTreatments.map((option) => (
+                    <option key={option} value={option}>
+                      {option === 'all'
+                        ? 'All Treatments'
+                        : option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {revenuePeriod === 'custom_date_range' && (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="text-sm font-medium text-gray-700">Start Date</span>
+                    <input
+                      type="date"
+                      value={revenueStartDate}
+                      max={todayString}
+                      onChange={(e) => setRevenueStartDate(e.target.value)}
+                      className="mt-2 w-full rounded-2xl border border-gray-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-sm font-medium text-gray-700">End Date</span>
+                    <input
+                      type="date"
+                      value={revenueEndDate}
+                      max={todayString}
+                      onChange={(e) => setRevenueEndDate(e.target.value)}
+                      className="mt-2 w-full rounded-2xl border border-gray-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                    />
+                  </label>
+                </div>
+              )}
+            </div>
+          </div>
 
-      <PatientVisitsTrend chartData={visitChartData} loading={loading} error={dateError || error} />
-      <RevenueTrend data={revenueData} summary={revenueSummary} loading={revenueLoading} error={revenueError} />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-6">
+            {[
+              { label: "Today's Revenue", value: revenueSummary.today_revenue, comparison: null },
+              { label: 'Total Revenue', value: revenueSummary.total_revenue, comparison: revenueSummary.previous_total_revenue },
+              { label: 'Average Revenue', value: revenueSummary.average_revenue, comparison: revenueSummary.previous_average_revenue },
+              { label: 'Highest Revenue', value: revenueSummary.highest_revenue, comparison: revenueSummary.previous_highest_revenue },
+            ].map((stat) => {
+              const diff = stat.comparison != null ? stat.value - stat.comparison : null;
+              const diffLabel = diff != null ? `${diff >= 0 ? '+' : '-'}${formatAmount(Math.abs(diff))}` : null;
+              const diffColor = diff != null ? (diff >= 0 ? 'text-emerald-700 bg-emerald-100' : 'text-rose-700 bg-rose-100') : '';
 
-      {/* Treatment Distribution */}
-      <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-lg transition-shadow">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-bold text-gray-900">Treatment Distribution</h3>
-          <div className="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-medium">Analytics</div>
+              return (
+                <div key={stat.label} className="rounded-[24px] border border-gray-200 bg-slate-50 p-4 shadow-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">{stat.label}</p>
+                    {diffLabel && (
+                      <span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${diffColor}`}>
+                        {diffLabel}
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-3 text-2xl font-semibold text-slate-900">{formatAmount(stat.value)}</p>
+                  {stat.comparison != null && (
+                    <p className="mt-2 text-xs text-slate-500">Previous: {formatAmount(stat.comparison)}</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {revenueError && (
+            <div className="mb-4 text-sm text-red-600">{revenueError}</div>
+          )}
+
+          <div className="h-72">
+            {revenueLoading ? (
+              <div className="h-full animate-pulse rounded-3xl bg-slate-100" />
+            ) : revenueData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={revenueData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
+                  <CartesianGrid stroke="#E5E7EB" strokeDasharray="3 3" vertical={false} />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fill: '#6B7280', fontSize: 12 }}
+                    tickLine={false}
+                    axisLine={false}
+                    minTickGap={12}
+                  />
+                  <YAxis
+                    tickFormatter={(value) => formatAmount(value)}
+                    tick={{ fill: '#6B7280', fontSize: 12 }}
+                    tickLine={false}
+                    axisLine={false}
+                    width={90}
+                  />
+                  <RechartsLegend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ paddingBottom: 16 }} />
+                  <RechartsTooltip
+  formatter={(value) => formatAmount(value)}
+  contentStyle={{
+    borderRadius: '1rem',
+    borderColor: '#E5E7EB',
+    backgroundColor: '#fff'
+  }}
+/>
+                  <RechartsLine
+                    type="monotone"
+                    dataKey="previous_revenue"
+                    name="Previous"
+                    stroke="#6366F1"
+                    strokeWidth={2}
+                    dot={false}
+                    strokeDasharray="5 5"
+                  />
+                  <RechartsLine
+                    type="monotone"
+                    dataKey="revenue"
+                    name="Current"
+                    stroke="#10B981"
+                    strokeWidth={3}
+                    dot={{ r: 4, fill: '#10B981', stroke: '#fff', strokeWidth: 2 }}
+                    activeDot={{ r: 6 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center rounded-3xl border border-dashed border-gray-200 bg-slate-50 p-6 text-center">
+                <div className="text-3xl mb-3">📉</div>
+                <p className="text-sm font-semibold text-slate-900">No revenue data available for selected period</p>
+                <p className="mt-2 text-sm text-slate-500">Try another date range or grouping to view revenue trends.</p>
+              </div>
+            )}
+          </div>
         </div>
-        <div className="h-64">
-          {treatmentChartData ? (
-            <Doughnut
-              key={chartKey}
-              data={treatmentChartData}
-              options={{
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                  legend: {
-                    position: 'right',
-                    labels: {
-                      generateLabels: function(chart) {
-                        const data = chart.data;
-                        if (data.labels.length && data.datasets.length) {
-                          return data.labels.map((label, i) => {
-                            const value = data.datasets[0].data[i];
-                            return {
-                              text: `${label} (${value})`, // 🔥 ADD COUNT HERE
-                              fillStyle: data.datasets[0].backgroundColor[i],
-                              strokeStyle: data.datasets[0].backgroundColor[i],
-                              index: i,
-                            };
-                          });
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-lg transition-shadow">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-bold text-gray-900">Treatment Distribution</h3>
+            <div className="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-medium">Analytics</div>
+          </div>
+          <div className="h-64">
+            {treatmentChartData ? (
+              <Doughnut
+                key={chartKey}
+                data={treatmentChartData}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
+                      position: 'right',
+                      labels: {
+                        generateLabels: function(chart) {
+                          const data = chart.data;
+                          if (data.labels.length && data.datasets.length) {
+                            return data.labels.map((label, i) => {
+                              const value = data.datasets[0].data[i];
+                              return {
+                                text: `${label} (${value})`, // 🔥 ADD COUNT HERE
+                                fillStyle: data.datasets[0].backgroundColor[i],
+                                strokeStyle: data.datasets[0].backgroundColor[i],
+                                index: i,
+                              };
+                            });
+                          }
+                          return [];
                         }
-                        return [];
                       }
                     }
                   }
-                }
-              }}
-            />
-          ) : (
-            <div className="h-full flex items-center justify-center text-gray-500">
-              Loading chart...
-            </div>
-          )}
+                }}
+              />
+            ) : (
+              <div className="h-full flex items-center justify-center text-gray-500">
+                Loading chart...
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

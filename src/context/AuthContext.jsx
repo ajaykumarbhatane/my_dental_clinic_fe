@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authApi } from '../api/authApi';
+import { registerPushNotifications, requestPushPermissions, setupPushNotificationHandlers, unregisterPushNotifications } from '../utils/pushNotifications';
 
 const AuthContext = createContext();
 
@@ -117,6 +118,16 @@ export const AuthProvider = ({ children }) => {
       setToken(newToken);
       setUser(userData);
 
+      try {
+        const permission = await requestPushPermissions();
+        if (permission?.granted) {
+          await setupPushNotificationHandlers();
+          await registerPushNotifications(userData, newToken);
+        }
+      } catch (pushError) {
+        console.error('Push registration failed during login', pushError);
+      }
+
       return { success: true };
     } catch (error) {
       console.error('Login error:', error);
@@ -153,6 +164,13 @@ export const AuthProvider = ({ children }) => {
       console.error('Logout error:', error);
       // Continue with logout even if API call fails
     } finally {
+      try {
+        const deviceToken = localStorage.getItem('fcm_device_token');
+        await unregisterPushNotifications(deviceToken);
+      } catch (pushError) {
+        console.error('Push unregistration failed during logout', pushError);
+      }
+
       // Clear storage and state
       StorageHelper.clear();
       setToken(null);

@@ -91,12 +91,20 @@ const Header = ({ onMenuClick }) => {
     resolveClinicName();
   }, [user]);
 
+  const getTodayLocalDate = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   useEffect(() => {
     if (!user) return;
 
     const loadReminders = async () => {
       try {
-        const today = new Date().toISOString().slice(0, 10);
+        const today = getTodayLocalDate();
         const response = await visitApi.getReminders(today);
         const reminderResults = response?.data?.results || [];
         setReminders(reminderResults);
