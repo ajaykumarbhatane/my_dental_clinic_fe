@@ -104,6 +104,24 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
+  useEffect(() => {
+    const initializePushRegistration = async () => {
+      if (!token || !user) return;
+
+      try {
+        const permission = await requestPushPermissions();
+        if (permission?.granted) {
+          await setupPushNotificationHandlers();
+          await registerPushNotifications(user, token);
+        }
+      } catch (pushError) {
+        console.error('Push registration failed during auth initialization', pushError);
+      }
+    };
+
+    initializePushRegistration();
+  }, [token, user]);
+
   const login = async (email, password) => {
     try {
       setError(null);
@@ -117,16 +135,6 @@ export const AuthProvider = ({ children }) => {
       // Update state
       setToken(newToken);
       setUser(userData);
-
-      try {
-        const permission = await requestPushPermissions();
-        if (permission?.granted) {
-          await setupPushNotificationHandlers();
-          await registerPushNotifications(userData, newToken);
-        }
-      } catch (pushError) {
-        console.error('Push registration failed during login', pushError);
-      }
 
       return { success: true };
     } catch (error) {

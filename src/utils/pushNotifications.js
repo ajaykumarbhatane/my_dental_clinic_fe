@@ -5,6 +5,25 @@ import apiClient from '../api/apiClient';
 
 const DEVICE_TOKEN_STORAGE_KEY = 'fcm_device_token';
 
+const postDeviceTokenToBackend = async (value, user) => {
+  if (!value) return;
+  try {
+    await apiClient.post('/device/register/', {
+      device_token: value,
+      platform: 'android',
+      app_version: '1.0.0',
+      device_name: Capacitor.getPlatform(),
+    });
+    console.log('Push device token registered with backend', {
+      userId: user?.id,
+      platform: Capacitor.getPlatform(),
+      tokenLength: value.length,
+    });
+  } catch (error) {
+    console.error('Failed to register device token with backend', error);
+  }
+};
+
 export const isNativePlatform = () => Capacitor.isNativePlatform();
 
 export const requestPushPermissions = async () => {
@@ -21,28 +40,18 @@ export const requestPushPermissions = async () => {
 export const registerPushNotifications = async (user, token) => {
   if (!isNativePlatform()) return null;
   try {
+    console.log('Starting push registration flow', { userId: user?.id, hasToken: !!token });
     await PushNotifications.register();
+
     const result = await PushNotifications.addListener('registration', async ({ value }) => {
       if (!value) return;
       localStorage.setItem(DEVICE_TOKEN_STORAGE_KEY, value);
-      if (user?.id) {
-        await apiClient.post('/device/register/', {
-          device_token: value,
-          platform: 'android',
-          app_version: '1.0.0',
-          device_name: Capacitor.getPlatform(),
-        });
-      }
+      await postDeviceTokenToBackend(value, user);
     });
 
     const currentToken = localStorage.getItem(DEVICE_TOKEN_STORAGE_KEY);
     if (currentToken) {
-      await apiClient.post('/device/register/', {
-        device_token: currentToken,
-        platform: 'android',
-        app_version: '1.0.0',
-        device_name: Capacitor.getPlatform(),
-      });
+      await postDeviceTokenToBackend(currentToken, user);
     }
 
     return result;
