@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authApi } from '../api/authApi';
-import { registerPushNotifications, requestPushPermissions, setupPushNotificationHandlers, unregisterPushNotifications } from '../utils/pushNotifications';
+import { registerPushNotifications, requestPushPermissions, resetPushRegistrationState, unregisterPushNotifications } from '../utils/pushNotifications';
 
 const AuthContext = createContext();
 
@@ -108,14 +108,17 @@ export const AuthProvider = ({ children }) => {
     const initializePushRegistration = async () => {
       if (!token || !user) return;
 
+      console.log('[auth] Auth state ready, starting push registration', { userId: user?.id, tokenPresent: !!token });
       try {
         const permission = await requestPushPermissions();
-        if (permission?.granted) {
-          await setupPushNotificationHandlers();
-          await registerPushNotifications(user, token);
+        if (!permission?.granted) {
+          console.warn('[auth] Push permission not granted; skipping registration');
+          return;
         }
+
+        await registerPushNotifications(user, token);
       } catch (pushError) {
-        console.error('Push registration failed during auth initialization', pushError);
+        console.error('[auth] Push registration failed during auth initialization', pushError);
       }
     };
 
@@ -136,6 +139,7 @@ export const AuthProvider = ({ children }) => {
       setToken(newToken);
       setUser(userData);
 
+      console.log('[auth] Login success; token and user stored');
       return { success: true };
     } catch (error) {
       console.error('Login error:', error);
@@ -174,6 +178,7 @@ export const AuthProvider = ({ children }) => {
     } finally {
       try {
         const deviceToken = localStorage.getItem('fcm_device_token');
+        resetPushRegistrationState();
         await unregisterPushNotifications(deviceToken);
       } catch (pushError) {
         console.error('Push unregistration failed during logout', pushError);

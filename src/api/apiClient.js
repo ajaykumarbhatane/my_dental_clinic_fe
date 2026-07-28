@@ -112,7 +112,7 @@ const retryAsync = async (fn, maxRetries = 3, delay = 1000, backoff = 2) => {
 // // console.log("API BASE URL:", import.meta.env.VITE_API_BASE_URL);
 
 const apiClient = axios.create({
-  baseURL: "https://mydentalclinicpro.com/api", //  import.meta.env.VITE_API_BASE_URL // 'http://127.0.0.1:8000/api' for local development
+  baseURL: import.meta.env.VITE_API_BASE_URL, //  "https://mydentalclinicpro.com/api" // 'http://127.0.0.1:8000/api' for local development
   headers: {
     'Content-Type': 'application/json',
   },
@@ -131,11 +131,11 @@ apiClient.interceptors.request.use(
     let token = null;
     try {
       token = localStorage.getItem('token');
-      console.log("TOKEN:", token);
-      console.log("REQUEST URL:", config.url);
-      console.log("FULL API URL:", config.baseURL + config.url);
-
-
+      console.log('[api] Request', {
+        url: config.url,
+        authHeaderPresent: Boolean(token),
+        baseURL: config.baseURL,
+      });
     } catch (e) {
       // localStorage might not be available in some mobile/private browse modes
       // Token may be in sessionStorage as fallback
@@ -148,6 +148,9 @@ apiClient.interceptors.request.use(
     
     if (token) {
       config.headers.Authorization = `Token ${token}`;
+      console.log('[api] Authorization header attached', { url: config.url });
+    } else {
+      console.warn('[api] Authorization header missing', { url: config.url });
     }
 
     // If using FormData, let Axios set the Content-Type header (including boundary)
