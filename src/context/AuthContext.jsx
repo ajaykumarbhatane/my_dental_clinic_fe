@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authApi } from '../api/authApi';
-import { registerPushNotifications, resetPushRegistrationState, unregisterPushNotifications } from '../utils/pushNotifications';
+import { registerDeviceToken, unregisterDevice } from '../utils/pushNotifications';
 
 const AuthContext = createContext();
 
@@ -107,20 +107,15 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const initializePushRegistration = async () => {
       if (!token || !user) {
-        console.log('[auth-push] Skipping push init: missing token or user', { tokenExists: !!token, userExists: !!user });
+        console.log('[auth] Skipping device registration: missing token or user', { tokenExists: !!token, userExists: !!user });
         return;
       }
 
-      console.log('[auth-push] ===== AUTH STATE CHANGED - TRIGGERING PUSH REGISTRATION =====', { 
-        userId: user?.id, 
-        tokenLength: token?.length,
-        timestamp: new Date().toISOString(),
-      });
-
+      console.log('[auth] Login success - attempting device registration', { userId: user?.id });
       try {
-        await registerPushNotifications(user, token);
-      } catch (pushError) {
-        console.error('[auth-push] Push registration failed during auth initialization', pushError);
+        await registerDeviceToken(user, token);
+      } catch (error) {
+        console.error('[auth] Device registration failed', error);
       }
     };
 
@@ -176,14 +171,14 @@ export const AuthProvider = ({ children }) => {
       await authApi.logout();
     } catch (error) {
       console.error('Logout error:', error);
-      // Continue with logout even if API call fails
     } finally {
       try {
         const deviceToken = localStorage.getItem('fcm_device_token');
-        resetPushRegistrationState();
-        await unregisterPushNotifications(deviceToken);
-      } catch (pushError) {
-        console.error('Push unregistration failed during logout', pushError);
+        if (deviceToken) {
+          await unregisterDevice(deviceToken);
+        }
+      } catch (error) {
+        console.error('Device unregistration failed', error);
       }
 
       // Clear storage and state
