@@ -7,139 +7,217 @@ const DEVICE_TOKEN_STORAGE_KEY = 'fcm_device_token';
 let listenersInitialized = false;
 let registrationInFlight = null;
 let registrationCompleted = false;
+let registrationTimeout = null;
 
-const isAndroidPlatform = () => Capacitor.getPlatform() === 'android';
+const debugLog = (message, extra = {}) => {
+  const timestamp = new Date().toISOString();
+  console.log(`[PUSH_DEBUG ${timestamp}] ${message}`, extra);
+};
 
-const logContext = (message, extra = {}) => {
-  console.log(`[push] ${message}`, extra);
+const debugError = (message, error, extra = {}) => {
+  const timestamp = new Date().toISOString();
+  console.error(`[PUSH_ERROR ${timestamp}] ${message}`, error, extra);
+};
+
+const isAndroidPlatform = () => {
+  const platform = Capacitor.getPlatform();
+  debugLog('Platform detection check', { platform, isAndroid: platform === 'android' });
+  return platform === 'android';
 };
 
 const postDeviceTokenToBackend = async (value, user) => {
   if (!value) {
-    logContext('Skipping backend registration: missing FCM token');
+    debugError('Cannot post FCM token to backend', new Error('Token is empty'), { userId: user?.id });
     return;
   }
 
   const authToken = localStorage.getItem('token') || sessionStorage.getItem('token');
-  logContext('Calling backend device registration', {
+  debugLog('Preparing backend device registration POST', {
     userId: user?.id,
     platform: Capacitor.getPlatform(),
     tokenLength: value.length,
-    authHeaderPresent: Boolean(authToken),
+    tokenPrefix: value?.substring(0, 20),
+    authTokenPresent: Boolean(authToken),
+    authTokenLength: authToken?.length,
   });
 
   try {
+    debugLog('Sending POST /device/register/', {
+      url: '/device/register/',
+      method: 'POST',
+      payload: {
+        device_token: value.substring(0, 20) + '...',
+        platform: 'android',
+        app_version: '1.0.0',
+        device_name: Capacitor.getPlatform(),
+      },
+    });
+
     const response = await apiClient.post('/device/register/', {
       device_token: value,
       platform: 'android',
       app_version: '1.0.0',
       device_name: Capacitor.getPlatform(),
     });
-    logContext('Backend device registration succeeded', {
+
+    debugLog('✓ POST /device/register/ SUCCEEDED', {
       userId: user?.id,
       status: response?.status,
+      responseData: response?.data,
     });
   } catch (error) {
-    console.error('[push] Backend device registration failed', {
+    debugError('✗ POST /device/register/ FAILED', error, {
       status: error.response?.status,
-      message: error.response?.data?.detail || error.message,
+      statusText: error.response?.statusText,
+      errorMessage: error.response?.data?.detail || error.message,
       userId: user?.id,
+      errorCode: error.code,
     });
   }
 };
 
-export const isNativePlatform = () => Capacitor.isNativePlatform();
+export const isNativePlatform = () => {
+  const isNative = Capacitor.isNativePlatform();
+  debugLog('Native platform check', { isNative });
+  return isNative;
+};
 
 export const resetPushRegistrationState = () => {
+  debugLog('Resetting push registration state');
+  if (registrationTimeout) {
+    clearTimeout(registrationTimeout);
+    registrationTimeout = null;
+  }
   listenersInitialized = false;
   registrationInFlight = null;
   registrationCompleted = false;
 };
 
 export const requestPushPermissions = async () => {
+  debugLog('STEP 1: Requesting push permissions');
+
   if (!isAndroidPlatform()) {
-    logContext('Skipping permission request: platform is not android', { platform: Capacitor.getPlatform() });
+    debugLog('STEP 1 SKIP: Not Android platform', { platform: Capacitor.getPlatform() });
     return { granted: true };
   }
 
   try {
+    debugLog('STEP 1: Calling PushNotifications.requestPermissions()');
     const permission = await PushNotifications.requestPermissions();
-    const granted = permission?.receive?.granted || permission?.granted === true;
-    logContext('Permission result', { granted, platform: Capacitor.getPlatform(), permission });
+    debugLog('STEP 1: Permission response received', { permission, keys: Object.keys(permission) });
+
+    const granted = permission?.receive?.granted === true || permission?.granted === true;
+    debugLog('STEP 1 RESULT', { granted, permission });
     return { granted };
   } catch (error) {
-    console.error('[push] Permission request failed', error);
+    debugError('STEP 1 FAILED: Permission request error', error, { errorType: error.constructor.name });
     return { granted: false };
   }
 };
 
 export const registerPushNotifications = async (user, token) => {
+  debugLog('===== PUSH REGISTRATION START =====', { userId: user?.id, hasAuthToken: !!token });
+
   if (!isAndroidPlatform()) {
-    logContext('Skipping push registration because platform is not android', { platform: Capacitor.getPlatform() });
+    debugLog('ABORT: Not Android platform', { platform: Capacitor.getPlatform() });
     return null;
   }
 
   if (!token) {
-    console.warn('[push] Skipping push registration because auth token is missing');
+    debugError('ABORT: No auth token', new Error('Auth token is missing'), { userId: user?.id });
     return null;
   }
 
   if (registrationCompleted) {
-    logContext('Push registration already completed for this session');
+    debugLog('ABORT: Registration already completed in this session', { userId: user?.id });
     return null;
   }
 
   if (registrationInFlight) {
-    logContext('Push registration is already in progress');
+    debugLog('ABORT: Registration is already in flight', { userId: user?.id });
     return registrationInFlight;
   }
 
   registrationInFlight = (async () => {
-    console.log('========== LOGIN SUCCESS ==========' );
-    console.log('[push] Token stored');
-    console.log('[push] Starting push registration');
+    try {
+      debugLog('STEP 1: Request permissions');
+      const permission = await requestPushPermissions();
 
-    const permission = await requestPushPermissions();
-    if (!permission?.granted) {
-      console.warn('[push] Permission denied; skipping registration');
-      return null;
-    }
-
-    console.log('[push] Permission granted');
-    await setupPushNotificationHandlers();
-
-    const registrationHandler = async ({ value }) => {
-      if (!value) {
-        console.warn('[push] Registration listener fired without a token');
-        return;
+      if (!permission?.granted) {
+        debugError('STEP 1 FAILED: Permission denied', new Error('User denied notification permission'), { userId: user?.id });
+        return null;
       }
 
-      localStorage.setItem(DEVICE_TOKEN_STORAGE_KEY, value);
-      console.log('========== FCM TOKEN RECEIVED ==========' );
-      console.log(value);
-      console.log('======================================');
-      await postDeviceTokenToBackend(value, user);
-    };
+      debugLog('STEP 1 SUCCESS: Permission granted');
 
-    console.log('[push] Calling PushNotifications.register()');
-    await PushNotifications.addListener('registration', registrationHandler);
-    await PushNotifications.register();
+      debugLog('STEP 2: Setup push notification handlers');
+      await setupPushNotificationHandlers();
+      debugLog('STEP 2 SUCCESS: Handlers setup complete');
 
-    const currentToken = localStorage.getItem(DEVICE_TOKEN_STORAGE_KEY);
-    if (currentToken) {
-      await postDeviceTokenToBackend(currentToken, user);
-    } else {
-      console.warn('[push] Registration listener never fired and no cached FCM token is available');
+      debugLog('STEP 3: Setup registration listener');
+      let listenerCalled = false;
+      const registrationHandler = async ({ value }) => {
+        listenerCalled = true;
+        debugLog('>>> REGISTRATION LISTENER FIRED <<<', { hasValue: !!value, tokenLength: value?.length });
+
+        if (!value) {
+          debugError('Listener fired with empty token', new Error('No FCM token in listener'), { userId: user?.id });
+          return;
+        }
+
+        localStorage.setItem(DEVICE_TOKEN_STORAGE_KEY, value);
+        debugLog('FCM TOKEN STORED', { 
+          token: value.substring(0, 30) + '...', 
+          length: value.length 
+        });
+
+        await postDeviceTokenToBackend(value, user);
+      };
+
+      await PushNotifications.addListener('registration', registrationHandler);
+      debugLog('STEP 3 SUCCESS: Registration listener attached');
+
+      debugLog('STEP 4: Call PushNotifications.register()');
+      await PushNotifications.register();
+      debugLog('STEP 4 SUCCESS: PushNotifications.register() completed');
+
+      // Wait a bit for the listener to fire
+      debugLog('STEP 5: Waiting for FCM token (max 5 seconds)');
+      await new Promise(resolve => setTimeout(resolve, 5000));
+
+      debugLog('STEP 6: Check if token was received');
+      if (!listenerCalled) {
+        debugLog('WARNING: Registration listener was never called', { userId: user?.id });
+      }
+
+      const currentToken = localStorage.getItem(DEVICE_TOKEN_STORAGE_KEY);
+      if (currentToken) {
+        debugLog('STEP 6: Found cached token, posting to backend', { tokenLength: currentToken.length });
+        await postDeviceTokenToBackend(currentToken, user);
+      } else {
+        debugError('STEP 6 FAILED: No FCM token received or cached', new Error('FCM token unavailable'), { 
+          userId: user?.id,
+          listenerCalled,
+        });
+      }
+
+      registrationCompleted = true;
+      debugLog('===== PUSH REGISTRATION COMPLETE =====', { userId: user?.id, success: !!currentToken });
+      return registrationHandler;
+    } catch (error) {
+      debugError('PUSH REGISTRATION EXCEPTION', error, { 
+        userId: user?.id,
+        errorType: error.constructor.name,
+        stack: error.stack,
+      });
+      return null;
     }
-
-    registrationCompleted = true;
-    return registrationHandler;
   })();
 
   try {
     return await registrationInFlight;
   } catch (error) {
-    console.error('[push] Push registration failed', error);
+    debugError('Registration promise rejected', error);
     return null;
   } finally {
     registrationInFlight = null;
@@ -151,35 +229,42 @@ export const refreshPushToken = async (oldToken, newToken) => {
   try {
     await apiClient.post('/device/refresh-token/', { old_token: oldToken, new_token: newToken });
   } catch (error) {
-    console.error('Token refresh failed', error);
+    debugError('Token refresh failed', error);
   }
 };
 
 export const unregisterPushNotifications = async (token) => {
   if (!isAndroidPlatform()) return;
+  debugLog('Unregistering device token');
   try {
     if (token) {
       await apiClient.post('/device/unregister/', { device_token: token });
+      debugLog('Device token unregistered successfully');
     }
   } catch (error) {
-    console.error('Push unregistration failed', error);
+    debugError('Push unregistration failed', error);
   }
 };
 
 export const setupPushNotificationHandlers = async () => {
-  if (!isAndroidPlatform()) return;
+  if (!isAndroidPlatform()) {
+    debugLog('Skipping handler setup: not Android');
+    return;
+  }
   if (listenersInitialized) {
-    logContext('Push notification handlers are already initialized');
+    debugLog('Handlers already initialized');
     return;
   }
 
   try {
+    debugLog('Setting up registrationError handler');
     await PushNotifications.addListener('registrationError', (error) => {
-      console.error('[push] Registration error', error);
+      debugError('>>> REGISTRATION ERROR LISTENER <<<', error, { errorData: error });
     });
 
+    debugLog('Setting up pushNotificationReceived handler');
     await PushNotifications.addListener('pushNotificationReceived', (notification) => {
-      console.log('[push] Foreground notification received', notification);
+      debugLog('Foreground notification received', notification);
       LocalNotifications.schedule({
         notifications: [
           {
@@ -193,12 +278,14 @@ export const setupPushNotificationHandlers = async () => {
       });
     });
 
+    debugLog('Setting up pushNotificationActionPerformed handler');
     await PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
-      console.log('[push] Notification action performed', action);
+      debugLog('Notification action performed', action);
     });
 
     listenersInitialized = true;
+    debugLog('All push handlers initialized successfully');
   } catch (error) {
-    console.error('[push] Push handler setup failed', error);
+    debugError('Push handler setup failed', error);
   }
 };

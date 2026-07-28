@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authApi } from '../api/authApi';
-import { registerPushNotifications, requestPushPermissions, resetPushRegistrationState, unregisterPushNotifications } from '../utils/pushNotifications';
+import { registerPushNotifications, resetPushRegistrationState, unregisterPushNotifications } from '../utils/pushNotifications';
 
 const AuthContext = createContext();
 
@@ -106,19 +106,21 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const initializePushRegistration = async () => {
-      if (!token || !user) return;
+      if (!token || !user) {
+        console.log('[auth-push] Skipping push init: missing token or user', { tokenExists: !!token, userExists: !!user });
+        return;
+      }
 
-      console.log('[auth] Auth state ready, starting push registration', { userId: user?.id, tokenPresent: !!token });
+      console.log('[auth-push] ===== AUTH STATE CHANGED - TRIGGERING PUSH REGISTRATION =====', { 
+        userId: user?.id, 
+        tokenLength: token?.length,
+        timestamp: new Date().toISOString(),
+      });
+
       try {
-        const permission = await requestPushPermissions();
-        if (!permission?.granted) {
-          console.warn('[auth] Push permission not granted; skipping registration');
-          return;
-        }
-
         await registerPushNotifications(user, token);
       } catch (pushError) {
-        console.error('[auth] Push registration failed during auth initialization', pushError);
+        console.error('[auth-push] Push registration failed during auth initialization', pushError);
       }
     };
 
