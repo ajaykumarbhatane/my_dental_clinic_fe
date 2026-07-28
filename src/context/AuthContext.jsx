@@ -106,14 +106,21 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const initializePushRegistration = async () => {
+      console.log('[auth] useEffect triggered: token or user changed', { 
+        tokenExists: !!token, 
+        userExists: !!user,
+        userId: user?.id,
+      });
+
       if (!token || !user) {
         console.log('[auth] Skipping device registration: missing token or user', { tokenExists: !!token, userExists: !!user });
         return;
       }
 
-      console.log('[auth] Login success - attempting device registration', { userId: user?.id });
+      console.log('[auth] ✓ Both token and user present, calling registerDeviceToken', { userId: user?.id });
       try {
         await registerDeviceToken(user, token);
+        console.log('[auth] ✓ Device registration completed');
       } catch (error) {
         console.error('[auth] Device registration failed', error);
       }
@@ -132,11 +139,12 @@ export const AuthProvider = ({ children }) => {
       StorageHelper.setToken(newToken);
       StorageHelper.setUser(userData);
 
-      // Update state
+      // Update state - this will trigger useEffect
+      console.log('[auth] Setting token and user state', { userId: userData?.id, hasToken: !!newToken });
       setToken(newToken);
       setUser(userData);
 
-      console.log('[auth] Login success; token and user stored');
+      console.log('[auth] ✓ Login success; state updated and useEffect should trigger');
       return { success: true };
     } catch (error) {
       console.error('Login error:', error);

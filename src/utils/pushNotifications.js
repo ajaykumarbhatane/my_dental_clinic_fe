@@ -4,7 +4,6 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 import apiClient from '../api/apiClient';
 
 const DEVICE_TOKEN_STORAGE_KEY = 'fcm_device_token';
-let registrationAttempted = false;
 
 const log = (msg, data = {}) => console.log(`[DEVICE_REG] ${msg}`, data);
 const err = (msg, error, data = {}) => console.error(`[DEVICE_REG_ERROR] ${msg}`, error, data);
@@ -25,12 +24,6 @@ export const registerDeviceToken = async (user, authToken) => {
     return null;
   }
 
-  if (registrationAttempted) {
-    log('SKIP: registration already attempted this session');
-    return null;
-  }
-
-  registrationAttempted = true;
   const platform = getDevicePlatform();
   
   log('START: Device token registration', { userId: user?.id, platform });
