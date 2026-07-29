@@ -55,6 +55,8 @@ const TreatmentDetail = () => {
   const [uploadWarning, setUploadWarning] = useState('');
   const [compressionInfo, setCompressionInfo] = useState('');
   const [previewImageUrl, setPreviewImageUrl] = useState(null);
+  const [highlightedVisitId, setHighlightedVisitId] = useState(null);
+  const [scrollTargetVisitId, setScrollTargetVisitId] = useState(null);
 
   const [visitFormData, setVisitFormData] = useState({
     next_visit_date: '',
@@ -107,6 +109,29 @@ const TreatmentDetail = () => {
     const res = await visitsApi.getByTreatment(id);
     setVisits(res.data?.results || res.data || []);
   };
+
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const visitId = queryParams.get('visit_id');
+    if (visitId) {
+      const normalizedId = Number(visitId);
+      if (!Number.isNaN(normalizedId)) {
+        setHighlightedVisitId(normalizedId);
+        setScrollTargetVisitId(normalizedId);
+        setExpandedVisits((prev) => (prev.includes(normalizedId) ? prev : [...prev, normalizedId]));
+      }
+    }
+  }, [location.search]);
+
+  useEffect(() => {
+    if (scrollTargetVisitId && visits.length > 0) {
+      const element = document.getElementById(`visit-${scrollTargetVisitId}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setScrollTargetVisitId(null);
+      }
+    }
+  }, [scrollTargetVisitId, visits]);
 
   const toggleVisitExpanded = (visitId) => {
     setExpandedVisits((prev) =>
@@ -696,9 +721,12 @@ const TreatmentDetail = () => {
         </div>
 
 
-        {visits.map((visit) => (
-          <div key={visit.id} className="mb-6 border-l-2 border-transparent hover:border-blue-400 pl-4 relative group">
- 
+        {visits.map((visit, index) => (
+          <div
+            id={`visit-${visit.id}`}
+            key={visit.id}
+            className={`mb-6 border-l-2 border-transparent hover:border-blue-400 pl-4 relative group ${visit.id === highlightedVisitId ? 'ring-2 ring-blue-500 bg-blue-50' : ''}`}
+          >
             <div className="absolute left-[-6px] top-2 w-3 h-3 bg-blue-600 rounded-full"></div>
  
             <div
@@ -707,10 +735,10 @@ const TreatmentDetail = () => {
             >
 
               <div className="flex justify-between">
-                <div className="flex flex-col">
+                <div className="flex flex-col gap-1">
                   <div className="flex gap-2 items-center">
                     <Calendar className="w-4 h-4 text-blue-600" />
-                    <span className="font-medium">Next Visit: {formatDate(visit.next_visit_date)}</span>
+                    <span className="font-medium">Visit {index + 1}: {formatDate(visit.next_visit_date)}</span>
                   </div>
                   <div className="text-xs text-gray-500">Created: {formatDate(visit.created_at)}</div>
                 </div>

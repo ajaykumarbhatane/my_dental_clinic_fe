@@ -28,6 +28,27 @@ const isNativeAndroid = () => {
   }
 };
 
+const ensureAppointmentChannel = async () => {
+  if (!isNativeAndroid()) {
+    return;
+  }
+
+  try {
+    await LocalNotifications.createChannel({
+      id: 'appointments',
+      name: 'Appointment Reminders',
+      description: 'Appointment reminder notifications and quick actions.',
+      importance: 4,
+      sound: 'default',
+      lights: true,
+      vibration: true,
+    });
+    log('ANDROID: Appointment notification channel ensured');
+  } catch (error) {
+    console.warn('ANDROID: Failed to create appointments notification channel', error);
+  }
+};
+
 const waitForRegistration = async () => {
   let registrationHandle = null;
   let errorHandle = null;
@@ -100,6 +121,7 @@ export const registerDeviceToken = async (user, authToken) => {
         log('ANDROID: Using cached device token before registration', { cachedTokenLength: cachedToken.length });
       }
 
+      await ensureAppointmentChannel();
       step(7, 'Attaching registration event handlers');
       const registrationPromise = waitForRegistration();
 

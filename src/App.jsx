@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
 import { App as CapacitorApp } from '@capacitor/app';
+import { PushNotifications } from '@capacitor/push-notifications';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 import NotificationContainer from './components/NotificationContainer';
@@ -46,6 +47,67 @@ const NativeBackHandler = () => {
       listener?.remove();
     };
   }, [navigate, location.key]);
+
+  return null;
+};
+
+const DeepLinkHandler = () => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) {
+      return undefined;
+    }
+
+    const handleAppUrlOpen = (event) => {
+      try {
+        const url = new URL(event.url);
+        if (url.protocol !== 'mydentalclinicpro:' || url.hostname !== 'app') {
+          return;
+        }
+
+        if (url.pathname.startsWith('/treatments/')) {
+          const treatmentId = url.pathname.split('/')[2];
+          const visitId = url.searchParams.get('visit_id');
+          const targetPath = `/app/treatments/${treatmentId}${visitId ? `?visit_id=${visitId}` : ''}`;
+          navigate(targetPath, { replace: true });
+        }
+      } catch (error) {
+        console.warn('Failed to handle deep link', error, { url: event.url });
+      }
+    };
+
+    const handleNotificationAction = (event) => {
+      const rawData = event?.notification?.data || event?.data || {};
+      const deepLink = rawData?.deep_link || rawData?.url || rawData?.deepLink;
+      if (!deepLink) {
+        return;
+      }
+
+      try {
+        const url = new URL(deepLink);
+        if (url.protocol !== 'mydentalclinicpro:' || url.hostname !== 'app') {
+          return;
+        }
+
+        if (url.pathname.startsWith('/treatments/')) {
+          const treatmentId = url.pathname.split('/')[2];
+          const visitId = url.searchParams.get('visit_id');
+          const targetPath = `/app/treatments/${treatmentId}${visitId ? `?visit_id=${visitId}` : ''}`;
+          navigate(targetPath, { replace: true });
+        }
+      } catch (error) {
+        console.warn('Failed to handle notification action deep link', error, { deepLink });
+      }
+    };
+
+    const listener = CapacitorApp.addListener('appUrlOpen', handleAppUrlOpen);
+    const actionListener = PushNotifications.addListener('pushNotificationActionPerformed', handleNotificationAction);
+    return () => {
+      listener?.remove();
+      actionListener?.remove();
+    };
+  }, [navigate]);
 
   return null;
 };
@@ -101,6 +163,7 @@ const AppRoutes = () => {
                   <Route path="settings" element={<Settings />} />
                   <Route path="*" element={<Navigate to="" replace />} />
                 </Routes>
+                <DeepLinkHandler />
               </DashboardLayout>
             </ProtectedRoute>
           }
