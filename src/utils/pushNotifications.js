@@ -89,9 +89,9 @@ export const registerDeviceToken = async (user, authToken) => {
       step(4, 'Push notification permission response', { permission });
 
       const granted = permission?.receive?.granted === true || permission?.granted === true;
-      if (!granted) {
-        step(5, 'Android push permission not granted', { permission });
-        return null;
+      if (permission.receive !== "granted") {
+          step(5, "Permission denied");
+          return;
       }
 
       step(6, 'Push permission granted; preparing registration');
