@@ -31,6 +31,8 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    console.log('[login] submit clicked', { email, isOnline });
     
     // Mobile connectivity check
     if (!isOnline) {

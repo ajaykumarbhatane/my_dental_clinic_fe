@@ -109,10 +109,29 @@ const retryAsync = async (fn, maxRetries = 3, delay = 1000, backoff = 2) => {
   throw lastError;
 };
 
-// // console.log("API BASE URL:", import.meta.env.VITE_API_BASE_URL);
+const ENV_API_BASE_URL = "https://mydentalclinicpro.com/api";
+// const ENV_API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+
+const BASE_URL = ENV_API_BASE_URL;
+
+if (!ENV_API_BASE_URL) {
+  console.warn('[api] VITE_API_BASE_URL is not set. Falling back to default API URL.', {
+    mode: import.meta.env.MODE,
+    defaultBaseUrl: DEFAULT_API_BASE_URL,
+    envValue: ENV_API_BASE_URL || null,
+    hint: 'For physical Android device testing against local backend, set VITE_API_BASE_URL to your machine LAN IP in .env or .env.development.',
+  });
+}
+
+console.log('[api] Using baseURL:', BASE_URL, {
+  source: ENV_API_BASE_URL ? 'env' : 'default',
+  envValue: ENV_API_BASE_URL || null,
+  mode: import.meta.env.MODE,
+});
 
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL, // "https://mydentalclinicpro.com/api"  // 'http://127.0.0.1:8000/api',  for local development
+  baseURL: BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -167,7 +186,14 @@ apiClient.interceptors.request.use(
 
 // Add response interceptor to handle auth errors and network issues
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('[api] Response', {
+      url: response.config?.url,
+      status: response.status,
+      baseURL: response.config?.baseURL,
+    });
+    return response;
+  },
   (error) => {
     // Attach error category to the error object
     const errorInfo = categorizeError(error);
@@ -175,12 +201,24 @@ apiClient.interceptors.response.use(
     error.userMessage = errorInfo.message;
     error.details = errorInfo.details;
     error.isRetryable = errorInfo.isRetryable;
-    
-    // Check for CORS errors or network issues common on mobile
+
+    const requestUrl = error.config?.url || 'unknown';
+    const requestBase = error.config?.baseURL || BASE_URL;
+    const responseStatus = error.response?.status;
+
+    console.error('[api] Response error', {
+      url: requestUrl,
+      baseURL: requestBase,
+      status: responseStatus,
+      message: error.message,
+      category: errorInfo.category,
+      responseData: error.response?.data,
+    });
+
     if (error.code === 'ECONNABORTED' || error.message === 'Network Error') {
-      console.error('Network error - check mobile connectivity and CORS settings');
+      console.error('[api] Network error - check mobile connectivity, API host and Android cleartext policy.');
     }
-    
+
     if (error.response?.status === 401) {
       // Clear auth data on unauthorized responses and redirect to landing
       try {
@@ -194,7 +232,7 @@ apiClient.interceptors.response.use(
       }
       routeTo('/', { replace: true });
     }
-    
+
     return Promise.reject(error);
   }
 );

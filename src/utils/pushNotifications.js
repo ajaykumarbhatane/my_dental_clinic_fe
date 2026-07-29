@@ -5,10 +5,10 @@ import apiClient from '../api/apiClient';
 
 const DEVICE_TOKEN_STORAGE_KEY = 'fcm_device_token';
 
-const log = (msg, data = {}) => console.log(`[DEVICE_REG] ${msg}`, data);
-const err = (msg, error, data = {}) => console.error(`[DEVICE_REG_ERROR] ${msg}`, error, data);
-
-export const isNativePlatform = () => Capacitor.isNativePlatform();
+const timestamp = () => new Date().toISOString();
+const log = (msg, data = {}) => console.log(`[${timestamp()}][DEVICE_REG] ${msg}`, data);
+const err = (msg, error, data = {}) => console.error(`[${timestamp()}][DEVICE_REG_ERROR] ${msg}`, error, data);
+const step = (number, msg, data = {}) => log(`STEP ${number}: ${msg}`, data);
 
 const getDevicePlatform = () => {
   try {
@@ -18,106 +18,134 @@ const getDevicePlatform = () => {
   }
 };
 
+const isNativeAndroid = () => {
+  try {
+    const platform = getDevicePlatform();
+    const isNative = Capacitor.isNativePlatform?.() ?? false;
+    return isNative && platform === 'android';
+  } catch (e) {
+    return false;
+  }
+};
+
+const waitForRegistration = async () => {
+  let registrationHandle = null;
+  let errorHandle = null;
+
+  return new Promise(async (resolve, reject) => {
+    const cleanup = async () => {
+      try {
+        await registrationHandle?.remove();
+      } catch (e) {
+        console.warn('[DEVICE_REG] cleanup registrationHandle failed', e);
+      }
+      try {
+        await errorHandle?.remove();
+      } catch (e) {
+        console.warn('[DEVICE_REG] cleanup errorHandle failed', e);
+      }
+    };
+
+    try {
+      registrationHandle = await PushNotifications.addListener('registration', (result) => {
+        log('ANDROID: registration event', { result });
+        const token = result?.value;
+        if (!token) {
+          err('ANDROID: registration event returned no token', result);
+          cleanup();
+          return reject(new Error('Push registration returned no token'));
+        }
+        cleanup();
+        resolve(token);
+      });
+
+      errorHandle = await PushNotifications.addListener('registrationError', (error) => {
+        err('ANDROID: registrationError event', error);
+        cleanup();
+        reject(new Error(`Push registration error: ${JSON.stringify(error)}`));
+      });
+    } catch (listenError) {
+      err('ANDROID: Failed to attach PushNotifications listeners', listenError);
+      await cleanup();
+      reject(listenError);
+    }
+  });
+};
+
 export const registerDeviceToken = async (user, authToken) => {
   if (!user || !authToken) {
-    log('SKIP: missing user or authToken', { userId: user?.id, hasToken: !!authToken });
+    step(1, 'SKIP: missing user or authToken', { userId: user?.id, hasToken: !!authToken });
     return null;
   }
 
   const platform = getDevicePlatform();
-  
-  log('START: Device token registration', { userId: user?.id, platform });
+  const nativeAndroid = isNativeAndroid();
+  step(2, 'Beginning device registration', { userId: user?.id, platform, nativeAndroid, PushNotificationsType: typeof PushNotifications });
 
-  // If Android, try to get FCM token from native Capacitor
-  if (platform === 'android') {
+  if (nativeAndroid) {
     try {
-      log('ANDROID: Requesting permissions');
+      step(3, 'Requesting push notification permission on Android');
       const permission = await PushNotifications.requestPermissions();
+      step(4, 'Push notification permission response', { permission });
+
       const granted = permission?.receive?.granted === true || permission?.granted === true;
-      
       if (!granted) {
-        log('ANDROID: Permission denied', { permission });
+        step(5, 'Android push permission not granted', { permission });
         return null;
       }
 
-      log('ANDROID: Permission granted, setting up handlers');
-      
-      // Setup error handler
-      await PushNotifications.addListener('registrationError', (error) => {
-        err('ANDROID: FCM registration error', error);
-      });
-
-      // Setup notification handlers
-      await PushNotifications.addListener('pushNotificationReceived', (notification) => {
-        log('ANDROID: Notification received (foreground)', { title: notification.title });
-        LocalNotifications.schedule({
-          notifications: [{
-            title: notification.title || 'New notification',
-            body: notification.body || 'Update',
-            id: Date.now(),
-            schedule: { at: new Date(Date.now() + 1000), allowWhileIdle: true },
-          }],
-        });
-      });
-
-      // Setup the crucial registration listener
-      let tokenReceived = false;
-      await PushNotifications.addListener('registration', async (result) => {
-        const fcmToken = result?.value;
-        log('ANDROID: Registration listener fired', { hasToken: !!fcmToken, tokenLength: fcmToken?.length });
-        
-        if (!fcmToken) {
-          log('ANDROID: Token is empty in listener');
-          return;
-        }
-
-        tokenReceived = true;
-        localStorage.setItem(DEVICE_TOKEN_STORAGE_KEY, fcmToken);
-        
-        // Post to backend
-        await postTokenToBackend(fcmToken, user, 'android');
-      });
-
-      log('ANDROID: Calling PushNotifications.register()');
-      await PushNotifications.register();
-
-      // Wait for listener to fire
-      await sleep(3000);
-
-      // If listener didn't fire, check cached token
-      if (!tokenReceived) {
-        log('ANDROID: Listener never fired, checking cache');
-        const cachedToken = localStorage.getItem(DEVICE_TOKEN_STORAGE_KEY);
-        if (cachedToken) {
-          log('ANDROID: Found cached token');
-          await postTokenToBackend(cachedToken, user, 'android');
-        } else {
-          err('ANDROID: No token in listener or cache', new Error('FCM token unavailable'));
-        }
+      step(6, 'Push permission granted; preparing registration');
+      const cachedToken = localStorage.getItem(DEVICE_TOKEN_STORAGE_KEY);
+      if (cachedToken) {
+        log('ANDROID: Using cached device token before registration', { cachedTokenLength: cachedToken.length });
       }
 
+      step(7, 'Attaching registration event handlers');
+      const registrationPromise = waitForRegistration();
+
+      step(8, 'Calling PushNotifications.register()');
+      await PushNotifications.register();
+
+      step(9, 'Waiting for FCM token from registration event');
+      const fcmToken = await Promise.race([
+        registrationPromise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('FCM registration timeout after 20 seconds')), 20000)),
+      ]);
+
+      step(10, 'FCM token received', { tokenLength: fcmToken?.length, tokenPreview: fcmToken?.slice(0, 20) });
+      localStorage.setItem(DEVICE_TOKEN_STORAGE_KEY, fcmToken);
+
+      await postTokenToBackend(fcmToken, user, 'android');
       return true;
     } catch (error) {
-      err('ANDROID: Registration failed', error);
+      err('ANDROID: Push registration failed', error);
+
+      // If FCM registration failed, still check for a cached token to avoid losing an already generated token.
+      const fallbackToken = localStorage.getItem(DEVICE_TOKEN_STORAGE_KEY);
+      if (fallbackToken) {
+        step(11, 'Using cached FCM token after registration failure', { fallbackTokenLength: fallbackToken.length });
+        await postTokenToBackend(fallbackToken, user, 'android');
+        return true;
+      }
+
       return null;
     }
-  } else {
-    // For web/testing: generate fake token and post to backend
-    log(`${platform.toUpperCase()}: Not native Android, using fallback token`);
-    const fallbackToken = `${platform}-${user.id}-${Date.now()}`;
-    localStorage.setItem(DEVICE_TOKEN_STORAGE_KEY, fallbackToken);
-    await postTokenToBackend(fallbackToken, user, platform);
-    return true;
   }
+
+  step(12, 'Non-Android platform detected; using web fallback token', { platform });
+  const fallbackToken = `${platform}-${user.id}-${Date.now()}`;
+  localStorage.setItem(DEVICE_TOKEN_STORAGE_KEY, fallbackToken);
+  await postTokenToBackend(fallbackToken, user, platform);
+  return true;
 };
 
 const postTokenToBackend = async (deviceToken, user, platform) => {
   if (!deviceToken) {
-    log('SKIP: Empty device token');
-    return;
+    step(13, 'SKIP: Empty device token');
+    return null;
   }
 
-  log('POSTING to backend', { tokenLength: deviceToken.length, userId: user?.id, platform });
+  step(14, 'Posting device token to backend', { tokenLength: deviceToken.length, userId: user?.id, platform });
 
   try {
     const response = await apiClient.post('/device/register/', {
@@ -127,17 +155,14 @@ const postTokenToBackend = async (deviceToken, user, platform) => {
       device_name: getDevicePlatform(),
     });
 
-    log('✓ BACKEND POST SUCCEEDED', { 
-      status: response?.status, 
-      userId: user?.id,
-      deviceId: response?.data?.id,
-    });
+    step(15, 'Backend registration succeeded', { status: response?.status, userId: user?.id, deviceId: response?.data?.id });
     return response.data;
   } catch (error) {
-    err('✗ BACKEND POST FAILED', error, {
+    err('ANDROID: Backend registration failed', error, {
       status: error.response?.status,
-      message: error.response?.data?.detail || error.message,
+      data: error.response?.data,
       userId: user?.id,
+      deviceTokenPreview: deviceToken?.slice(0, 20),
     });
     return null;
   }
@@ -145,14 +170,11 @@ const postTokenToBackend = async (deviceToken, user, platform) => {
 
 export const unregisterDevice = async (deviceToken) => {
   if (!deviceToken) return;
-  
   try {
     await apiClient.post('/device/unregister/', { device_token: deviceToken });
-    log('Device unregistered');
+    step(16, 'Device unregistered', { tokenPreview: deviceToken.slice(0, 20) });
   } catch (error) {
-    err('Unregister failed', error);
+    err('ANDROID: Unregister failed', error, { tokenPreview: deviceToken?.slice(0, 20) });
   }
 };
-
-const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 

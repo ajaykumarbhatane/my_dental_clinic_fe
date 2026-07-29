@@ -119,8 +119,16 @@ export const AuthProvider = ({ children }) => {
 
       console.log('[auth] ✓ Both token and user present, calling registerDeviceToken', { userId: user?.id });
       try {
-        await registerDeviceToken(user, token);
-        console.log('[auth] ✓ Device registration completed');
+        const registrationResult = await registerDeviceToken(user, token);
+        if (registrationResult) {
+          console.log('[auth] ✓ Device registration completed', { userId: user?.id });
+        } else {
+          console.warn('[auth] ⚠️ Device registration did not complete successfully', {
+            userId: user?.id,
+            tokenPresent: !!token,
+            userPresent: !!user,
+          });
+        }
       } catch (error) {
         console.error('[auth] Device registration failed', error);
       }
