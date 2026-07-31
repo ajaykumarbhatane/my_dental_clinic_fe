@@ -1,11 +1,13 @@
-import { useState, useEffect } from 'react';
-import { Edit, Save, AlertCircle, Check, Plus, Pill, Trash2 } from 'lucide-react';
+import { lazy, Suspense, useState, useEffect } from 'react';
+import { Edit, Save, AlertCircle, Check, Plus, Pill, Trash2, CreditCard } from 'lucide-react';
 import { userApi } from '../api/userApi';
 import { clinicApi } from '../api/clinicApi';
 import { clinicDoctorApi } from '../api/clinicDoctorApi';
 import { prescriptionApi } from '../api/prescriptionApi';
 import ChoiceSelect from '../components/ChoiceSelect';
 import { formatDate } from '../utils/dateUtils';
+
+const SubscriptionDashboard = lazy(() => import('../components/subscriptions/SubscriptionDashboard'));
 
 const InfoRow = ({ label, value }) => (
   <div className="flex items-center gap-3 border-b border-slate-100 py-3 last:border-b-0">
@@ -333,7 +335,8 @@ const ClinicSettings = () => {
   const tabs = [
     { id: 'profile', label: 'Profile', icon: Edit },
     { id: 'clinic_info', label: 'Clinic Information', icon: Edit },
-    { id: 'medicines', label: 'Clinic Medicines', icon: Pill }
+    { id: 'medicines', label: 'Clinic Medicines', icon: Pill },
+    { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard },
   ];
 
   const handleClinicInputChange = (field, value) => {
@@ -436,7 +439,7 @@ const ClinicSettings = () => {
 
       <div className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm">
         <div className="rounded-[24px] bg-slate-100 p-3">
-          <div className="grid grid-cols-2 gap-0">
+          <div className="grid grid-cols-2 gap-0 md:grid-cols-4">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
@@ -474,6 +477,24 @@ const ClinicSettings = () => {
             <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
             <p className="text-sm text-red-700">{error}</p>
           </div>
+        )}
+
+        {activeTab === 'subscriptions' && (
+          <Suspense
+            fallback={(
+              <div className="space-y-8" aria-label="Loading subscriptions">
+                <div className="skeleton h-64 rounded-[28px]" />
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <div className="skeleton h-36 rounded-2xl" />
+                  <div className="skeleton h-36 rounded-2xl" />
+                  <div className="skeleton h-36 rounded-2xl" />
+                  <div className="skeleton h-36 rounded-2xl" />
+                </div>
+              </div>
+            )}
+          >
+            <SubscriptionDashboard />
+          </Suspense>
         )}
 
         {/* Profile Tab */}

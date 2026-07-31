@@ -109,8 +109,9 @@ const retryAsync = async (fn, maxRetries = 3, delay = 1000, backoff = 2) => {
   throw lastError;
 };
 
-const ENV_API_BASE_URL = "https://mydentalclinicpro.com/api";
-// const ENV_API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+// const ENV_API_BASE_URL = "https://mydentalclinicpro.com/api";
+const ENV_API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 
 const BASE_URL = ENV_API_BASE_URL;
