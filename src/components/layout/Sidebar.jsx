@@ -28,7 +28,7 @@ const Sidebar = ({ isOpen, onClose, isExpanded, setIsExpanded }) => {
     { path: '/app/treatments', icon: Stethoscope, label: 'Treatments' },
     { path: '/app/treatment-videos', icon: Film, label: 'Videos' },
     { path: '/app/clinic-settings', icon: Building, label: 'Clinic Settings' },
-    { path: '/app/subscriptions', icon: CreditCard, label: 'Subscriptions' },
+    { path: '/app/subscriptions', icon: CreditCard, label: 'Billing and Subscriptions' },
     { path: '/app/customer-care', icon: Phone, label: 'Support' },
     { path: '/app/settings', icon: Settings, label: 'Settings' },
   ];

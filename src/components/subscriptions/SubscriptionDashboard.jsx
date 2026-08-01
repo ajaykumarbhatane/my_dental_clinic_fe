@@ -39,8 +39,29 @@ const formatCurrency = (value) => {
 const formatDate = (value) => {
   if (!value) return 'Not available';
 
-  const parsedDate = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(parsedDate.getTime())) return 'Not available';
+  let parsedDate = value;
+
+  if (value instanceof Date) {
+    parsedDate = value;
+  } else if (typeof value === 'string') {
+    const trimmedValue = value.trim();
+    const isoMatch = trimmedValue.match(/^\d{4}-\d{2}-\d{2}$/);
+    const dayMonthYearMatch = trimmedValue.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    const dayMonthYearDashMatch = trimmedValue.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+
+    if (isoMatch) {
+      parsedDate = new Date(trimmedValue);
+    } else if (dayMonthYearMatch || dayMonthYearDashMatch) {
+      const [, day, month, year] = dayMonthYearMatch || dayMonthYearDashMatch;
+      parsedDate = new Date(Number(year), Number(month) - 1, Number(day));
+    } else {
+      parsedDate = new Date(trimmedValue);
+    }
+  }
+
+  if (parsedDate instanceof Date && Number.isNaN(parsedDate.getTime())) {
+    return 'Not available';
+  }
 
   return new Intl.DateTimeFormat('en-IN', {
     day: '2-digit',
@@ -100,20 +121,20 @@ const Stat = ({ icon: Icon, label, value, tone = 'blue' }) => {
 const ActiveSubscriptionCard = ({ subscription, onChoosePlan }) => {
   if (!subscription) {
     return (
-      <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-slate-950 via-blue-950 to-cyan-700 p-6 text-white shadow-xl shadow-blue-900/10 sm:p-8">
+      <section className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-slate-950 via-blue-950 to-cyan-700 p-6 text-white shadow-[0_18px_50px_-24px_rgba(29,78,216,0.65)] sm:p-7">
         <div className="relative z-10 max-w-xl">
-          <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/20">
-            <Sparkles size={23} aria-hidden="true" />
+          <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/20">
+            <Sparkles size={21} aria-hidden="true" />
           </div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-cyan-200">Your workspace</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-cyan-200">Current subscription</p>
           <h2 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">No active subscription</h2>
-          <p className="mt-3 max-w-md text-sm leading-6 text-blue-100">
-            Choose a plan to unlock the tools that help your clinic run with less friction.
+          <p className="mt-2 max-w-md text-sm leading-6 text-blue-100">
+            Purchase a plan to unlock the tools that keep your clinic moving.
           </p>
           <button
             type="button"
             onClick={onChoosePlan}
-            className="mt-7 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-blue-900 shadow-lg transition hover:-translate-y-0.5 hover:bg-cyan-50 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-950"
+            className="mt-5 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-blue-900 shadow-lg transition hover:-translate-y-0.5 hover:bg-cyan-50 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-950"
           >
             Choose a plan <ArrowRight size={16} aria-hidden="true" />
           </button>
@@ -129,59 +150,66 @@ const ActiveSubscriptionCard = ({ subscription, onChoosePlan }) => {
   const daysUsed = Number(subscription.days_used || Math.max(totalDays - remainingDays, 0));
   const progress = totalDays ? Math.min(Math.max((daysUsed / totalDays) * 100, 0), 100) : 0;
   const planName = subscription.plan?.name || subscription.current_plan?.name || 'Current plan';
+  const statusLabel = (subscription.status || 'active').toLowerCase() === 'active' ? 'Active' : (subscription.status || 'Active');
 
   return (
-    <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-blue-800 via-blue-700 to-cyan-500 p-6 text-white shadow-xl shadow-blue-700/15 sm:p-8">
+    <section className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-slate-950 via-blue-900 to-cyan-600 p-6 text-white shadow-[0_24px_60px_-28px_rgba(29,78,216,0.7)] sm:p-7">
       <div className="relative z-10">
-        <div className="flex flex-col gap-7 xl:flex-row xl:items-start xl:justify-between">
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_185px] xl:items-start">
           <div>
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold ring-1 ring-white/20">
-                <Crown size={14} aria-hidden="true" /> Current plan
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-2 rounded-full bg-white/12 px-3 py-1 text-[11px] font-semibold tracking-[0.18em] text-white/90 ring-1 ring-white/20">
+                <Crown size={13} aria-hidden="true" /> Current plan
               </span>
-              <span className="rounded-full bg-emerald-400/20 px-3 py-1.5 text-xs font-semibold text-emerald-50 ring-1 ring-emerald-200/20">
-                {subscription.status || 'Active'}
+              <span className="rounded-full bg-emerald-400/20 px-3 py-1 text-[11px] font-semibold text-emerald-50 ring-1 ring-emerald-200/30">
+                {statusLabel}
               </span>
             </div>
-            <h2 className="mt-5 text-3xl font-semibold tracking-tight">{planName}</h2>
-            <p className="mt-2 text-sm text-blue-100">Your clinic workspace is covered through {formatDate(subscription.end_date)}.</p>
+            <h2 className="mt-4 text-3xl font-semibold tracking-tight text-white">{planName}</h2>
+            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-blue-100">
+              <span className="inline-flex items-center gap-2"><CalendarDays size={14} aria-hidden="true" /> Start {formatDate(subscription.start_date)}</span>
+              <span className="inline-flex items-center gap-2"><CalendarDays size={14} aria-hidden="true" /> End {formatDate(subscription.end_date)}</span>
+            </div>
           </div>
-          <div className="rounded-2xl bg-white/10 px-5 py-4 ring-1 ring-white/15 xl:min-w-[180px]">
-            <p className="text-xs text-blue-100">Plan value</p>
-            <p className="mt-1 text-2xl font-semibold">{formatCurrency(subscription.amount)}</p>
+
+          <div className="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/15 backdrop-blur-sm">
+            <p className="text-[11px] uppercase tracking-[0.24em] text-blue-100">Plan value</p>
+            <p className="mt-1 text-2xl font-semibold text-white">{formatCurrency(subscription.amount)}</p>
             <p className="mt-1 text-xs text-blue-100">{subscription.duration_days} days</p>
+            {/* <p className="mt-2 text-xs text-blue-100">End date: {formatDate(subscription.end_date)}</p> */}
           </div>
         </div>
 
-        <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_auto] lg:items-end">
+        <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
           <div>
-            <div className="mb-3 flex items-end justify-between gap-4 text-sm">
-              <span className="font-medium text-blue-50">Plan usage</span>
-              <span className="font-semibold text-white">{daysUsed} / {totalDays} days</span>
+            <div className="mb-2 flex items-center justify-between gap-3 text-sm text-blue-50">
+              <span className="font-medium">Usage</span>
+              <span className="font-semibold text-white">{remainingDays} days remaining</span>
             </div>
             <div
-              className="h-3 overflow-hidden rounded-full bg-blue-950/30 ring-1 ring-white/10"
+              className="h-3.5 overflow-hidden rounded-full bg-white/15 ring-1 ring-white/15"
               role="progressbar"
               aria-label="Subscription time used"
               aria-valuemin="0"
               aria-valuemax={totalDays}
               aria-valuenow={daysUsed}
             >
-              <div className="h-full rounded-full bg-white transition-all duration-700" style={{ width: `${progress}%` }} />
+              <div className="h-full rounded-full bg-gradient-to-r from-cyan-200 to-white transition-all duration-700" style={{ width: `${progress}%` }} />
             </div>
-            <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-xs text-blue-100">
-              <span>{remainingDays} days remaining</span>
-              <span>Expires {formatDate(subscription.end_date)}</span>
-            </div>
+            {/* <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-blue-100">
+              <span>Started {formatDate(subscription.start_date)}</span>
+              <span>Ends {formatDate(subscription.end_date)}</span>
+            </div> */}
           </div>
-          <button
+
+          {/* <button
             type="button"
             disabled
             title="Renewal will be available in a future release"
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/15 px-5 py-3 text-sm font-semibold text-white opacity-75 ring-1 ring-white/20"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/12 px-4 py-2.5 text-sm font-semibold text-white opacity-75 ring-1 ring-white/20"
           >
-            <RefreshCw size={16} aria-hidden="true" /> Renew <span className="text-[10px] uppercase tracking-wider text-blue-100">Coming soon</span>
-          </button>
+            <RefreshCw size={16} aria-hidden="true" /> Renew <span className="text-[10px] uppercase tracking-[0.2em] text-blue-100">Soon</span>
+          </button> */}
         </div>
       </div>
     </section>
@@ -200,16 +228,16 @@ const FeatureGrid = ({ features = [], hasSubscription }) => {
   return (
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       {items.map((feature) => (
-        <div key={feature.code || feature.id || feature.name} className="group rounded-2xl border border-slate-200 bg-white p-4 transition duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-900/5">
-          <div className="flex items-start justify-between gap-3">
+        <div key={feature.code || feature.id || feature.name} className="group rounded-[20px] border border-slate-200 bg-white p-4 transition duration-300 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-900/5">
+          <div className="flex items-center justify-between gap-3">
             <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${feature.available ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
               {feature.available ? <Check size={17} aria-hidden="true" /> : <Lock size={16} aria-hidden="true" />}
             </div>
-            <span className={`text-[10px] font-semibold uppercase tracking-wider ${feature.available ? 'text-emerald-600' : 'text-slate-400'}`}>
+            <span className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${feature.available ? 'text-emerald-600' : 'text-slate-400'}`}>
               {feature.available ? 'Included' : hasSubscription ? 'Not included' : 'Locked'}
             </span>
           </div>
-          <h3 className="mt-5 text-sm font-semibold text-slate-900">{feature.name}</h3>
+          <h3 className="mt-4 text-sm font-semibold text-slate-900">{feature.name}</h3>
           <p className="mt-1 text-xs leading-5 text-slate-500">{feature.description || 'A focused capability for your clinic.'}</p>
         </div>
       ))}
@@ -218,41 +246,40 @@ const FeatureGrid = ({ features = [], hasSubscription }) => {
 };
 
 const PlanFeatureList = ({ features = [] }) => (
-  <ul className="mt-5 space-y-3">
+  <div className="mt-4 flex flex-wrap gap-2">
     {features.length ? features.slice(0, 5).map((feature) => (
-      <li key={feature.id || feature.code || feature.name} className="flex items-start gap-2 text-sm text-slate-600">
-        <Check size={16} className="mt-0.5 shrink-0 text-emerald-500" aria-hidden="true" />
-        <span>{feature.name}</span>
-      </li>
+      <span key={feature.id || feature.code || feature.name} className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+        <Check size={13} aria-hidden="true" /> {feature.name}
+      </span>
     )) : (
-      <li className="text-sm text-slate-400">Feature details coming soon</li>
+      <span className="text-xs text-slate-400">Feature details coming soon</span>
     )}
-  </ul>
+  </div>
 );
 
 const SubscriptionPlanCard = ({ plan, selectedDuration, onDurationChange, onPurchase, purchasing, isCurrentActivePlan, isActivating }) => {
-  const [showFeatures, setShowFeatures] = useState(false);
   const selectedPricing = getPricing(plan, selectedDuration);
   const isFeatured = plan.code === 'pro' || plan.code === 'advance';
-  const buttonLabel = isCurrentActivePlan ? 'Current plan active' : isActivating ? 'Activating...' : 'Choose plan';
+  const buttonLabel = isCurrentActivePlan ? 'Current plan active' : isActivating ? 'Activating...' : 'Purchase plan';
+  const featureBadges = (plan.features || []).slice(0, 4);
 
   return (
-    <article className={`relative flex min-w-[285px] flex-1 flex-col rounded-[26px] border bg-white p-6 transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-900/10 ${isFeatured ? 'border-blue-300 ring-2 ring-blue-100' : 'border-slate-200'}`}>
-      {isFeatured && <span className="absolute right-5 top-5 rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-blue-700">Popular</span>}
+    <article className={`relative flex min-w-[285px] flex-1 flex-col rounded-[24px] border bg-white p-5 transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-24px_rgba(29,78,216,0.55)] ${isFeatured ? 'border-blue-300 ring-2 ring-blue-100' : 'border-slate-200'}`}>
+      {isFeatured && <span className="absolute right-4 top-4 rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-blue-700">Popular</span>}
       <div className="flex items-center gap-3">
-        <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${isFeatured ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
-          {isFeatured ? <Zap size={20} aria-hidden="true" /> : <Package size={19} aria-hidden="true" />}
+        <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${isFeatured ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
+          {isFeatured ? <Zap size={18} aria-hidden="true" /> : <Package size={18} aria-hidden="true" />}
         </div>
         <div>
           <h3 className="font-semibold text-slate-950">{plan.name}</h3>
           <p className="text-xs text-slate-500">{plan.description || 'A considered plan for growing clinics.'}</p>
         </div>
       </div>
-      <div className="mt-7 flex items-end gap-2">
-        <span className="text-4xl font-semibold tracking-tight text-slate-950">{formatCurrency(selectedPricing?.price)}</span>
+      <div className="mt-5 flex items-end gap-2">
+        <span className="text-3xl font-semibold tracking-tight text-slate-950">{formatCurrency(selectedPricing?.price)}</span>
         <span className="pb-1 text-sm text-slate-500">/ {selectedPricing?.duration_days || selectedDuration} days</span>
       </div>
-      <div className="mt-5 flex flex-wrap gap-2" role="radiogroup" aria-label={`${plan.name} duration`}>
+      <div className="mt-4 flex flex-wrap gap-2" role="radiogroup" aria-label={`${plan.name} duration`}>
         {(plan.pricing?.length ? plan.pricing.map((pricing) => Number(pricing.duration_days)) : durationOptions).map((duration) => {
           const available = Boolean(getPricing(plan, duration));
           const selected = Number(selectedDuration) === duration;
@@ -271,22 +298,18 @@ const SubscriptionPlanCard = ({ plan, selectedDuration, onDurationChange, onPurc
           );
         })}
       </div>
-      <div className="mt-5">
-        <button
-          type="button"
-          onClick={() => setShowFeatures((current) => !current)}
-          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-blue-700 transition hover:border-blue-200 hover:bg-blue-50"
-        >
-          {showFeatures ? 'Hide features' : 'View features'}
-          {showFeatures ? <ChevronUp size={14} aria-hidden="true" /> : <ChevronDown size={14} aria-hidden="true" />}
-        </button>
-        {showFeatures && <PlanFeatureList features={plan.features || []} />}
+      <div className="mt-4 flex flex-wrap gap-2">
+        {featureBadges.length ? featureBadges.map((feature) => (
+          <span key={feature.id || feature.code || feature.name} className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700">
+            <Check size={12} aria-hidden="true" /> {feature.name}
+          </span>
+        )) : <span className="text-xs text-slate-400">Feature details coming soon</span>}
       </div>
       <button
         type="button"
         disabled={!selectedPricing || purchasing || isCurrentActivePlan}
         onClick={() => onPurchase(plan, Number(selectedPricing?.duration_days || selectedDuration))}
-        className="mt-7 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-700 to-cyan-500 px-4 py-3 text-sm font-semibold text-white shadow-md transition hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+        className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-700 to-cyan-500 px-4 py-3 text-sm font-semibold text-white shadow-md transition hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {buttonLabel} <ArrowRight size={16} aria-hidden="true" />
       </button>
@@ -294,60 +317,52 @@ const SubscriptionPlanCard = ({ plan, selectedDuration, onDurationChange, onPurc
   );
 };
 
-const SubscriptionHistory = ({ history }) => {
+const SubscriptionHistory = ({ history, showAllHistory = false }) => {
   const [expandedId, setExpandedId] = useState(null);
   if (!history.length) {
     return <EmptyState icon={Clock3} title="No subscription history found" description="Your plan activity will appear here after your first purchase." />;
   }
+
+  const visibleHistory = showAllHistory ? history : history.slice(0, 5);
+
   return (
-    <div className="relative space-y-4 before:absolute before:bottom-5 before:left-[19px] before:top-5 before:w-px before:bg-slate-200 sm:before:left-[23px]">
-      {history.map((item, index) => {
+    <div className="space-y-3">
+      {visibleHistory.map((item, index) => {
         const itemId = item.id || index;
         const expanded = expandedId === itemId;
         return (
-          <article key={itemId} className="relative pl-11 sm:pl-14">
-            <div className="absolute left-2 top-5 flex h-6 w-6 items-center justify-center rounded-full border-4 border-white bg-blue-600 shadow-sm sm:left-2.5" aria-hidden="true">
-              <span className="h-1.5 w-1.5 rounded-full bg-white" />
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 transition hover:border-blue-200 hover:shadow-md">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="font-semibold text-slate-950">{item.plan?.name || 'Subscription'}</h3>
-                    <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${item.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-                      {item.status || 'Expired'}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-sm text-slate-500">{formatCurrency(item.amount)} · {item.duration_days} days</p>
+          <article key={itemId} className="rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm transition duration-300 hover:border-blue-200 hover:shadow-md">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-sm font-semibold text-slate-950">{item.plan?.name || 'Subscription'}</h3>
+                  <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] ${item.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                    {item.status || 'Expired'}
+                  </span>
                 </div>
-                <button type="button" onClick={() => setExpandedId(expanded ? null : itemId)} className="inline-flex items-center gap-2 self-start rounded-lg px-3 py-2 text-xs font-semibold text-blue-700 transition hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  {expanded ? 'Hide details' : 'View details'} {expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-                </button>
-              </div>
-              <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-500">
-                <span className="inline-flex items-center gap-1.5"><CalendarDays size={14} /> {formatDate(item.start_date)}</span>
-                <ArrowRight size={14} className="hidden text-slate-300 sm:block" aria-hidden="true" />
-                <span className="inline-flex items-center gap-1.5"><CalendarDays size={14} /> {formatDate(item.end_date)}</span>
-              </div>
-              {expanded && (
-                <div className="mt-5 grid gap-3 border-t border-slate-100 pt-5 sm:grid-cols-2 xl:grid-cols-4">
-                  <div><p className="text-xs text-slate-400">Start date</p><p className="mt-1 text-sm font-semibold text-slate-800">{formatDate(item.start_date)}</p></div>
-                  <div><p className="text-xs text-slate-400">End date</p><p className="mt-1 text-sm font-semibold text-slate-800">{formatDate(item.end_date)}</p></div>
-                  <div><p className="text-xs text-slate-400">Amount</p><p className="mt-1 text-sm font-semibold text-slate-800">{formatCurrency(item.amount)}</p></div>
-                  <div><p className="text-xs text-slate-400">Duration</p><p className="mt-1 text-sm font-semibold text-slate-800">{item.duration_days} days</p></div>
-                  <div className="sm:col-span-2 xl:col-span-4">
-                    <p className="text-xs text-slate-400">Features</p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {(item.features || []).length ? (item.features || []).map((feature) => (
-                        <span key={feature.id || feature.code || feature.name} className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-                          {feature.name}
-                        </span>
-                      )) : <span className="text-sm text-slate-500">No feature details</span>}
-                    </div>
-                  </div>
+                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
+                  <span>{formatCurrency(item.amount)}</span>
+                  <span>·</span>
+                  <span>{item.duration_days} days</span>
+                  <span>·</span>
+                  <span>Start {formatDate(item.start_date)}</span>
+                  <span>·</span>
+                  <span>End {formatDate(item.end_date)}</span>
                 </div>
-              )}
+              </div>
+              <button type="button" onClick={() => setExpandedId(expanded ? null : itemId)} className="inline-flex items-center gap-2 self-start rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-blue-700 transition hover:border-blue-200 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {expanded ? 'Hide details' : 'View details'} {expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+              </button>
             </div>
+            {expanded && (
+              <div className="mt-4 grid gap-3 border-t border-slate-100 pt-4 sm:grid-cols-2 xl:grid-cols-4">
+                <div><p className="text-xs text-slate-400">Start date</p><p className="mt-1 text-sm font-semibold text-slate-800">{formatDate(item.start_date)}</p></div>
+                <div><p className="text-xs text-slate-400">End date</p><p className="mt-1 text-sm font-semibold text-slate-800">{formatDate(item.end_date)}</p></div>
+                <div><p className="text-xs text-slate-400">Amount</p><p className="mt-1 text-sm font-semibold text-slate-800">{formatCurrency(item.amount)}</p></div>
+                <div><p className="text-xs text-slate-400">Duration</p><p className="mt-1 text-sm font-semibold text-slate-800">{item.duration_days} days</p></div>
+                <div className="sm:col-span-2 xl:col-span-4"><p className="text-xs text-slate-400">Features</p><div className="mt-2 flex flex-wrap gap-2">{(item.features || []).length ? (item.features || []).map((feature) => <span key={feature.id || feature.code || feature.name} className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">{feature.name}</span>) : <span className="text-sm text-slate-500">No feature details</span>}</div></div>
+              </div>
+            )}
           </article>
         );
       })}
@@ -357,20 +372,29 @@ const SubscriptionHistory = ({ history }) => {
 
 const SubscriptionStats = ({ current, history }) => {
   const totalSpent = history.reduce((total, item) => total + Number(item.amount || 0), 0);
+  const stats = [
+    { icon: Crown, label: 'Current plan', value: current?.plan?.name || current?.current_plan?.name || 'None', tone: 'cyan' },
+    { icon: CalendarDays, label: 'Active since', value: current?.start_date ? formatDate(current.start_date) : 'Not active', tone: 'slate' },
+    { icon: CreditCard, label: 'Subscriptions purchased', value: history.length, tone: 'blue' },
+    { icon: Wallet, label: 'Total money spent', value: formatCurrency(totalSpent), tone: 'green' },
+  ];
+
   return (
-    <aside className="rounded-[26px] border border-slate-200 bg-slate-50/80 p-5">
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-blue-700 shadow-sm"><BarChart3 size={18} /></div>
-        <div><p className="text-sm font-semibold text-slate-950">Account snapshot</p><p className="text-xs text-slate-500">A quick view of your plan history</p></div>
-      </div>
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-        <Stat icon={CreditCard} label="Subscriptions purchased" value={history.length} tone="blue" />
-        <Stat icon={Crown} label="Current plan" value={current?.plan?.name || current?.current_plan?.name || 'None'} tone="cyan" />
-        <Stat icon={CalendarDays} label="Active since" value={current?.start_date ? formatDate(current.start_date) : 'Not active'} tone="slate" />
-        <Stat icon={Wallet} label="Total money spent" value={formatCurrency(totalSpent)} tone="green" />
-        <Stat icon={Users} label="Current status" value={current?.status || 'No active plan'} tone="slate" />
-      </div>
-    </aside>
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      {stats.map((stat) => (
+        <div key={stat.label} className="rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-md">
+          <div className="flex items-center gap-3">
+            <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${stat.tone === 'blue' ? 'bg-blue-50 text-blue-700' : stat.tone === 'cyan' ? 'bg-cyan-50 text-cyan-700' : stat.tone === 'green' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-700'}`}>
+              <stat.icon size={17} aria-hidden="true" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">{stat.label}</p>
+              <p className="mt-1 truncate text-sm font-semibold text-slate-900">{stat.value}</p>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
   );
 };
 
@@ -435,6 +459,7 @@ const SubscriptionDashboard = () => {
   const [notice, setNotice] = useState(null);
   const [pendingPlan, setPendingPlan] = useState(null);
   const [activatingPlanId, setActivatingPlanId] = useState(null);
+  const [showAllHistory, setShowAllHistory] = useState(false);
 
   const loadSubscriptions = useCallback(async () => {
     setLoading(true);
@@ -540,29 +565,37 @@ const SubscriptionDashboard = () => {
         />
       )}
 
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+      {/* <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div><p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-blue-600">BILLING & ACCESS</p><h2 className="mt-1.5 text-2xl font-semibold tracking-tight text-slate-950">Subscriptions</h2><p className="mt-1 max-w-2xl text-sm text-slate-500">Choose the tools your clinic needs, with a clear view of usage and plan history.</p></div>
         <button type="button" onClick={loadSubscriptions} className="inline-flex items-center gap-2 self-start rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"><RefreshCw size={15} /> Refresh</button>
-      </div>
+      </div> */}
 
       <div id="subscription-current"><ActiveSubscriptionCard subscription={current} onChoosePlan={() => document.getElementById('subscription-plans')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} /></div>
 
       <section>
-        <SectionHeading eyebrow="Included with your plan" title="Features" description="Everything your current subscription makes available to your clinic." />
-        <div className="mt-4"><FeatureGrid features={activeFeatures} hasSubscription={Boolean(current)} /></div>
+        <SubscriptionStats current={current} history={history} />
       </section>
 
       <section id="subscription-plans">
-        <SectionHeading eyebrow="Find the right fit" title="Available plans" description="Switch between durations to see the exact price before activating a plan." />
+        <SectionHeading title="Available Plans" />
         {plans.length ? <div className="mt-4 flex gap-5 overflow-x-auto pb-2 lg:grid lg:grid-cols-3 lg:overflow-visible">{plans.map((plan) => <SubscriptionPlanCard key={plan.id} plan={plan} selectedDuration={selectedDurations[plan.id] || getSelectedDuration(plan)} onDurationChange={(duration) => setSelectedDurations((previous) => ({ ...previous, [plan.id]: duration }))} onPurchase={handlePurchase} purchasing={Boolean(purchasingKey)} isCurrentActivePlan={current?.status === 'active' && (current?.plan?.id || current?.current_plan?.id) === plan.id} isActivating={activatingPlanId === plan.id} />)}</div> : <div className="mt-4"><EmptyState icon={Package} title="No plans available" description="Subscription plans will appear here when they are available for your clinic." /></div>}
       </section>
 
       <section>
-        <SectionHeading eyebrow="Your account" title="Subscription history" description="A transparent timeline of plans purchased by your clinic." />
-        <div className="mt-4 grid gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
-          <SubscriptionHistory history={history} />
-          <SubscriptionStats current={current} history={history} />
-        </div>
+        <SectionHeading title="Current Plan Features"/>
+        <div className="mt-4"><FeatureGrid features={activeFeatures} hasSubscription={Boolean(current)} /></div>
+      </section>
+
+      <section>
+        <SectionHeading title="Subscription history"/>
+        <div className="mt-4"><SubscriptionHistory history={history} showAllHistory={showAllHistory} /></div>
+        {history.length > 5 && (
+          <div className="mt-4 flex justify-center">
+            <button type="button" onClick={() => setShowAllHistory((current) => !current)} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              {showAllHistory ? 'Show latest 5' : 'View all history'} <ChevronDown size={15} aria-hidden="true" />
+            </button>
+          </div>
+        )}
       </section>
     </div>
   );
