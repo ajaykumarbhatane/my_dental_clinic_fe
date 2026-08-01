@@ -1,9 +1,10 @@
-import { Menu, User, LogOut, ChevronDown, Bell } from 'lucide-react';
+import { Menu, User, LogOut, ChevronDown, Bell, Sparkles } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import { clinicApi } from '../../api/clinicApi';
 import { visitApi } from '../../api/visitApi';
+import { subscriptionService } from '../../api/subscriptionService';
 
 const Header = ({ onMenuClick }) => {
   const { user, logout } = useAuth();
@@ -11,11 +12,10 @@ const Header = ({ onMenuClick }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showReminders, setShowReminders] = useState(false);
   const [clinicName, setClinicName] = useState('');
+  const [currentPlanName, setCurrentPlanName] = useState('');
   const [reminders, setReminders] = useState([]);
   const dropdownRef = useRef(null);
   const reminderRef = useRef(null);
-
-
 
   // Close dropdown outside click
   useEffect(() => {
@@ -91,6 +91,28 @@ const Header = ({ onMenuClick }) => {
     resolveClinicName();
   }, [user]);
 
+  useEffect(() => {
+    const loadCurrentPlan = async () => {
+      if (!user) {
+        setCurrentPlanName('');
+        return;
+      }
+
+      try {
+        const response = await subscriptionService.getCurrentSubscription();
+        const planName = response?.data?.plan?.name || '';
+        setCurrentPlanName(planName);
+      } catch (error) {
+        if (error?.response?.status !== 404) {
+          console.warn('Could not load current plan:', error);
+        }
+        setCurrentPlanName('');
+      }
+    };
+
+    loadCurrentPlan();
+  }, [user]);
+
   const getTodayLocalDate = () => {
     const now = new Date();
     const year = now.getFullYear();
@@ -123,11 +145,7 @@ const Header = ({ onMenuClick }) => {
   return (
     <header className="fixed top-0 left-0 right-0 h-14 md:h-16 z-50 bg-white border-b border-gray-200 shadow-sm">
       <div className="h-full w-full max-w-full px-3 sm:px-4 md:px-6 flex items-center justify-between gap-2 overflow-visible">
-
-        {/* Left Section */}
         <div className="flex items-center gap-2 sm:gap-3">
-
-          {/* Mobile Menu Button */}
           <button
             onClick={onMenuClick}
             className="p-2 rounded-lg bg-gray-100 hover-common text-gray-600 hover:bg-gray-200 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -136,37 +154,21 @@ const Header = ({ onMenuClick }) => {
             <Menu className="w-5 h-5" />
           </button>
 
-          {/* Clinic Info */}
-          <div className="relative min-w-0 max-w-[55vw] sm:max-w-[220px] group">
-            <p className="text-xs text-gray-500">Welcome to,</p>
+          <div className="relative min-w-0 max-w-[55vw] sm:max-w-[260px] group">
+            <div className="flex items-center gap-2">
+              <div className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-700">
+                Welcome
+              </div>
+              <p className="truncate text-sm font-semibold text-slate-900">{getUserClinicName()}</p>
+            </div>
+            {currentPlanName && (
+              <div className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm">
+                <Sparkles size={12} aria-hidden="true" />
+                {currentPlanName}
+              </div>
+            )}
 
-            <p className="truncate text-sm font-semibold text-gray-900">
-              {getUserClinicName()}
-            </p>
-
-            <div
-              className="
-                invisible
-                absolute
-                top-full
-                left-0
-                mt-2
-                z-50
-                rounded-lg
-                bg-slate-900
-                px-3
-                py-2
-                text-xs
-                text-white
-                opacity-0
-                shadow-xl
-                transition-all
-                duration-200
-                whitespace-nowrap
-                group-hover:visible
-                group-hover:opacity-100
-              "
-            >
+            <div className="invisible absolute top-full left-0 mt-2 z-50 rounded-lg bg-slate-900 px-3 py-2 text-xs text-white opacity-0 shadow-xl transition-all duration-200 whitespace-nowrap group-hover:visible group-hover:opacity-100">
               {getUserClinicName()}
             </div>
           </div>

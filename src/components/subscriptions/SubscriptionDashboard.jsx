@@ -69,10 +69,10 @@ const SkeletonBlock = ({ className = '' }) => (
 );
 
 const SectionHeading = ({ eyebrow, title, description, action }) => (
-  <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+  <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
     <div>
       <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-blue-600">{eyebrow}</p>
-      <h2 className="mt-2 text-xl font-semibold tracking-tight text-slate-950">{title}</h2>
+      <h2 className="mt-1.5 text-xl font-semibold tracking-tight text-slate-950">{title}</h2>
       {description && <p className="mt-1 max-w-2xl text-sm text-slate-500">{description}</p>}
     </div>
     {action}
@@ -230,9 +230,12 @@ const PlanFeatureList = ({ features = [] }) => (
   </ul>
 );
 
-const SubscriptionPlanCard = ({ plan, selectedDuration, onDurationChange, onPurchase, purchasing }) => {
+const SubscriptionPlanCard = ({ plan, selectedDuration, onDurationChange, onPurchase, purchasing, isCurrentActivePlan, isActivating }) => {
+  const [showFeatures, setShowFeatures] = useState(false);
   const selectedPricing = getPricing(plan, selectedDuration);
   const isFeatured = plan.code === 'pro' || plan.code === 'advance';
+  const buttonLabel = isCurrentActivePlan ? 'Current plan active' : isActivating ? 'Activating...' : 'Choose plan';
+
   return (
     <article className={`relative flex min-w-[285px] flex-1 flex-col rounded-[26px] border bg-white p-6 transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-900/10 ${isFeatured ? 'border-blue-300 ring-2 ring-blue-100' : 'border-slate-200'}`}>
       {isFeatured && <span className="absolute right-5 top-5 rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-blue-700">Popular</span>}
@@ -268,14 +271,24 @@ const SubscriptionPlanCard = ({ plan, selectedDuration, onDurationChange, onPurc
           );
         })}
       </div>
-      <PlanFeatureList features={plan.features || []} />
+      <div className="mt-5">
+        <button
+          type="button"
+          onClick={() => setShowFeatures((current) => !current)}
+          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-blue-700 transition hover:border-blue-200 hover:bg-blue-50"
+        >
+          {showFeatures ? 'Hide features' : 'View features'}
+          {showFeatures ? <ChevronUp size={14} aria-hidden="true" /> : <ChevronDown size={14} aria-hidden="true" />}
+        </button>
+        {showFeatures && <PlanFeatureList features={plan.features || []} />}
+      </div>
       <button
         type="button"
-        disabled={!selectedPricing || purchasing}
+        disabled={!selectedPricing || purchasing || isCurrentActivePlan}
         onClick={() => onPurchase(plan, Number(selectedPricing?.duration_days || selectedDuration))}
         className="mt-7 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-700 to-cyan-500 px-4 py-3 text-sm font-semibold text-white shadow-md transition hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {purchasing ? 'Activating...' : 'Choose plan'} <ArrowRight size={16} aria-hidden="true" />
+        {buttonLabel} <ArrowRight size={16} aria-hidden="true" />
       </button>
     </article>
   );
@@ -317,10 +330,21 @@ const SubscriptionHistory = ({ history }) => {
                 <span className="inline-flex items-center gap-1.5"><CalendarDays size={14} /> {formatDate(item.end_date)}</span>
               </div>
               {expanded && (
-                <div className="mt-5 grid gap-3 border-t border-slate-100 pt-5 sm:grid-cols-3">
+                <div className="mt-5 grid gap-3 border-t border-slate-100 pt-5 sm:grid-cols-2 xl:grid-cols-4">
+                  <div><p className="text-xs text-slate-400">Start date</p><p className="mt-1 text-sm font-semibold text-slate-800">{formatDate(item.start_date)}</p></div>
+                  <div><p className="text-xs text-slate-400">End date</p><p className="mt-1 text-sm font-semibold text-slate-800">{formatDate(item.end_date)}</p></div>
                   <div><p className="text-xs text-slate-400">Amount</p><p className="mt-1 text-sm font-semibold text-slate-800">{formatCurrency(item.amount)}</p></div>
                   <div><p className="text-xs text-slate-400">Duration</p><p className="mt-1 text-sm font-semibold text-slate-800">{item.duration_days} days</p></div>
-                  <div><p className="text-xs text-slate-400">Features</p><p className="mt-1 text-sm font-semibold text-slate-800">{(item.features || []).length || 0} included</p></div>
+                  <div className="sm:col-span-2 xl:col-span-4">
+                    <p className="text-xs text-slate-400">Features</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {(item.features || []).length ? (item.features || []).map((feature) => (
+                        <span key={feature.id || feature.code || feature.name} className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                          {feature.name}
+                        </span>
+                      )) : <span className="text-sm text-slate-500">No feature details</span>}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -351,11 +375,44 @@ const SubscriptionStats = ({ current, history }) => {
 };
 
 const EmptyState = ({ icon: Icon = Package, title, description, action }) => (
-  <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 px-6 py-10 text-center">
+  <div className="rounded-[24px] border border-dashed border-slate-300 bg-slate-50/70 px-6 py-10 text-center">
     <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-sm"><Icon size={21} /></div>
     <h3 className="mt-4 text-sm font-semibold text-slate-900">{title}</h3>
     <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-500">{description}</p>
     {action}
+  </div>
+);
+
+const ConfirmPlanModal = ({ plan, duration, onCancel, onConfirm, submitting }) => (
+  <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/45 p-4">
+    <div className="w-full max-w-lg rounded-[28px] border border-slate-200 bg-white p-6 shadow-2xl">
+      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-700">
+        <CreditCard size={20} aria-hidden="true" />
+      </div>
+      <h3 className="mt-4 text-xl font-semibold text-slate-950">Confirm plan activation</h3>
+      <p className="mt-2 text-sm leading-6 text-slate-600">
+        You are about to activate <span className="font-semibold text-slate-900">{plan?.name}</span> for <span className="font-semibold text-slate-900">{duration} days</span>.
+        The current active plan will be paused and resumed later automatically when the new plan expires.
+      </p>
+      <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-blue-600">Included features</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {(plan?.features || []).length ? (plan?.features || []).map((feature) => (
+            <span key={feature.id || feature.code || feature.name} className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
+              {feature.name}
+            </span>
+          )) : <span className="text-sm text-slate-500">No feature details available</span>}
+        </div>
+      </div>
+      <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+        <button type="button" onClick={onCancel} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50">
+          Cancel
+        </button>
+        <button type="button" onClick={onConfirm} disabled={submitting} className="rounded-xl bg-gradient-to-r from-blue-700 to-cyan-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60">
+          {submitting ? 'Activating...' : 'Confirm activation'}
+        </button>
+      </div>
+    </div>
   </div>
 );
 
@@ -376,6 +433,8 @@ const SubscriptionDashboard = () => {
   const [loadingError, setLoadingError] = useState('');
   const [purchasingKey, setPurchasingKey] = useState(null);
   const [notice, setNotice] = useState(null);
+  const [pendingPlan, setPendingPlan] = useState(null);
+  const [activatingPlanId, setActivatingPlanId] = useState(null);
 
   const loadSubscriptions = useCallback(async () => {
     setLoading(true);
@@ -416,9 +475,24 @@ const SubscriptionDashboard = () => {
   }, [notice]);
 
   const handlePurchase = async (plan, duration) => {
+    const activePlanId = current?.plan?.id || current?.current_plan?.id;
+    if (current?.status === 'active' && activePlanId === plan.id) {
+      setNotice({ type: 'error', message: 'Plan already active', detail: `${plan.name} is already your current active plan.` });
+      return;
+    }
+
+    setPendingPlan({ plan, duration });
+  };
+
+  const confirmPendingPurchase = async () => {
+    if (!pendingPlan) return;
+
+    const { plan, duration } = pendingPlan;
     const purchaseKey = `${plan.id}-${duration}`;
+    setActivatingPlanId(plan.id);
     setPurchasingKey(purchaseKey);
     setNotice(null);
+
     try {
       await subscriptionService.purchaseSubscription({ plan: plan.id, duration_days: duration });
       await loadSubscriptions();
@@ -428,6 +502,8 @@ const SubscriptionDashboard = () => {
       setNotice({ type: 'error', message: 'Purchase could not be completed', detail: getErrorMessage(error) });
     } finally {
       setPurchasingKey(null);
+      setActivatingPlanId(null);
+      setPendingPlan(null);
     }
   };
 
@@ -447,15 +523,25 @@ const SubscriptionDashboard = () => {
   }
 
   return (
-    <div className="relative space-y-10">
+    <div className="relative space-y-6">
       {notice && (
         <div role="status" className={`fixed bottom-6 right-6 z-50 max-w-sm rounded-2xl border p-4 shadow-2xl ${notice.type === 'success' ? 'border-emerald-200 bg-white' : 'border-red-200 bg-white'}`}>
           <div className="flex items-start gap-3"><div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${notice.type === 'success' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>{notice.type === 'success' ? <Check size={17} /> : <AlertCircle size={17} />}</div><div><p className="text-sm font-semibold text-slate-900">{notice.message}</p><p className="mt-1 text-xs leading-5 text-slate-500">{notice.detail}</p></div><button type="button" aria-label="Dismiss notification" onClick={() => setNotice(null)} className="text-slate-400 hover:text-slate-700">×</button></div>
         </div>
       )}
 
+      {pendingPlan && (
+        <ConfirmPlanModal
+          plan={pendingPlan.plan}
+          duration={pendingPlan.duration}
+          submitting={Boolean(purchasingKey)}
+          onCancel={() => setPendingPlan(null)}
+          onConfirm={confirmPendingPurchase}
+        />
+      )}
+
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div><p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-blue-600">BILLING & ACCESS</p><h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Subscriptions</h2><p className="mt-1 max-w-2xl text-sm text-slate-500">Choose the tools your clinic needs, with a clear view of usage and plan history.</p></div>
+        <div><p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-blue-600">BILLING & ACCESS</p><h2 className="mt-1.5 text-2xl font-semibold tracking-tight text-slate-950">Subscriptions</h2><p className="mt-1 max-w-2xl text-sm text-slate-500">Choose the tools your clinic needs, with a clear view of usage and plan history.</p></div>
         <button type="button" onClick={loadSubscriptions} className="inline-flex items-center gap-2 self-start rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"><RefreshCw size={15} /> Refresh</button>
       </div>
 
@@ -463,17 +549,17 @@ const SubscriptionDashboard = () => {
 
       <section>
         <SectionHeading eyebrow="Included with your plan" title="Features" description="Everything your current subscription makes available to your clinic." />
-        <div className="mt-5"><FeatureGrid features={activeFeatures} hasSubscription={Boolean(current)} /></div>
+        <div className="mt-4"><FeatureGrid features={activeFeatures} hasSubscription={Boolean(current)} /></div>
       </section>
 
       <section id="subscription-plans">
         <SectionHeading eyebrow="Find the right fit" title="Available plans" description="Switch between durations to see the exact price before activating a plan." />
-        {plans.length ? <div className="mt-5 flex gap-5 overflow-x-auto pb-4 lg:grid lg:grid-cols-3 lg:overflow-visible">{plans.map((plan) => <SubscriptionPlanCard key={plan.id} plan={plan} selectedDuration={selectedDurations[plan.id] || getSelectedDuration(plan)} onDurationChange={(duration) => setSelectedDurations((previous) => ({ ...previous, [plan.id]: duration }))} onPurchase={handlePurchase} purchasing={Boolean(purchasingKey)} />)}</div> : <div className="mt-5"><EmptyState icon={Package} title="No plans available" description="Subscription plans will appear here when they are available for your clinic." /></div>}
+        {plans.length ? <div className="mt-4 flex gap-5 overflow-x-auto pb-2 lg:grid lg:grid-cols-3 lg:overflow-visible">{plans.map((plan) => <SubscriptionPlanCard key={plan.id} plan={plan} selectedDuration={selectedDurations[plan.id] || getSelectedDuration(plan)} onDurationChange={(duration) => setSelectedDurations((previous) => ({ ...previous, [plan.id]: duration }))} onPurchase={handlePurchase} purchasing={Boolean(purchasingKey)} isCurrentActivePlan={current?.status === 'active' && (current?.plan?.id || current?.current_plan?.id) === plan.id} isActivating={activatingPlanId === plan.id} />)}</div> : <div className="mt-4"><EmptyState icon={Package} title="No plans available" description="Subscription plans will appear here when they are available for your clinic." /></div>}
       </section>
 
       <section>
         <SectionHeading eyebrow="Your account" title="Subscription history" description="A transparent timeline of plans purchased by your clinic." />
-        <div className="mt-5 grid gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
+        <div className="mt-4 grid gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
           <SubscriptionHistory history={history} />
           <SubscriptionStats current={current} history={history} />
         </div>

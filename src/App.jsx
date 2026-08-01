@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
 import { App as CapacitorApp } from '@capacitor/app';
@@ -18,6 +18,15 @@ import TreatmentVideos from './pages/TreatmentVideos';
 import Settings from './pages/Settings';
 import ClinicSettings from './pages/ClinicSettings';
 import CustomerCare from './pages/CustomerCare';
+
+const Subscriptions = lazy(() => import('./pages/Subscriptions'));
+
+const RouteLoading = () => (
+  <div className="space-y-8" aria-label="Loading page">
+    <div className="skeleton h-40 rounded-[28px]" />
+    <div className="skeleton h-64 rounded-[28px]" />
+  </div>
+);
 
 // Handle native Android back button using the same history stack as React Router.
 const NativeBackHandler = () => {
@@ -160,6 +169,14 @@ const AppRoutes = () => {
                   <Route path="treatment-videos" element={<TreatmentVideos />} />
                   <Route path="customer-care" element={<CustomerCare />} />
                   <Route path="clinic-settings" element={<ClinicSettings />} />
+                  <Route
+                    path="subscriptions"
+                    element={(
+                      <Suspense fallback={<RouteLoading />}>
+                        <Subscriptions />
+                      </Suspense>
+                    )}
+                  />
                   <Route path="settings" element={<Settings />} />
                   <Route path="*" element={<Navigate to="" replace />} />
                 </Routes>
