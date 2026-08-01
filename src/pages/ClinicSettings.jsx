@@ -424,7 +424,7 @@ const ClinicSettings = () => {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-[32px] bg-gradient-to-r from-blue-800 to-cyan-500 p-8 text-white">
+      {/* <div className="rounded-[32px] bg-gradient-to-r from-blue-800 to-cyan-500 p-8 text-white">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="max-w-3xl space-y-3">
             <h1 className="text-2xl font-semibold tracking-tight">CLINIC SETTINGS</h1>
@@ -432,18 +432,18 @@ const ClinicSettings = () => {
           </div>
           
         </div>
-      </div>
+      </div> */}
 
       <div className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm">
         <div className="rounded-[24px] bg-slate-100 p-3">
-          <div className="grid grid-cols-2 gap-0">
+          <div className="flex gap-2 overflow-hidden">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`w-full rounded-[16px] px-4 py-4 text-sm font-semibold transition-all duration-300 ${
+                  className={`group flex-1 min-w-0 rounded-[16px] px-4 py-4 text-sm font-semibold transition-all duration-300 ${
                     activeTab === tab.id
                       ? 'bg-gradient-to-r from-blue-700 to-cyan-500 text-white shadow-md'
                       : 'text-slate-500 hover:bg-white hover:text-blue-600'
@@ -654,79 +654,54 @@ const ClinicSettings = () => {
                     No clinic medicines have been added yet. Use the button above to add your first medicine.
                   </div>
                 ) : (
-                  <div className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
+                  <div className="space-y-4">
+                    <div className="hidden grid-cols-[2fr_1fr_1fr_1fr] gap-4 px-6 py-4 bg-slate-50 border-b border-slate-200 text-xs font-bold uppercase tracking-[0.2em] text-slate-500 sm:grid">
+                      <div>Medicine Name</div>
+                      <div>Form</div>
+                      <div>Strength</div>
+                      <div className="text-center">Actions</div>
+                    </div>
 
-  {/* Header */}
-  <div className="grid grid-cols-[25%_25%_25%_25%] gap-4 px-6 py-4 bg-slate-50 border-b border-slate-200">
+                    {medicines.map((medicine) => (
+                      <div
+                        key={medicine.id}
+                        className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm transition hover:border-slate-300 hover:shadow-md sm:grid sm:grid-cols-[2fr_1fr_1fr_1fr] sm:items-center sm:p-4"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-xs uppercase tracking-[0.2em] text-slate-400 sm:hidden">Medicine Name</p>
+                          <p className="mt-2 text-sm font-semibold text-slate-900 sm:mt-0">{medicine.medicine_name}</p>
+                        </div>
 
-    <div className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">
-      Medicine Name
-    </div>
+                        <div className="min-w-0">
+                          <p className="text-xs uppercase tracking-[0.2em] text-slate-400 sm:hidden">Form</p>
+                          <p className="mt-2 text-sm font-semibold text-slate-700 capitalize sm:mt-0">{medicine.form}</p>
+                        </div>
 
-    <div className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">
-      Form
-    </div>
+                        <div className="min-w-0">
+                          <p className="text-xs uppercase tracking-[0.2em] text-slate-400 sm:hidden">Strength</p>
+                          <p className="mt-2 text-sm font-semibold text-slate-700 sm:mt-0">{medicine.strength || 'N/A'}</p>
+                        </div>
 
-    <div className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">
-      Strength
-    </div>
+                        <div className="mt-4 flex flex-wrap gap-2 justify-start sm:mt-0 sm:justify-center">
+                          <button
+                            onClick={() => handleEditMedicine(medicine)}
+                            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700 hover:bg-slate-100"
+                          >
+                            <Edit className="h-4 w-4" />
+                            <span className="text-xs font-semibold uppercase tracking-[0.15em]">Edit</span>
+                          </button>
 
-    <div className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500 text-center">
-      Actions
-    </div>
-
-  </div>
-
-  {medicines.map((medicine) => (
-    <div
-      key={medicine.id}
-      className="
-  grid grid-cols-[25%_25%_25%_25%]
-  gap-4
-  items-center
-  px-6 py-4
-  border-b border-slate-100
-  hover:bg-cyan-50
-  transition-all
-"
-    >
-
-      <div className="font-semibold text-slate-900">
-        {medicine.medicine_name}
-      </div>
-
-      <div className="font-semibold text-slate-700 capitalize">
-        {medicine.form}
-      </div>
-
-      <div className="font-semibold text-slate-700">
-        {medicine.strength || 'N/A'}
-      </div>
-
-      <div className="flex justify-center gap-2">
-
-        <button
-          onClick={() => handleEditMedicine(medicine)}
-          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700 hover:bg-slate-100"
-        >
-          <Edit className="h-4 w-4" />
-          <span className="text-xs font-semibold uppercase tracking-[0.15em]">Edit</span>
-        </button>
-
-        <button
-          onClick={() => handleDeleteMedicine(medicine.id)}
-          className="inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100"
-        >
-          <Trash2 className="h-4 w-4" />
-          <span className="text-xs font-semibold uppercase tracking-[0.15em]">Delete</span>
-        </button>
-
-      </div>
-
-    </div>
-  ))}
-
-</div>
+                          <button
+                            onClick={() => handleDeleteMedicine(medicine.id)}
+                            className="inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="text-xs font-semibold uppercase tracking-[0.15em]">Delete</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             )}

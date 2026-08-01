@@ -31,12 +31,12 @@ const RevenueTrend = ({ data, summary, loading, error }) => {
         <div className="mb-4 text-sm text-red-600">{error}</div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-6">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 mb-6">
         {[
           { label: "Today's Revenue", value: summary.today_revenue, comparison: null },
           { label: 'Total Revenue', value: summary.total_revenue, comparison: summary.previous_total_revenue },
-          { label: 'Average Revenue', value: summary.average_revenue, comparison: summary.previous_average_revenue },
-          { label: 'Highest Revenue', value: summary.highest_revenue, comparison: summary.previous_highest_revenue },
+          // { label: 'Average Revenue', value: summary.average_revenue, comparison: summary.previous_average_revenue },
+          // { label: 'Highest Revenue', value: summary.highest_revenue, comparison: summary.previous_highest_revenue },
         ].map((stat) => {
           const diff = stat.comparison != null ? stat.value - stat.comparison : null;
           const diffLabel = diff != null ? `${diff >= 0 ? '+' : '-'}${formatAmount(Math.abs(diff))}` : null;
@@ -45,17 +45,19 @@ const RevenueTrend = ({ data, summary, loading, error }) => {
           return (
             <div key={stat.label} className="rounded-[24px] border border-gray-200 bg-slate-50 p-4 shadow-sm">
               <div className="flex items-center justify-between gap-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">{stat.label}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">{stat.label}</p>
                 {diffLabel && (
                   <span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${diffColor}`}>
                     {diffLabel}
                   </span>
                 )}
               </div>
-              <p className="mt-3 text-2xl font-semibold text-slate-900">{formatAmount(stat.value)}</p>
-              {stat.comparison != null && (
-                <p className="mt-2 text-xs text-slate-500">Previous: {formatAmount(stat.comparison)}</p>
-              )}
+              <div className="mt-3 flex items-end justify-between gap-3">
+                <p className="text-2xl font-semibold text-slate-900">{formatAmount(stat.value)}</p>
+                {stat.comparison != null && (
+                  <p className="text-xs text-slate-500">Previous: {formatAmount(stat.comparison)}</p>
+                )}
+              </div>
             </div>
           );
         })}

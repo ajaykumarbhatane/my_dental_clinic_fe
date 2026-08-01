@@ -426,8 +426,44 @@ const Dashboard = () => {
     }).format(amount || 0);
   };
 
+  const getFilterLabel = () => {
+    if (period === 'custom_date_range') {
+      return `${formatDate(startDate)} - ${formatDate(endDate)}`;
+    }
+
+    if (period === 'last_7_days') {
+      return 'Last 7 days';
+    }
+
+    if (period === 'current_month') {
+      return 'Current month';
+    }
+
+    if (period === 'year_to_date') {
+      return 'Year to date';
+    }
+
+    return 'Selected range';
+  };
+
   return (
     <div className="space-y-8">
+      <AnalyticsFilters
+        period={period}
+        group={group}
+        selectedTreatment={selectedTreatment}
+        treatmentOptions={treatmentOptions}
+        onPeriodChange={handlePeriodChange}
+        onGroupChange={setGroup}
+        onTreatmentChange={setSelectedTreatment}
+        onOpenDateRange={() => {
+          setDraftStartDate(startDate);
+          setDraftEndDate(endDate);
+          setShowDatePicker(true);
+        }}
+        customDateRangeLabel={`${formatDate(startDate)} - ${formatDate(endDate)}`}
+      />
+
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {stats.map((stat, index) => {
@@ -446,28 +482,12 @@ const Dashboard = () => {
                 </div>
               </div>
               <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-100">
-                <p className="text-xs text-gray-500">Last 30 days</p>
+                <p className="text-xs text-gray-500">{getFilterLabel()}</p>
               </div>
             </div>
           );
         })}
       </div>
-
-      <AnalyticsFilters
-        period={period}
-        group={group}
-        selectedTreatment={selectedTreatment}
-        treatmentOptions={treatmentOptions}
-        onPeriodChange={handlePeriodChange}
-        onGroupChange={setGroup}
-        onTreatmentChange={setSelectedTreatment}
-        onOpenDateRange={() => {
-          setDraftStartDate(startDate);
-          setDraftEndDate(endDate);
-          setShowDatePicker(true);
-        }}
-        customDateRangeLabel={`${formatDate(startDate)} - ${formatDate(endDate)}`}
-      />
 
       {showDatePicker && (
         <div
