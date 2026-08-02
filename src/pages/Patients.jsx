@@ -795,36 +795,35 @@ useEffect(() => {
         </div>
 
         <button
-          onClick={() => setShowAddModal(true)}
-          className="
-shrink-0
-w-full
-md:w-auto
-px-6
-lg:px-7
-py-3
-min-w-[170px]
-rounded-xl
-bg-gradient-to-r
-from-blue-600
-to-blue-700
-text-white
-font-medium
-flex
-items-center
-justify-center
-gap-2
-shadow-sm
-hover:shadow-lg
-hover:from-blue-700
-hover:to-blue-800
-transition-all
-duration-200
-"
-        >
-          <Plus className="w-4 h-4" />
-          Add Patient
-        </button>
+  onClick={() => setShowAddModal(true)}
+  className="
+    hidden
+    md:flex
+    shrink-0
+    px-6
+    lg:px-7
+    py-3
+    min-w-[170px]
+    rounded-xl
+    bg-gradient-to-r
+    from-blue-600
+    to-blue-700
+    text-white
+    font-medium
+    items-center
+    justify-center
+    gap-2
+    shadow-sm
+    hover:shadow-lg
+    hover:from-blue-700
+    hover:to-blue-800
+    transition-all
+    duration-200
+  "
+>
+    <Plus className="w-4 h-4" />
+    Add Patient
+</button>
       </div>
 
     </div>
@@ -961,7 +960,51 @@ duration-200
             />
           </div>
         )}
+        
       </div>
+      {/* Mobile Floating Add Button */}
+<button
+  onClick={() => setShowAddModal(true)}
+  className="
+    md:hidden
+    fixed
+    bottom-28
+    right-6
+    z-50
+
+    h-12
+    w-12
+    rounded-full
+
+    bg-gradient-to-br
+    from-blue-500
+    via-blue-600
+    to-blue-700
+
+    text-white
+
+    border
+    border-white/30
+
+    shadow-[0_12px_30px_rgba(37,99,235,0.45)]
+
+    backdrop-blur-md
+
+    flex
+    items-center
+    justify-center
+
+    transition-all
+    duration-300
+
+    active:scale-95
+    hover:scale-110
+    hover:rotate-90
+  "
+  aria-label="Add Patient"
+>
+    <Plus className="w-8 h-8 stroke-[2.5]" />
+</button>
 
       {/* Add Patient Modal */}
       {showAddModal && (

@@ -1,6 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Calendar, X, CalendarDays, ClipboardList, DollarSign, Sparkles } from 'lucide-react';
+import {
+ArrowLeft,
+Plus,
+Trash2,
+Calendar,
+X,
+CalendarDays,
+ClipboardList,
+DollarSign,
+Sparkles,
+MoreVertical,
+Pencil,
+Trash
+} from "lucide-react";
 import { treatmentApi } from '../api/treatmentApi';
 import { visitsApi, visitImagesApi } from '../api/visitsApi';
 import { compressImage } from '../utils/imageOptimizer';
@@ -31,6 +44,7 @@ const TreatmentDetail = () => {
   const [showDeleteTreatmentModal, setShowDeleteTreatmentModal] = useState(false);
   const [isDeletingTreatment, setIsDeletingTreatment] = useState(false);
   const [showEditTreatmentModal, setShowEditTreatmentModal] = useState(false);
+  const [showTreatmentMenu, setShowTreatmentMenu] = useState(false);
   const [editingTreatment, setEditingTreatment] = useState(null);
   const [treatmentFormData, setTreatmentFormData] = useState({
     type_of_treatment: '',
@@ -68,6 +82,8 @@ const TreatmentDetail = () => {
   });
   const [showEditVisitModal, setShowEditVisitModal] = useState(false);
   const [visitToEdit, setVisitToEdit] = useState(null);
+  const [showMobileFabMenu, setShowMobileFabMenu] = useState(false);
+  // const [showTreatmentMenu, setShowTreatmentMenu] = useState(false);
 
   useEffect(() => {
     fetchTreatmentDetail();
@@ -524,6 +540,12 @@ const TreatmentDetail = () => {
   const patientDisplayName = (patientFirst || patientLast)
     ? `${patientFirst} ${patientLast}`.trim()
     : (treatment?.patient_full_name || treatment?.patient_name || 'Patient');
+  const MAX_PATIENT_NAME = 14;
+
+  const shortPatientName =
+    patientDisplayName.length > MAX_PATIENT_NAME
+      ? `${patientDisplayName.substring(0, MAX_PATIENT_NAME)}...`
+      : patientDisplayName;
 
   const statusText = treatment?.status || 'Ongoing';
   const statusIsOngoing = String(statusText).toLowerCase() === 'ongoing';
@@ -546,139 +568,293 @@ const TreatmentDetail = () => {
     <div className="space-y-8">
       <div className="rounded-[32px] bg-white shadow-2xl border border-slate-200 overflow-hidden sticky top-4 z-30">
         <div className="bg-gradient-to-r from-slate-900 via-indigo-800 to-sky-700 text-white px-6 py-6 md:px-10 md:py-8">
-          <div className="space-y-4">
-            <div className="flex items-start justify-between">
+          <div className="space-y-6">
 
-    {/* LEFT */}
+{/* ================= HEADER ================= */}
 
-    <div className="flex flex-col gap-2">
+<div className="flex items-start justify-between gap-6">
 
-        <div className="flex items-center gap-3">
+    <div>
 
-            <h2 className="text-2xl font-semibold tracking-tight text-white">
+        <div className="flex items-center gap-2 min-w-0">
+
+    <span className="text-sm font-semibold uppercase tracking-[0.15em] text-blue-200 whitespace-nowrap">
+        PT:
+    </span>
+
+    <span
+        title={patientDisplayName}
+        className="
+            text-2xl
+            font-bold
+            text-white
+            cursor-default
+
+            block
+
+            max-w-[140px]
+            truncate
+
+            md:max-w-none
+            md:truncate-none
+            md:whitespace-normal
+        "
+    >
+        {patientDisplayName}
+    </span>
+
+</div>
+
+        
+
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+
+            <span className="text-lg font-semibold">
                 {treatment.treatment_name || treatment.type_of_treatment_name}
-            </h2>
-
-            <span
-                className={`inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs uppercase tracking-[0.3em] text-white ${
-                    statusIsOngoing
-                        ? "text-emerald-200"
-                        : "text-slate-200"
-                }`}
-            >
-                <span
-                    className={
-                        statusIsOngoing
-                            ? "text-emerald-300"
-                            : "text-slate-300"
-                    }
-                >
-                    •
-                </span>
-
-                {statusText}
             </span>
 
-        </div>
+            <span
+                className="
+                inline-flex
+                items-center
+                gap-2
 
-        <div className="flex items-center gap-3">
+                rounded-full
 
-            <p className="text-xs uppercase tracking-[0.3em] text-slate-300">
-                Treatment Summary
-            </p>
+                bg-emerald-500/20
 
-            <p className="text-lg font-semibold text-white">
-                {patientDisplayName}
-            </p>
+                border
+                border-emerald-400/30
+
+                px-3
+                py-1
+
+                text-xs
+                font-semibold
+
+                text-emerald-200
+                "
+            >
+
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+
+                {statusText}
+
+            </span>
 
         </div>
 
     </div>
 
-    {/* RIGHT */}
+    {/* MENU */}
 
-    <button
-      onClick={() => openEditTreatmentModal(treatment)}
-      className="inline-flex items-center gap-2 rounded-2xl bg-white/10 border border-white/20 px-5 py-3 text-sm font-semibold text-white hover:bg-white hover:text-slate-900 transition-all shadow-lg"
-    >
-      Edit Treatment
-    </button>
+    <div className="relative self-start z-50 hidden md:block">
+
+        <button
+
+            onClick={() => setShowTreatmentMenu(!showTreatmentMenu)}
+
+            className="
+
+            h-10
+
+            w-10
+
+            rounded-full
+
+            bg-white/10
+
+            hover:bg-white/20
+
+            flex
+
+            items-center
+
+            justify-center
+
+            transition
+
+            "
+
+        >
+
+            <MoreVertical className="w-5 h-5"/>
+
+        </button>
+
+        {showTreatmentMenu && (
+
+            <div
+className="
+absolute
+top-12
+right-0
+w-60
+rounded-2xl
+bg-white
+border
+border-gray-200
+shadow-[0_20px_50px_rgba(0,0,0,0.18)]
+overflow-hidden
+z-50
+"
+>
+
+                <button
+
+                    onClick={() => {
+
+                        setShowTreatmentMenu(false);
+
+                        openEditTreatmentModal(treatment);
+
+                    }}
+
+                    className="
+w-full
+flex
+items-center
+gap-3
+px-5
+py-3
+text-gray-800
+hover:bg-blue-50
+hover:text-blue-600
+transition-colors
+"
+
+                >
+
+                    <Pencil className="w-4 h-4 text-blue-600" />
+
+                    Edit Treatment
+
+                </button>
+
+                <button
+
+                    onClick={() => {
+
+                        setShowTreatmentMenu(false);
+
+                        handleDeleteTreatment();
+
+                    }}
+
+                    className="w-full flex items-center gap-3 px-5 py-3 text-red-600 hover:bg-red-50"
+
+                >
+
+                    <Trash className="w-4 h-4 text-red-600" />
+
+                    Delete Treatment
+
+                </button>
+
+            </div>
+
+        )}
+
+    </div>
 
 </div>
 
-            <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-              <div className="min-h-[72px] rounded-xl border border-white/10 bg-white/10 p-4 shadow-sm shadow-slate-900/5">
-                <p className="text-xs uppercase tracking-[0.3em] text-slate-300">Total Amount</p>
-                <p className="mt-2 text-base font-semibold text-white">{formatAmount(treatment.planned_amount)}</p>
-              </div>
-              <div className="min-h-[72px] rounded-xl border border-white/10 bg-white/10 p-4 shadow-sm shadow-slate-900/5">
-                <p className="text-xs uppercase tracking-[0.3em] text-slate-300">Paid</p>
-                <p className="mt-2 text-base font-semibold text-white">{formatAmount(totalPaid)}</p>
-              </div>
-              <div className="min-h-[72px] rounded-xl border border-white/10 bg-white/10 p-4 shadow-sm shadow-slate-900/5">
-                <p className="text-xs uppercase tracking-[0.3em] text-slate-300">Remaining</p>
-                <p className="mt-2 text-base font-semibold text-white">{formatAmount(remainingAmount)}</p>
-              </div>
-              <div className="min-h-[72px] rounded-xl border border-white/10 bg-white/10 p-4 shadow-sm shadow-slate-900/5">
-                <p className="text-xs uppercase tracking-[0.3em] text-slate-300">Duration</p>
-                <p className="mt-2 text-base font-semibold text-white">{treatment.estimated_duration_months || 'N/A'} months</p>
-              </div>
-            </div>
+            <div className="rounded-3xl bg-white/10 backdrop-blur-lg border border-white/10 overflow-hidden">
 
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-4">
-              {bracesOrCapValue && (
-                <div className="rounded-xl border border-white/10 bg-white/10 p-4 shadow-sm shadow-slate-900/5">
-                  <p className="text-xs uppercase tracking-[0.3em] text-slate-300">Braces / Cap Type</p>
-                  <p className="mt-2 text-base font-semibold text-white">{bracesOrCapValue}</p>
-                </div>
-              )}
+    <div className="px-6 py-4 border-b border-white/10">
 
-              {initialFindingsLines.length > 0 && (
-                <div className="rounded-xl border border-white/10 bg-white/10 p-4 shadow-sm shadow-slate-900/5">
-                  <p className="text-xs uppercase tracking-[0.3em] text-slate-300">Initial Findings</p>
-                  <div className="mt-3 space-y-2 text-sm leading-6 text-white">
-                    {initialFindingsLines.length > 1 ? (
-                      <ul className="space-y-2">
-                        {initialFindingsLines.map((line, index) => (
-                          <li key={index} className="flex gap-2">
-                            <span className="text-white/80">•</span>
-                            <span>{line}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p>{initialFindingsLines[0]}</p>
-                    )}
-                  </div>
-                </div>
-              )}
+        <h3 className="text-sm uppercase tracking-[0.35em] text-blue-200">
 
-              <div className="rounded-xl border border-white/10 bg-white/10 p-4 shadow-sm shadow-slate-900/5">
-                <p className="text-xs uppercase tracking-[0.3em] text-slate-300">Treatment Plan</p>
-                <div className="mt-3 space-y-2 text-sm leading-6 text-white">
-                  {treatmentPlanEmpty ? (
-                    <p className="text-slate-200">No treatment plan available.</p>
-                  ) : treatmentPlanLines.length > 1 ? (
-                    <ul className="space-y-2">
-                      {treatmentPlanLines.map((line, index) => (
-                        <li key={index} className="flex gap-2">
-                          <span className="text-white/80">•</span>
-                          <span>{line}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p>{treatment.treatment_plan}</p>
-                  )}
-                </div>
-              </div>
+            Treatment Summary
 
-              <div className="rounded-xl border border-white/10 bg-white/10 p-4 shadow-sm shadow-slate-900/5">
-                <p className="text-xs uppercase tracking-[0.3em] text-slate-300">Treatment Notes</p>
-                <p className="mt-3 text-sm leading-6 text-white">
-                  {treatmentNotesEmpty ? 'No treatment notes recorded.' : treatment.treatment_notes}
-                </p>
-              </div>
+        </h3>
+
+    </div>
+
+    <div className="grid grid-cols-1 md:grid-cols-2">
+
+    <div className="flex justify-between items-center border-b md:border-r border-white/10 px-6 py-5">
+        <span className="text-white/70">
+            Total Amount
+        </span>
+
+        <span className="font-semibold text-lg">
+            {formatAmount(treatment.planned_amount)}
+        </span>
+    </div>
+
+    <div className="flex justify-between items-center border-b border-white/10 px-6 py-5">
+        <span className="text-white/70">
+            Paid
+        </span>
+
+        <span className="font-semibold text-emerald-300 text-lg">
+            {formatAmount(totalPaid)}
+        </span>
+    </div>
+
+    <div className="flex justify-between items-center md:border-r border-white/10 px-6 py-5">
+        <span className="text-white/70">
+            Remaining
+        </span>
+
+        <span className="font-semibold text-yellow-300 text-lg">
+            {formatAmount(remainingAmount)}
+        </span>
+    </div>
+
+    <div className="flex justify-between items-center px-6 py-5">
+        <span className="text-white/70">
+            Braces / Cap Type
+        </span>
+
+        <span className="font-semibold">
+            {bracesOrCapValue || "-"}
+        </span>
+    </div>
+
+</div>
+
+</div>
+
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-2">
+              
+
+              <div className="rounded-3xl bg-white/10 border border-white/10 p-6">
+
+<h3 className="text-sm uppercase tracking-[0.35em] text-blue-200 mb-5">
+
+Treatment Plan
+
+</h3>
+
+<p className="leading-7">
+
+{treatmentPlanEmpty
+? "No treatment plan available."
+: treatment.treatment_plan}
+
+</p>
+
+</div>
+
+              <div className="rounded-3xl bg-white/10 border border-white/10 p-6">
+
+<h3 className="text-sm uppercase tracking-[0.35em] text-blue-200 mb-5">
+
+Treatment Notes
+
+</h3>
+
+<p className="leading-7">
+
+{treatmentNotesEmpty
+? "No treatment notes recorded."
+: treatment.treatment_notes}
+
+</p>
+
+</div>
             </div>
           </div>
         </div>
@@ -713,7 +889,23 @@ const TreatmentDetail = () => {
           </div>
           <button
             onClick={() => setShowAddVisitModal(true)}
-            className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/10 transition hover:bg-blue-700"
+            className="
+hidden
+md:inline-flex
+items-center
+gap-2
+rounded-2xl
+bg-blue-600
+px-4
+py-3
+text-sm
+font-semibold
+text-white
+shadow-lg
+shadow-blue-500/10
+transition
+hover:bg-blue-700
+"
           >
             <Plus className="w-4 h-4" />
             Add Visit
@@ -1462,6 +1654,132 @@ const TreatmentDetail = () => {
           </div>
         </div>
       )}
+      {/* ================= MOBILE FLOATING ACTION ================= */}
+
+<div className="md:hidden">
+
+    {showMobileFabMenu && (
+
+        <>
+
+            <div
+                className="fixed inset-0 z-40"
+                onClick={() => setShowMobileFabMenu(false)}
+            />
+
+            <div className="fixed bottom-24 right-5 z-50 flex flex-col gap-3">
+
+                <button
+                    onClick={()=>{
+                        setShowMobileFabMenu(false);
+                        openEditTreatmentModal(treatment);
+                    }}
+                    className="
+                    flex
+                    items-center
+                    gap-3
+                    bg-white
+                    rounded-2xl
+                    px-4
+                    py-3
+                    shadow-xl
+                    "
+                >
+                    <Pencil className="w-5 h-5 text-blue-600"/>
+                    <span>Edit Treatment</span>
+                </button>
+
+                <button
+                    onClick={()=>{
+                        setShowMobileFabMenu(false);
+                        setShowAddVisitModal(true);
+                    }}
+                    className="
+                    flex
+                    items-center
+                    gap-3
+                    bg-white
+                    rounded-2xl
+                    px-4
+                    py-3
+                    shadow-xl
+                    "
+                >
+                    <Plus className="w-5 h-5 text-blue-600"/>
+                    <span>Add Visit</span>
+                </button>
+
+                <button
+                    onClick={()=>{
+                        setShowMobileFabMenu(false);
+                        handleDeleteTreatment();
+                    }}
+                    className="
+                    flex
+                    items-center
+                    gap-3
+                    bg-white
+                    rounded-2xl
+                    px-4
+                    py-3
+                    shadow-xl
+                    text-red-600
+                    "
+                >
+                    <Trash className="w-5 h-5"/>
+                    <span>Delete Treatment</span>
+                </button>
+
+            </div>
+
+        </>
+
+    )}
+
+    <button
+
+        onClick={()=>setShowMobileFabMenu(!showMobileFabMenu)}
+
+        className="
+        fixed
+        bottom-6
+        right-6
+        z-50
+
+        h-12
+        w-12
+
+        rounded-full
+
+        bg-gradient-to-r
+        from-blue-600
+        to-cyan-500
+
+        text-white
+
+        shadow-2xl
+
+        flex
+        items-center
+        justify-center
+
+        transition-all
+        duration-300
+
+        active:scale-95
+        "
+
+    >
+
+        <Plus
+            className={`w-8 h-8 transition-transform duration-300 ${
+                showMobileFabMenu ? "rotate-45" : ""
+            }`}
+        />
+
+    </button>
+
+</div>
     </div>
   );
 };

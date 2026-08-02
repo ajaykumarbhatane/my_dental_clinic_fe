@@ -654,8 +654,8 @@ const Dashboard = () => {
       <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-lg transition-shadow">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="text-lg font-bold text-gray-900">Upcoming Patient Visits</h3>
-            <p className="text-sm text-gray-500 mt-1">Next appointments scheduled</p>
+            <h3 className="text-lg font-bold text-gray-900">Upcoming next 5 days Patient Visits</h3>
+            {/* <p className="text-sm text-gray-500 mt-1">Next appointments scheduled</p> */}
           </div>
           <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center text-white font-bold text-lg">
             📅

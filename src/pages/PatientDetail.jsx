@@ -160,7 +160,7 @@ hover:shadow-blue-100
                }}
                className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
             >
-               <MoreVertical className="h-4 w-4" />
+               {/* <MoreVertical className="h-4 w-4" /> */}
                Take Action
                <ChevronDown className="h-4 w-4" />
             </button>
@@ -1195,8 +1195,8 @@ const PatientDetail = () => {
                      {/* moved stats into the clinical profile */}
                      <div className="grid grid-cols-2 gap-3">
                         {/* <StatCard icon={CalendarDays} label="Visits" value={totalVisits} /> */}
-                        <StatCard icon={CircleDollarSign} label="Revenue" value={formatAmount(totalPaid)} />
-                        <StatCard icon={Wallet} label="Outstanding" value={formatAmount(pendingAmount)} />
+                        <StatCard icon={CircleDollarSign} label="Total Revenue" value={formatAmount(totalPaid)} />
+                        <StatCard icon={Wallet} label="Total Pending" value={formatAmount(pendingAmount)} />
                         {/* <StatCard icon={ClipboardCheck} label="Rx" value={prescriptions.length} /> */}
                      </div>
 

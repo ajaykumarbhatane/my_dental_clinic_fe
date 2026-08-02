@@ -58,6 +58,7 @@ const Treatments = () => {
   const [showDeleteVisitModal, setShowDeleteVisitModal] = useState(false);
   const [visitToDelete, setVisitToDelete] = useState(null);
   const [isDeletingVisit, setIsDeletingVisit] = useState(false);
+  const [showMobileFab, setShowMobileFab] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -380,9 +381,9 @@ const Treatments = () => {
     <div className="h-[calc(100vh-80px)] flex flex-col space-y-4">
 
       {/* Header */}
-      <div className="space-y-3">
+      <div className="space-y-2">
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
 
           {/* Search */}
           <div className="min-w-0 flex-1 md:w-full lg:w-auto">
@@ -440,30 +441,37 @@ const Treatments = () => {
   <button
     onClick={() => setShowAddModal(true)}
     className="
-      w-full
-      md:w-auto
-      min-w-[180px]
-      h-12
-      px-6
-      rounded-xl
-      bg-gradient-to-r
-      from-blue-600
-      to-blue-700
-      text-white
-      font-semibold
-      flex
-      items-center
-      justify-center
-      gap-2
-      shadow-sm
-      hover:shadow-lg
-      hover:from-blue-700
-      hover:to-blue-800
-      transition-all
-      duration-200
-      whitespace-nowrap
-    "
-  >
+hidden
+md:flex
+
+min-w-[180px]
+h-12
+px-6
+
+rounded-xl
+
+bg-gradient-to-r
+from-blue-600
+to-blue-700
+
+text-white
+font-semibold
+
+items-center
+justify-center
+gap-2
+
+shadow-sm
+hover:shadow-lg
+
+hover:from-blue-700
+hover:to-blue-800
+
+transition-all
+duration-200
+
+whitespace-nowrap
+">
               <Plus className="w-4 h-4" />
               Add Treatment
             </button>
@@ -474,7 +482,7 @@ const Treatments = () => {
       </div>
 
       {/* Table Container */}
-      <div className="flex flex-col flex-1 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="flex flex-col flex-1 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mt-0">
 
         {/* Scrollable Table */}
         <div className="flex-1 overflow-auto">
@@ -483,7 +491,7 @@ const Treatments = () => {
             {/* Header */}
             <thead className="sticky top-0 z-10 bg-blue-50 border-b border-blue-100">
               <tr className="text-sm text-gray-600">
-                <th className="px-5 py-3 text-left font-semibold">Patient Name</th>
+                <th className="px-5 py-3 text-left font-semibold">Patient</th>
                 <th className="px-5 py-3 text-left font-semibold">Mobile</th>
                 <th className="px-5 py-3 text-left font-semibold">Treatment Type</th>
                 <th className="px-5 py-3 text-left font-semibold">Status</th>
@@ -624,6 +632,51 @@ const Treatments = () => {
           </div>
         )}
       </div>
+      {/* Mobile Floating Add Treatment Button */}
+<button
+  onClick={() => setShowAddModal(true)}
+  className="
+    md:hidden
+    fixed
+    bottom-28
+    right-6
+    z-50
+
+    h-12
+    w-12
+
+    rounded-full
+
+    bg-gradient-to-br
+    from-blue-500
+    via-blue-600
+    to-blue-700
+
+    text-white
+
+    border
+    border-white/30
+
+    shadow-[0_12px_30px_rgba(37,99,235,0.45)]
+
+    backdrop-blur-md
+
+    flex
+    items-center
+    justify-center
+
+    transition-all
+    duration-300
+
+    active:scale-95
+    hover:scale-110
+    hover:rotate-90
+  "
+  aria-label="Add Treatment"
+>
+    <Plus className="w-8 h-8 stroke-[2.5]" />
+</button>
+    
 
       {/* Add Treatment Modal */}
       {showAddModal && (

@@ -17,8 +17,8 @@ const PatientVisitsTrend = ({
     <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-lg transition-shadow">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
-          <h3 className="text-lg font-bold text-gray-900">Patient Visits Trend</h3>
-          <p className="text-sm text-gray-500">Filter by treatment and date range to compare visit trends.</p>
+          <h3 className="text-lg font-bold text-gray-900">Patient Visits Graph</h3>
+          {/* <p className="text-sm text-gray-500">Filter by treatment and date range to compare visit trends.</p> */}
         </div>
       </div>
 

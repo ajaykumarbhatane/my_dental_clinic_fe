@@ -22,8 +22,8 @@ const RevenueTrend = ({ data, summary, loading, error }) => {
     <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-lg transition-shadow">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
         <div>
-          <h3 className="text-lg font-bold text-gray-900">Revenue Trend</h3>
-          <p className="text-sm text-gray-500">Track clinic revenue across selected period.</p>
+          <h3 className="text-lg font-bold text-gray-900">Clinic Revenue</h3>
+          {/* <p className="text-sm text-gray-500">Track clinic revenue across selected period.</p> */}
         </div>
       </div>
 
