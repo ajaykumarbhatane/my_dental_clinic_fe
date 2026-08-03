@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, Plus, Eye, Edit, Trash2, Phone, X } from 'lucide-react';
+import { Search, Plus, Eye, Edit, Trash2, Phone, User, Stethoscope, X } from 'lucide-react';
 import { patientApi } from '../api/patientApi';
 import { clinicApi } from '../api/clinicApi';
 import { userApi } from '../api/userApi';
@@ -15,18 +15,25 @@ import { formatDate } from '../utils/dateUtils';
 import FilterSelect from "../components/FilterSelect";
 
 const Patients = () => {
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const initialSearch = params.get('search') || '';
+  const initialPage = parseInt(params.get('page') || '1', 10) || 1;
+  const initialTreatment = params.get('treatment') || '';
+  const initialDoctor = params.get('doctor') || '';
+
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(initialSearch);
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(initialSearch);
   const [isFirstLoad, setIsFirstLoad] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(initialPage);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
 
   // Filter States
-  const [treatmentFilter, setTreatmentFilter] = useState('');
-  const [doctorFilter, setDoctorFilter] = useState('');
+  const [treatmentFilter, setTreatmentFilter] = useState(initialTreatment);
+  const [doctorFilter, setDoctorFilter] = useState(initialDoctor);
   const [filterDoctors, setFilterDoctors] = useState([]);
   const [filterTreatments, setFilterTreatments] = useState([]);
 
@@ -92,7 +99,6 @@ const Patients = () => {
   const newItemRef = useRef(null);
 
   const navigate = useNavigate();
-  const location = useLocation();
   const { user } = useAuth();
   const { showError, showSuccess } = useNotification();
 
@@ -105,35 +111,19 @@ const Patients = () => {
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const page = parseInt(params.get('page') || '1', 10);
+    const page = parseInt(params.get('page') || '1', 10) || 1;
     const search = params.get('search') || '';
     const treatment = params.get('treatment') || '';
     const doctor = params.get('doctor') || '';
 
-    if (!Number.isNaN(page) && page > 0) {
-      setCurrentPage(page);
-    }
+    setCurrentPage(page);
+    setSearchTerm(search);
+    setDebouncedSearchTerm(search);
+    setTreatmentFilter(treatment);
+    setDoctorFilter(doctor);
 
-    if (search !== searchTerm) {
-      setSearchTerm(search);
-    }
-
-    if (search !== debouncedSearchTerm) {
-      setDebouncedSearchTerm(search);
-    }
-
-    if (treatment !== treatmentFilter) {
-      setTreatmentFilter(treatment);
-    }
-
-    if (doctor !== doctorFilter) {
-      setDoctorFilter(doctor);
-    }
+    fetchPatients(page, search, treatment, doctor);
   }, [location.search]);
-
-  useEffect(() => {
-    fetchPatients(currentPage, debouncedSearchTerm, treatmentFilter, doctorFilter);
-  }, [currentPage, debouncedSearchTerm, treatmentFilter, doctorFilter]);
 
   
 
@@ -833,101 +823,183 @@ useEffect(() => {
 
         {/* Scrollable Table */}
         <div className="flex-1 overflow-auto">
-          <table className="min-w-full">
+          {/* Mobile card view */}
+          <div className="space-y-4 p-4 md:hidden">
+            {loading ? (
+              <div className="rounded-3xl border border-gray-200 bg-slate-50 p-6 text-center text-sm text-slate-500">
+                Loading patients...
+              </div>
+            ) : patients.length === 0 ? (
+              <div className="rounded-3xl border border-gray-200 bg-slate-50 p-6 text-center text-sm text-slate-500">
+                No patients found
+              </div>
+            ) : (
+              patients.map((patient) => {
+                const patientName = `${patient.first_name || ''} ${patient.last_name || ''}`.trim();
+                const treatmentInfo = patient.treatment_summary || (patient.treatment_count > 0 ? `${patient.treatment_count} treatments` : 'No treatments');
 
-            {/* Header */}
-            <thead className="sticky top-0 z-10 bg-blue-50 border-b border-blue-100">
-              <tr className="text-sm text-slate-700">
-                <th className="px-5 py-3 text-left font-semibold">Patient</th>
-                <th className="px-5 py-3 text-left font-semibold">Mobile</th>
-                {/* <th className="px-5 py-3 text-left font-semibold">Doctor</th> */}
-                <th className="px-5 py-3 text-left font-semibold">Treatments</th>
-                {/* <th className="px-5 py-3 text-left font-semibold">Date</th> */}
-                <th className="px-5 py-3 text-left font-semibold">Actions</th>
-              </tr>
-            </thead>
-
-            {/* Body */}
-            <tbody className="divide-y">
-              {loading ? (
-                <tr>
-                  <td colSpan="6" className="text-center py-6 text-gray-500">
-                    Loading patients...
-                  </td>
-                </tr>
-              ) : patients.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="text-center py-6 text-gray-400">
-                    No patients found
-                  </td>
-                </tr>
-                ) : (
-              patients.map((patient) => (
-                <tr
-                  key={patient.id}
-                  onClick={() => {
-                    const params = new URLSearchParams();
-                    if (debouncedSearchTerm) params.set('search', debouncedSearchTerm);
-                    if (currentPage > 1) params.set('page', currentPage.toString());
-                    // Use Link component's 'to' property syntax or navigate with proper object
-                    navigate({ 
-                      pathname: `${patient.id}`,
-                      search: params.toString() ? `?${params.toString()}` : '' 
-                    });
-                  }}
-                  className="group cursor-pointer transition-all duration-300 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 hover:shadow-md hover:scale-[1.002]">
-
-                  {/* Patient */}
-                  <td className="px-5 py-3">
-                    <span className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
-                      {patient.first_name} <br /> {patient.last_name}
-                    </span>
-                  </td>
-
-                  {/* Mobile */}
-                  <td className="px-5 py-3">
-                    {patient.mobile ? (
-                      <a
-                        href={`tel:${patient.mobile}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="inline-flex items-center gap-3 group"
-                      >
-                        <div className="w-8 h-8 flex items-center justify-center bg-blue-500 text-white rounded-md group-hover:bg-blue-600 transition-colors">
-                          <Phone className="w-4 h-4" />
-                        </div>
-
-                        <span className="text-gray-600 group-hover:text-blue-600 transition-colors">
-                          {patient.mobile}
-                        </span>
-                      </a>
-                    ) : (
-                      <span className="text-gray-400">N/A</span>
-                    )}
-                  </td>
-
-                  {/* Doctor */}
-                  {/* <td className="px-5 py-3 text-gray-600">
-                    {patient.assigned_doctor || 'N/A'}
-                  </td> */}
-
-                  {/* Treatments */}
-                  <td className="px-5 py-3 text-gray-600">
-                    {patient.treatment_summary || (patient.treatment_count > 0 ? `${patient.treatment_count} treatments` : 'No treatments')}
-                  </td>
-
-                  {/* Date */}
-                  {/* <td className="px-5 py-3 text-gray-600">
-                    {formatDate(patient.created_at)}
-                  </td>
-
-                  {/* Actions */}
-                  <td
-                    className="px-5 py-3"
-                    onClick={(e) => e.stopPropagation()}
+                return (
+                  <div
+                    key={patient.id}
+                    onClick={() => {
+                      const params = new URLSearchParams(location.search);
+                      if (currentPage > 1) {
+                        params.set('page', currentPage.toString());
+                      } else {
+                        params.delete('page');
+                      }
+                      navigate({
+                        pathname: `${patient.id}`,
+                        search: params.toString() ? `?${params.toString()}` : ''
+                      });
+                    }}
+                    className="group relative cursor-pointer overflow-hidden rounded-3xl border border-gray-200 bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md"
                   >
-                    <div className="flex gap-3">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-700">
+                          <User className="h-6 w-6" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-base font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
+                            {patientName || 'Unknown Patient'}
+                          </p>
+                        </div>
+                      </div>
 
-                      <Eye className="w-4 h-4 text-blue-600 cursor-pointer hover:scale-125 transition-transform" />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteClick(patient);
+                        }}
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-slate-500 transition hover:bg-red-50 hover:text-red-600"
+                        aria-label={`Delete ${patientName}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+
+                    <div className="mt-4 space-y-3 text-sm text-slate-600">
+                      <div className="flex items-center gap-3 rounded-2xl bg-slate-50 p-3">
+                        <Stethoscope className="h-4 w-4 text-blue-600" />
+                        <span className="truncate">{treatmentInfo}</span>
+                      </div>
+
+                      <a
+                        href={`tel:${patient.mobile || ''}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 transition hover:bg-slate-100"
+                      >
+                        <Phone className="h-4 w-4 text-green-600" />
+                        <span>{patient.mobile || 'N/A'}</span>
+                      </a>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Desktop table view */}
+          <div className="hidden md:block">
+            <table className="min-w-full">
+
+              {/* Header */}
+              <thead className="sticky top-0 z-10 bg-blue-50 border-b border-blue-100">
+                <tr className="text-sm text-slate-700">
+                  <th className="px-5 py-3 text-left font-semibold">Patient</th>
+                  <th className="px-5 py-3 text-left font-semibold">Mobile</th>
+                  {/* <th className="px-5 py-3 text-left font-semibold">Doctor</th> */}
+                  <th className="px-5 py-3 text-left font-semibold">Treatments</th>
+                  {/* <th className="px-5 py-3 text-left font-semibold">Date</th> */}
+                  <th className="px-5 py-3 text-left font-semibold">Actions</th>
+                </tr>
+              </thead>
+
+              {/* Body */}
+              <tbody className="divide-y">
+                {loading ? (
+                  <tr>
+                    <td colSpan="6" className="text-center py-6 text-gray-500">
+                      Loading patients...
+                    </td>
+                  </tr>
+                ) : patients.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="text-center py-6 text-gray-400">
+                      No patients found
+                    </td>
+                  </tr>
+                ) : (
+                  patients.map((patient) => (
+                    <tr
+                      key={patient.id}
+                      onClick={() => {
+                        const params = new URLSearchParams(location.search);
+                        if (currentPage > 1) {
+                          params.set('page', currentPage.toString());
+                        } else {
+                          params.delete('page');
+                        }
+                        navigate({ 
+                          pathname: `${patient.id}`,
+                          search: params.toString() ? `?${params.toString()}` : '' 
+                        });
+                      }}
+                      className="group cursor-pointer transition-all duration-300 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 hover:shadow-md hover:scale-[1.002]">
+
+                      {/* Patient */}
+                      <td className="px-5 py-3">
+                        <span className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
+                          {patient.first_name} <br /> {patient.last_name}
+                        </span>
+                      </td>
+
+                      {/* Mobile */}
+                      <td className="px-5 py-3">
+                        {patient.mobile ? (
+                          <a
+                            href={`tel:${patient.mobile}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex items-center gap-3 group"
+                          >
+                            <div className="w-8 h-8 flex items-center justify-center bg-blue-500 text-white rounded-md group-hover:bg-blue-600 transition-colors">
+                              <Phone className="w-4 h-4" />
+                            </div>
+
+                            <span className="text-gray-600 group-hover:text-blue-600 transition-colors">
+                              {patient.mobile}
+                            </span>
+                          </a>
+                        ) : (
+                          <span className="text-gray-400">N/A</span>
+                        )}
+                      </td>
+
+                      {/* Doctor */}
+                      {/* <td className="px-5 py-3 text-gray-600">
+                        {patient.assigned_doctor || 'N/A'}
+                      </td> */}
+
+                      {/* Treatments */}
+                      <td className="px-5 py-3 text-gray-600">
+                        {patient.treatment_summary || (patient.treatment_count > 0 ? `${patient.treatment_count} treatments` : 'No treatments')}
+                      </td>
+
+                      {/* Date */}
+                      {/* <td className="px-5 py-3 text-gray-600">
+                        {formatDate(patient.created_at)}
+                      </td>
+
+                      {/* Actions */}
+                      <td
+                        className="px-5 py-3"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex gap-3">
+
+                          <Eye className="w-4 h-4 text-blue-600 cursor-pointer hover:scale-125 transition-transform" />
 
 <Edit className="w-4 h-4 text-amber-600 cursor-pointer hover:scale-125 transition-transform" />
 
@@ -938,15 +1010,15 @@ useEffect(() => {
   }}
   className="w-4 h-4 text-red-600 cursor-pointer hover:scale-125 transition-transform" />
 
-                    </div>
-                  </td>
+                        </div>
+                      </td>
 
-                </tr>
-                      )
-                
-              ))}
-            </tbody>
-          </table>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* Pagination */}

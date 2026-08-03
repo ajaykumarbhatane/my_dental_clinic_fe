@@ -319,7 +319,11 @@ const TreatmentDetail = () => {
     try {
       await treatmentApi.delete(id);
       alert('Treatment deleted successfully!');
-      navigate('/app/treatments');
+      // Try to navigate back to the originating list view with preserved query params
+      const queryParams = new URLSearchParams(location.search || '');
+      const returnToParam = queryParams.get('returnTo');
+      const returnTo = returnToParam ? decodeURIComponent(returnToParam) : (location.state?.returnTo || location.state?.from || '/app/treatments');
+      navigate(returnTo);
     } catch (error) {
       console.error('Error deleting treatment:', error);
       alert(error.response?.data?.detail || 'Error deleting treatment');

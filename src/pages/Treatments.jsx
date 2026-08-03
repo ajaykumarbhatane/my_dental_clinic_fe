@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, Filter, Eye, Edit3, Plus, X, Trash2, Phone } from 'lucide-react';
+import { Search, Filter, Eye, Edit3, Plus, X, Trash2, Phone, User, Stethoscope } from 'lucide-react';
 import { treatmentApi } from '../api/treatmentApi';
 import { patientApi } from '../api/patientApi';
 import { visitsApi } from '../api/visitsApi';
@@ -13,16 +13,26 @@ const Treatments = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const initialParams = new URLSearchParams(location.search);
+  const initialPage = parseInt(initialParams.get('page') || '1', 10);
+  const initialSearch = initialParams.get('search') || '';
+  let initialType = initialParams.get('type') || '';
+  let initialStatus = initialParams.get('status') || '';
+
+  if (initialType === 'all') initialType = '';
+  if (initialStatus === 'all') initialStatus = '';
+
   const [treatments, setTreatments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState(initialSearch);
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(initialSearch);
+  const [currentPage, setCurrentPage] = useState(Number.isNaN(initialPage) || initialPage <= 0 ? 1 : initialPage);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
-  const [treatmentFilter, setTreatmentFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [treatmentFilter, setTreatmentFilter] = useState(initialType);
+  const [statusFilter, setStatusFilter] = useState(initialStatus);
   const [isFirstLoad, setIsFirstLoad] = useState(true);
+  const [hasSyncedQueryParams, setHasSyncedQueryParams] = useState(false);
   const [treatmentTypes, setTreatmentTypes] = useState([]);
   const [patients, setPatients] = useState([]);
   const [selectedTreatment, setSelectedTreatment] = useState(null);
@@ -89,11 +99,14 @@ const Treatments = () => {
     if (status !== statusFilter) {
       setStatusFilter(status);
     }
+
+    setHasSyncedQueryParams(true);
   }, [location.search]);
 
   useEffect(() => {
+    if (!hasSyncedQueryParams) return;
     fetchTreatments(currentPage, debouncedSearchTerm, treatmentFilter, statusFilter);
-  }, [currentPage, debouncedSearchTerm, treatmentFilter, statusFilter]);
+  }, [currentPage, debouncedSearchTerm, treatmentFilter, statusFilter, hasSyncedQueryParams]);
 
   useEffect(() => {
     if (isFirstLoad) {
@@ -244,9 +257,22 @@ const Treatments = () => {
   };
 
   const handleViewTreatment = (treatment) => {
+    // Preserve current search / filter / page params when navigating to detail
+    const params = new URLSearchParams(location.search);
+    // Ensure page param is preserved explicitly when on later pages
+    if (currentPage > 1) {
+      params.set('page', String(currentPage));
+    } else {
+      params.delete('page');
+    }
+
+    const searchString = params.toString() ? `?${params.toString()}` : '';
     const currentPageUrl = `${location.pathname}${location.search}`;
+
+    // Navigate to detail while keeping the original list params in the detail URL.
+    // Also include a returnTo state for callers that rely on it.
     navigate(
-      `/app/treatments/${treatment.id}?returnTo=${encodeURIComponent(currentPageUrl)}`,
+      `/app/treatments/${treatment.id}${searchString}`,
       { state: { from: currentPageUrl, returnTo: currentPageUrl } }
     );
   };
@@ -486,6 +512,77 @@ whitespace-nowrap
 
         {/* Scrollable Table */}
         <div className="flex-1 overflow-auto">
+        <div className="space-y-4 p-4 md:hidden">
+          {loading ? (
+            <div className="rounded-3xl border border-gray-200 bg-slate-50 p-6 text-center text-sm text-slate-500">
+              Loading treatments...
+            </div>
+          ) : treatments.length === 0 ? (
+            <div className="rounded-3xl border border-gray-200 bg-slate-50 p-6 text-center text-sm text-slate-500">
+              No treatments found
+            </div>
+          ) : (
+            treatments.map((treatment) => {
+              const treatmentPatientName = [
+                treatment.patient_name,
+                treatment.patient_last_name
+              ]
+                .filter(Boolean)
+                .join(' ') || treatment.patient_name || 'Unknown Patient';
+
+              return (
+                <div
+                  key={treatment.id}
+                  onClick={() => handleViewTreatment(treatment)}
+                  className="group relative cursor-pointer overflow-hidden rounded-3xl border border-gray-200 bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-700">
+                        <User className="h-6 w-6" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-base font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
+                          {treatmentPatientName}
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteTreatment(treatment);
+                      }}
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-slate-500 transition hover:bg-red-50 hover:text-red-600"
+                      aria-label={`Delete treatment for ${treatmentPatientName}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  <div className="mt-4 space-y-3 text-sm text-slate-600">
+                    <div className="flex items-center gap-3 rounded-2xl bg-slate-50 p-3">
+                      <Stethoscope className="h-4 w-4 text-blue-600" />
+                      <span className="truncate">{treatment.type_of_treatment_name || 'No treatment type'}</span>
+                    </div>
+
+                    <a
+                      href={`tel:${treatment.patient_mobile || treatment.patient?.mobile || ''}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 transition hover:bg-slate-100"
+                    >
+                      <Phone className="h-4 w-4 text-green-600" />
+                      <span>{treatment.patient_mobile || treatment.patient?.mobile || 'N/A'}</span>
+                    </a>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        <div className="hidden md:block">
           <table className="min-w-full">
 
             {/* Header */}
@@ -535,7 +632,7 @@ whitespace-nowrap
 >
                     <td className="px-5 py-3">
                       <span className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
-                        {treatment.patient_first_name || treatment.patient?.first_name || treatment.patient_name || 'N/A'}
+                        {treatment.patient_name || treatment.patient?.first_name || treatment.patient_name || 'N/A'}
                         {treatment.patient_last_name || treatment.patient?.last_name ? (
                           <><br />{treatment.patient_last_name || treatment.patient?.last_name}</>
                         ) : null}
@@ -619,6 +716,7 @@ whitespace-nowrap
             </tbody>
           </table>
         </div>
+      </div>
 
         {/* Pagination */}
         {totalPages > 1 && (
