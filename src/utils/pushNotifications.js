@@ -39,7 +39,7 @@ const ensureAppointmentChannel = async () => {
       name: 'Appointment Reminders',
       description: 'Appointment reminder notifications and quick actions.',
       importance: 4,
-      sound: 'default',
+      sound: 'notification_sound',
       lights: true,
       vibration: true,
     });
