@@ -12,7 +12,8 @@ DollarSign,
 Sparkles,
 MoreVertical,
 Pencil,
-Trash
+Trash,
+Phone
 } from "lucide-react";
 import { treatmentApi } from '../api/treatmentApi';
 import { visitsApi, visitImagesApi } from '../api/visitsApi';
@@ -544,6 +545,7 @@ const TreatmentDetail = () => {
   const patientDisplayName = (patientFirst || patientLast)
     ? `${patientFirst} ${patientLast}`.trim()
     : (treatment?.patient_full_name || treatment?.patient_name || 'Patient');
+  const patientMobile = treatment?.patient_mobile || treatment?.patient?.mobile || '';
   const MAX_PATIENT_NAME = 14;
 
   const shortPatientName =
@@ -580,32 +582,59 @@ const TreatmentDetail = () => {
 
     <div>
 
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="space-y-2">
 
-    <span className="text-sm font-semibold uppercase tracking-[0.15em] text-blue-200 whitespace-nowrap">
-        PT:
-    </span>
+    <div className="flex items-center gap-2 min-w-0">
+        <span className="text-sm font-semibold uppercase tracking-[0.15em] text-blue-200">
+            PT:
+        </span>
 
-    <span
-        title={patientDisplayName}
+        <span
+            title={patientDisplayName}
+            className="text-2xl font-bold text-white"
+        >
+            {patientDisplayName}
+        </span>
+    </div>
+
+    {patientMobile && (
+    <a
+        href={`tel:${patientMobile}`}
         className="
-            text-2xl
-            font-bold
+            inline-flex
+            items-center
+            gap-2
+            mt-1
+
+            rounded-full
+
+            bg-gradient-to-r
+            from-green-500
+            to-emerald-600
+
+            px-4
+            py-2
+
+            text-sm
+            font-semibold
             text-white
-            cursor-default
 
-            block
+            shadow-lg
+            shadow-green-500/30
 
-            max-w-[140px]
-            truncate
+            transition-all
+            duration-200
 
-            md:max-w-none
-            md:truncate-none
-            md:whitespace-normal
+            hover:from-green-600
+            hover:to-emerald-700
+
+            active:scale-95
         "
     >
-        {patientDisplayName}
-    </span>
+        <Phone className="w-4 h-4 text-white" />
+        <span>{patientMobile}</span>
+    </a>
+)}
 
 </div>
 
