@@ -15,7 +15,6 @@ import PatientDetail from './pages/PatientDetail';
 import Treatments from './pages/Treatments';
 import TreatmentDetail from './pages/TreatmentDetail';
 import TreatmentVideos from './pages/TreatmentVideos';
-import Settings from './pages/Settings';
 import ClinicSettings from './pages/ClinicSettings';
 import CustomerCare from './pages/CustomerCare';
 
@@ -80,6 +79,8 @@ const DeepLinkHandler = () => {
           const visitId = url.searchParams.get('visit_id');
           const targetPath = `/app/treatments/${treatmentId}${visitId ? `?visit_id=${visitId}` : ''}`;
           navigate(targetPath, { replace: true });
+        } else if (url.pathname.startsWith('/subscriptions')) {
+          navigate('/app/subscriptions', { replace: true });
         }
       } catch (error) {
         console.warn('Failed to handle deep link', error, { url: event.url });
@@ -168,7 +169,7 @@ const AppRoutes = () => {
                   <Route path="treatments/:id" element={<TreatmentDetail />} />
                   <Route path="treatment-videos" element={<TreatmentVideos />} />
                   <Route path="customer-care" element={<CustomerCare />} />
-                  <Route path="clinic-settings" element={<ClinicSettings />} />
+                  <Route path="clinic-settings" element={<Navigate to="/app/settings" replace />} />
                   <Route
                     path="subscriptions"
                     element={(
@@ -177,7 +178,7 @@ const AppRoutes = () => {
                       </Suspense>
                     )}
                   />
-                  <Route path="settings" element={<Settings />} />
+                  <Route path="settings" element={<ClinicSettings />} />
                   <Route path="*" element={<Navigate to="" replace />} />
                 </Routes>
                 <DeepLinkHandler />

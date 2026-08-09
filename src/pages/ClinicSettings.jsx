@@ -426,9 +426,9 @@ const ClinicSettings = () => {
           {/* <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.32em] text-slate-500">Clinic Settings</p>
-                <h1 className="mt-2 text-3xl font-semibold text-slate-900">Manage clinic profile, members and medicines</h1>
-                <p className="mt-2 max-w-2xl text-sm text-slate-500">A responsive clinic settings hub for profile configuration, assigned staff, and medicines management.</p>
+                <p className="text-sm font-semibold uppercase tracking-[0.32em] text-slate-500">Settings</p>
+                <h1 className="mt-2 text-3xl font-semibold text-slate-900">Manage your clinic profile, team, and medicines</h1>
+                <p className="mt-2 max-w-2xl text-sm text-slate-500">Everything for clinic administration now lives in one place, with the profile, staff, and medicine tools grouped into a single settings experience.</p>
               </div>
             </div>
           </div> */}
