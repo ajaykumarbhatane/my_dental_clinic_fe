@@ -372,30 +372,30 @@ const SubscriptionHistory = ({ history, showAllHistory = false }) => {
 
 const SubscriptionStats = ({ current, history }) => {
   const totalSpent = history.reduce((total, item) => total + Number(item.amount || 0), 0);
-  const stats = [
-    { icon: Crown, label: 'Current plan', value: current?.plan?.name || current?.current_plan?.name || 'None', tone: 'cyan' },
-    { icon: CalendarDays, label: 'Active since', value: current?.start_date ? formatDate(current.start_date) : 'Not active', tone: 'slate' },
-    { icon: CreditCard, label: 'Subscriptions purchased', value: history.length, tone: 'blue' },
-    { icon: Wallet, label: 'Total money spent', value: formatCurrency(totalSpent), tone: 'green' },
-  ];
+  // const stats = [
+  //   { icon: Crown, label: 'Current plan', value: current?.plan?.name || current?.current_plan?.name || 'None', tone: 'cyan' },
+  //   { icon: CalendarDays, label: 'Active since', value: current?.start_date ? formatDate(current.start_date) : 'Not active', tone: 'slate' },
+  //   { icon: CreditCard, label: 'Subscriptions purchased', value: history.length, tone: 'blue' },
+  //   { icon: Wallet, label: 'Total money spent', value: formatCurrency(totalSpent), tone: 'green' },
+  // ];
 
-  return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      {stats.map((stat) => (
-        <div key={stat.label} className="rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-md">
-          <div className="flex items-center gap-3">
-            <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${stat.tone === 'blue' ? 'bg-blue-50 text-blue-700' : stat.tone === 'cyan' ? 'bg-cyan-50 text-cyan-700' : stat.tone === 'green' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-700'}`}>
-              <stat.icon size={17} aria-hidden="true" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">{stat.label}</p>
-              <p className="mt-1 truncate text-sm font-semibold text-slate-900">{stat.value}</p>
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
+  // return (
+  //   <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+  //     {stats.map((stat) => (
+  //       <div key={stat.label} className="rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-md">
+  //         <div className="flex items-center gap-3">
+  //           <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${stat.tone === 'blue' ? 'bg-blue-50 text-blue-700' : stat.tone === 'cyan' ? 'bg-cyan-50 text-cyan-700' : stat.tone === 'green' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-700'}`}>
+  //             <stat.icon size={17} aria-hidden="true" />
+  //           </div>
+  //           <div className="min-w-0">
+  //             <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">{stat.label}</p>
+  //             <p className="mt-1 truncate text-sm font-semibold text-slate-900">{stat.value}</p>
+  //           </div>
+  //         </div>
+  //       </div>
+  //     ))}
+  //   </div>
+  // );
 };
 
 const EmptyState = ({ icon: Icon = Package, title, description, action }) => (
@@ -581,10 +581,10 @@ const SubscriptionDashboard = () => {
         {plans.length ? <div className="mt-4 flex gap-5 overflow-x-auto pb-2 lg:grid lg:grid-cols-3 lg:overflow-visible">{plans.map((plan) => <SubscriptionPlanCard key={plan.id} plan={plan} selectedDuration={selectedDurations[plan.id] || getSelectedDuration(plan)} onDurationChange={(duration) => setSelectedDurations((previous) => ({ ...previous, [plan.id]: duration }))} onPurchase={handlePurchase} purchasing={Boolean(purchasingKey)} isCurrentActivePlan={current?.status === 'active' && (current?.plan?.id || current?.current_plan?.id) === plan.id} isActivating={activatingPlanId === plan.id} />)}</div> : <div className="mt-4"><EmptyState icon={Package} title="No plans available" description="Subscription plans will appear here when they are available for your clinic." /></div>}
       </section>
 
-      <section>
+      {/* <section>
         <SectionHeading title="Current Plan Features"/>
         <div className="mt-4"><FeatureGrid features={activeFeatures} hasSubscription={Boolean(current)} /></div>
-      </section>
+      </section> */}
 
       <section>
         <SectionHeading title="Subscription history"/>

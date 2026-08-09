@@ -4,7 +4,7 @@ import Pagination from '../components/Pagination';
 import AnalyticsFilters from '../components/AnalyticsFilters';
 import PatientVisitsTrend from '../components/PatientVisitsTrend';
 import RevenueTrend from '../components/RevenueTrend';
-import { Users, UserCheck, Calendar, TrendingUp, Phone } from 'lucide-react';
+import { Users, UserCheck, Calendar, TrendingUp, Phone, Stethoscope } from 'lucide-react';
 import { dashboardApi } from '../api/dashboardApi';
 import { useNotification } from '../context/NotificationContext';
 import { formatDate } from '../utils/dateUtils';
@@ -680,85 +680,71 @@ const Dashboard = () => {
           </div>
         ) : (
           <>
-            <div className="w-full overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
-                  <tr>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Patient Name
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Treatment
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Doctor
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Mobile
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Next Visit Date
-                  </th>
+            <div className="w-full max-h-[34rem] overflow-hidden overflow-y-auto pr-3">
+              <div className="space-y-4 p-2">
+                {paginatedUpcomingVisits.map((visit) => {
+                  const patientName = visit.patient_full_name || `${visit.patient_name || ''} ${visit.patient_last_name || ''}`.trim() || 'Unknown Patient';
+                  const treatmentName = visit.treatment_name || 'N/A';
+                  const doctorName = visit.doctor_name || visit.doctor?.name || 'N/A';
 
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {paginatedUpcomingVisits.map((visit, idx) => (
-                  <tr
-                    key={visit.id}
-                    className="hover:bg-gray-50 transition-colors cursor-pointer"
-                    onClick={() => navigate(visit.treatment || visit.treatment_id ? `treatments/${visit.treatment || visit.treatment_id}` : '#')}
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                      {visit.patient_full_name || `${visit.patient_name || ''} ${visit.patient_last_name || ''}`.trim() || 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-                        {visit.treatment_name || 'N/A'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
-                      {visit.doctor_name || visit.doctor?.name || 'N/A'}
-                    </td>
-                    {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
-                      {formatDate(visit.created_at)}
-                    </td> */}
-                    
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-3">
-                        {visit.patient_mobile && (
-                          <a
-                            href={`tel:${visit.patient_mobile}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-8 h-8 flex items-center justify-center bg-blue-500 text-white rounded-md hover:bg-blue-600"
-                          >
-                            <Phone className="w-4 h-4" />
-                          </a>
-                        )}
-                        <span className="text-gray-600">
-                          {visit.patient_mobile || 'N/A'}
-                        </span>
+                  return (
+                    <div
+                      key={visit.id}
+                      className="group relative cursor-pointer overflow-hidden rounded-3xl border border-gray-200 bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                      onClick={() => navigate(visit.treatment || visit.treatment_id ? `treatments/${visit.treatment || visit.treatment_id}` : '#')}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-700">
+                            <Users className="h-6 w-6" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate text-base font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
+                              {patientName}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 rounded-full bg-slate-100 px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
+                          <Calendar className="h-4 w-4 text-slate-500" />
+                          <span>{formatDate(visit.next_visit_date)}</span>
+                        </div>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
-                      {formatDate(visit.next_visit_date)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
 
-          {upcomingTotalPages > 1 && (
-            <div className="mt-4">
-              <Pagination
-                currentPage={upcomingPage}
-                totalPages={upcomingTotalPages}
-                onPageChange={setUpcomingPage}
-                itemCountText={`Showing ${((upcomingPage - 1) * upcomingPerPage) + 1} to ${Math.min(upcomingPage * upcomingPerPage, upcomingVisits.length)} of ${upcomingVisits.length} upcoming visits`}
-              />
+                      <div className="mt-4 space-y-3 text-sm text-slate-600">
+                        <div className="flex items-center gap-3 rounded-2xl bg-slate-50 p-3">
+                          <Stethoscope className="h-4 w-4 text-blue-600" />
+                          <span className="truncate font-medium text-slate-800">{treatmentName}</span>
+                        </div>
+                        <div className="flex items-center gap-3 rounded-2xl bg-slate-50 p-3">
+                          <UserCheck className="h-4 w-4 text-blue-600" />
+                          <span className="text-slate-500">Doctor:</span>
+                          <span className="truncate font-medium text-slate-800">{doctorName}</span>
+                        </div>
+                        <a
+                          href={`tel:${visit.patient_mobile || ''}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 transition hover:bg-slate-100"
+                        >
+                          <Phone className="h-4 w-4 text-green-600" />
+                          <span>{visit.patient_mobile || 'N/A'}</span>
+                        </a>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          )}
+
+            {upcomingTotalPages > 1 && (
+              <div className="mt-4">
+                <Pagination
+                  currentPage={upcomingPage}
+                  totalPages={upcomingTotalPages}
+                  onPageChange={setUpcomingPage}
+                  itemCountText={`Showing ${((upcomingPage - 1) * upcomingPerPage) + 1} to ${Math.min(upcomingPage * upcomingPerPage, upcomingVisits.length)} of ${upcomingVisits.length} upcoming visits`}
+                />
+              </div>
+            )}
         </>
         )}
       </div>

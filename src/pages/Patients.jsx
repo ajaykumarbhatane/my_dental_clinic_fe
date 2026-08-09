@@ -769,7 +769,7 @@ useEffect(() => {
         </div>
 
         {/* Doctor */}
-        <div className="shrink-0 w-[88px] sm:w-[90px] md:w-[170px]">
+        {/* <div className="shrink-0 w-[88px] sm:w-[90px] md:w-[170px]">
           <FilterSelect
             value={doctorFilter}
             placeholder="All Doctors"
@@ -782,7 +782,7 @@ useEffect(() => {
             ]}
             onChange={(value) => handleFilterChange("doctor", value)}
           />
-        </div>
+        </div> */}
 
         <button
   onClick={() => setShowAddModal(true)}

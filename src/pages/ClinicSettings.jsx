@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Edit, Save, AlertCircle, Check, Plus, Pill, Trash2 } from 'lucide-react';
+import { Edit, Save, AlertCircle, Check, Plus, Pill, Trash2, User, Phone, Calendar, MapPin, Users, FileText, Mail } from 'lucide-react';
 import { userApi } from '../api/userApi';
 import { clinicApi } from '../api/clinicApi';
 import { clinicDoctorApi } from '../api/clinicDoctorApi';
@@ -7,19 +7,16 @@ import { prescriptionApi } from '../api/prescriptionApi';
 import ChoiceSelect from '../components/ChoiceSelect';
 import { formatDate } from '../utils/dateUtils';
 
-const InfoRow = ({ label, value }) => (
-  <div className="flex items-center gap-3 border-b border-slate-100 py-3 last:border-b-0">
-    <div className="w-32 shrink-0">
-      <span className="text-sm font-medium text-slate-500">
-        {label}
-      </span>
+const InfoRow = ({ label, value, Icon }) => (
+  <div className="flex items-center gap-3 rounded-xl p-3 hover:bg-slate-50 transition">
+    <div
+      title={label}
+      className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600 shrink-0"
+    >
+      {Icon && <Icon className="h-5 w-5" />}
     </div>
 
-    <div className="flex-1">
-      <span className="text-sm font-semibold text-slate-900">
-        {value || 'N/A'}
-      </span>
-    </div>
+    <span className="text-sm font-semibold text-slate-900 truncate">{value || 'N/A'}</span>
   </div>
 );
 
@@ -423,63 +420,45 @@ const ClinicSettings = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* <div className="rounded-[32px] bg-gradient-to-r from-blue-800 to-cyan-500 p-8 text-white">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="max-w-3xl space-y-3">
-            <h1 className="text-2xl font-semibold tracking-tight">CLINIC SETTINGS</h1>
-            <p className="text-sm uppercase tracking-[0.1em] text-sky-300">Manage your clinic profile and medicines.</p>
+    <div className="flex flex-col gap-6">
+      <div className="px-0 w-full">
+        <main className="space-y-5">
+          {/* <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.32em] text-slate-500">Clinic Settings</p>
+                <h1 className="mt-2 text-3xl font-semibold text-slate-900">Manage clinic profile, members and medicines</h1>
+                <p className="mt-2 max-w-2xl text-sm text-slate-500">A responsive clinic settings hub for profile configuration, assigned staff, and medicines management.</p>
+              </div>
+            </div>
+          </div> */}
+
+          <div className="rounded-[28px] border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
+            <div className="flex flex-wrap gap-2 rounded-[20px] bg-slate-100 p-1.5">
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`group flex-1 rounded-[16px] px-4 py-3 text-sm font-semibold transition-all duration-300 whitespace-nowrap ${
+                      activeTab === tab.id
+                        ? 'bg-gradient-to-r from-blue-700 to-cyan-500 text-white shadow-md'
+                        : 'text-slate-500 hover:bg-white hover:text-blue-600 hover:shadow-xl hover:-translate-y-1'
+                    }`}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <Icon className="h-4 w-4" />
+                      <span>{tab.label}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          
-        </div>
-      </div> */}
-
-      <div className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="rounded-[24px] bg-slate-100 p-3">
-          <div className="flex gap-2 overflow-hidden">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`group flex-1 min-w-0 rounded-[16px] px-4 py-4 text-sm font-semibold transition-all duration-300 ${
-                    activeTab === tab.id
-                      ? 'bg-gradient-to-r from-blue-700 to-cyan-500 text-white shadow-md'
-                      : 'text-slate-500 hover:bg-white hover:text-blue-600'
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  {tab.label}
-                </button>
-              );
-            })}
-          </div>
-
-        </div>
-
-        {/* Success Message */}
-        {success && (
-          <div className="flex items-center gap-3 bg-green-50 border-l-4 border-green-500 p-4 rounded-lg mb-6 animate-in fade-in slide-in-from-top-2">
-            <Check className="h-5 w-5 text-green-600 flex-shrink-0" />
-            <p className="text-sm text-green-700 font-medium">
-              {activeTab === 'profile' ? 'Profile updated successfully!' : 'Operation completed successfully!'}
-            </p>
-          </div>
-        )}
-
-        {/* Error Message */}
-        {error && (
-          <div className="flex items-center gap-3 bg-red-50 border-l-4 border-red-500 p-4 rounded-lg mb-6">
-            <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
-            <p className="text-sm text-red-700">{error}</p>
-          </div>
-        )}
-
-        {/* Profile Tab */}
-        {activeTab === 'profile' && (
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
+          {activeTab === 'profile' && (
+            <div className="space-y-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-slate-400">
                   PROFILE OVERVIEW
@@ -488,120 +467,149 @@ const ClinicSettings = () => {
               {!isEditing ? (
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-lg flex items-center gap-2 font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
                   disabled={loading}
                 >
-                  <Edit className="w-5 h-5" />
+                  <Edit className="h-4 w-4" />
                   <span>Edit Profile</span>
                 </button>
               ) : (
                 <button
                   onClick={handleSave}
-                  className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-3 rounded-lg flex items-center gap-2 font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-green-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700"
                   disabled={loading}
                 >
-                  <Save className="w-5 h-5" />
+                  <Save className="h-4 w-4" />
                   <span>{loading ? 'Saving...' : 'Save Changes'}</span>
                 </button>
               )}
             </div>
 
             {loading && !userData.email ? (
-              <div className="flex flex-col items-center justify-center h-64">
+              <div className="flex flex-col items-center justify-center h-56 py-8">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
                 <p className="text-gray-600 font-medium">Loading profile...</p>
               </div>
             ) : (
-              <div className="grid gap-6 xl:grid-cols-[1.3fr_0.9fr]">
-                <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-                  {isEditing ? (
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div className="rounded-[24px] border border-slate-100 bg-slate-50 p-4">
-                        <label className="block text-sm font-semibold text-slate-600 mb-2">First Name</label>
-                        <input
-                          type="text"
-                          value={userData.first_name}
-                          onChange={(e) => handleInputChange('first_name', e.target.value)}
-                          className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
-                        />
-                      </div>
+              <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                <div className="grid gap-5 lg:grid-cols-[1.55fr_1fr]">
+                  <div>
+                    {isEditing ? (
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div className="rounded-[24px] border border-slate-100 bg-slate-50 p-4">
+                          <label className="block text-sm font-semibold text-slate-600 mb-2">First Name</label>
+                          <input
+                            type="text"
+                            value={userData.first_name}
+                            onChange={(e) => handleInputChange('first_name', e.target.value)}
+                            className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
+                          />
+                        </div>
 
-                      <div className="rounded-[24px] border border-slate-100 bg-slate-50 p-4">
-                        <label className="block text-sm font-semibold text-slate-600 mb-2">Last Name</label>
-                        <input
-                          type="text"
-                          value={userData.last_name}
-                          onChange={(e) => handleInputChange('last_name', e.target.value)}
-                          className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
-                        />
-                      </div>
+                        <div className="rounded-[24px] border border-slate-100 bg-slate-50 p-4">
+                          <label className="block text-sm font-semibold text-slate-600 mb-2">Last Name</label>
+                          <input
+                            type="text"
+                            value={userData.last_name}
+                            onChange={(e) => handleInputChange('last_name', e.target.value)}
+                            className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
+                          />
+                        </div>
 
-                      <div className="rounded-[24px] border border-slate-100 bg-slate-50 p-4">
-                        <label className="block text-sm font-semibold text-slate-600 mb-2">Email</label>
-                        <input
-                          type="email"
+                        <div className="rounded-[24px] border border-slate-100 bg-slate-50 p-4">
+                          <label className="block text-sm font-semibold text-slate-600 mb-2">Email</label>
+                          <input
+                            type="email"
+                            value={userData.email}
+                            onChange={(e) => handleInputChange('email', e.target.value)}
+                            className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
+                          />
+                        </div>
+
+                        <div className="rounded-[24px] border border-slate-100 bg-slate-50 p-4">
+                          <label className="block text-sm font-semibold text-slate-600 mb-2">Phone</label>
+                          <input
+                            type="tel"
+                            value={userData.phone_number}
+                            onChange={(e) => handleInputChange('phone_number', e.target.value)}
+                            className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
+                          />
+                        </div>
+
+                        <div className="rounded-[24px] border border-slate-100 bg-slate-50 p-4">
+                          <label className="block text-sm font-semibold text-slate-600 mb-2">Qualification</label>
+                          <input
+                            type="text"
+                            value={userData.qualification}
+                            onChange={(e) => handleInputChange('qualification', e.target.value)}
+                            className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
+                            />
+                        </div>
+
+                        <div className="rounded-[24px] border border-slate-100 bg-slate-50 p-4">
+                          <label className="block text-sm font-semibold text-slate-600 mb-2">Registration</label>
+                          <input
+                            type="text"
+                            value={userData.registration_number}
+                            onChange={(e) => handleInputChange('registration_number', e.target.value)}
+                            className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <InfoRow
+                          Icon={User}
+                          label="Name"
+                          value={`${userData.first_name || ''} ${userData.last_name || ''}`.trim()}
+                        />
+
+                        <InfoRow
+                          Icon={Mail}
+                          label="Email"
                           value={userData.email}
-                          onChange={(e) => handleInputChange('email', e.target.value)}
-                          className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
                         />
-                      </div>
 
-                      <div className="rounded-[24px] border border-slate-100 bg-slate-50 p-4">
-                        <label className="block text-sm font-semibold text-slate-600 mb-2">Phone</label>
-                        <input
-                          type="tel"
+                        <InfoRow
+                          Icon={Phone}
+                          label="Phone"
                           value={userData.phone_number}
-                          onChange={(e) => handleInputChange('phone_number', e.target.value)}
-                          className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
                         />
-                      </div>
 
-                      <div className="rounded-[24px] border border-slate-100 bg-slate-50 p-4">
-                        <label className="block text-sm font-semibold text-slate-600 mb-2">Qualification</label>
-                        <input
-                          type="text"
+                        <InfoRow
+                          Icon={FileText}
+                          label="Qualification"
                           value={userData.qualification}
-                          onChange={(e) => handleInputChange('qualification', e.target.value)}
-                          className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
                         />
-                      </div>
 
-                      <div className="rounded-[24px] border border-slate-100 bg-slate-50 p-4">
-                        <label className="block text-sm font-semibold text-slate-600 mb-2">Registration</label>
-                        <input
-                          type="text"
+                        <InfoRow
+                          Icon={FileText}
+                          label="Registration"
                           value={userData.registration_number}
-                          onChange={(e) => handleInputChange('registration_number', e.target.value)}
-                          className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
                         />
                       </div>
-                    </div>
-                  ) : (
-                    <div className="grid gap-0 md:grid-cols-2">
-                      <InfoRow label="First Name" value={userData.first_name} />
-                      <InfoRow label="Last Name" value={userData.last_name} />
-                      <InfoRow label="Email" value={userData.email} />
-                      <InfoRow label="Phone" value={userData.phone_number} />
-                      <InfoRow label="Qualification" value={userData.qualification} />
-                      <InfoRow label="Registration" value={userData.registration_number} />
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
 
-                <div className="space-y-6">
-                  <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+                  {/* <div className="rounded-[24px] bg-slate-50 p-4">
                     <p className="text-sm uppercase tracking-[0.28em] text-slate-500">Profile status</p>
                     <div className="mt-5 grid gap-4">
-                      <div className="rounded-[24px] bg-slate-50 p-4">
-                        <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Role</p>
+                      <div className="rounded-[24px] bg-white p-4">
+                        <div className="flex items-center gap-2">
+                          <User className="w-4 h-4 text-slate-400" />
+                          <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Role</p>
+                        </div>
                         <p className="mt-2 text-xl font-semibold text-slate-900 capitalize">{userData.role || 'N/A'}</p>
                       </div>
-                      <div className="rounded-[24px] bg-slate-50 p-4">
-                        <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Joining Date</p>
+                      <div className="rounded-[24px] bg-white p-4">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-slate-400" />
+                          <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Joining Date</p>
+                        </div>
                         <p className="mt-2 text-xl font-semibold text-slate-900">{formatDate(userData.joining_date) || 'TBA'}</p>
                       </div>
                     </div>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             )}
@@ -610,8 +618,12 @@ const ClinicSettings = () => {
 
         {/* Clinic Medicines Tab */}
         {activeTab === 'medicines' && (
-          <div className="space-y-6">
-            <div className="flex justify-end items-center">
+          <div className="space-y-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3 text-sm text-slate-600">
+                <Pill className="h-4 w-4 text-slate-600" />
+                <p className="font-semibold text-slate-700">Clinic Medicines</p>
+              </div>
               <button
                 onClick={() => {
                   setMedicineModalMode('add');
@@ -624,20 +636,20 @@ const ClinicSettings = () => {
                   });
                   setShowAddMedicine(true);
                 }}
-                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-lg flex items-center gap-2 font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
               >
-                <Plus className="w-5 h-5" />
+                <Plus className="h-4 w-4" />
                 <span>Add Medicine</span>
               </button>
             </div>
 
             {medicineLoading && medicines.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-64">
+              <div className="flex flex-col items-center justify-center h-64 py-6">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
                 <p className="text-gray-600 font-medium">Loading medicines...</p>
               </div>
              ) : (
-              <div className="space-y-6">
+                <div className="space-y-4">
                {/* <div className="grid gap-4 md:grid-cols-3">
                   <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-400">
@@ -650,12 +662,12 @@ const ClinicSettings = () => {
                 </div> */}
 
                 {medicines.length === 0 ? (
-                  <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-10 text-center text-slate-600">
+                  <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4 text-center text-slate-600">
                     No clinic medicines have been added yet. Use the button above to add your first medicine.
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <div className="hidden grid-cols-[2fr_1fr_1fr_1fr] gap-4 px-6 py-4 bg-slate-50 border-b border-slate-200 text-xs font-bold uppercase tracking-[0.2em] text-slate-500 sm:grid">
+                    <div className="hidden grid-cols-[2fr_1fr_1fr_1fr] gap-4 px-4 py-3 bg-slate-50 border-b border-slate-200 text-xs font-bold uppercase tracking-[0.2em] text-slate-500 sm:grid">
                       <div>Medicine Name</div>
                       <div>Form</div>
                       <div>Strength</div>
@@ -665,7 +677,7 @@ const ClinicSettings = () => {
                     {medicines.map((medicine) => (
                       <div
                         key={medicine.id}
-                        className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm transition hover:border-slate-300 hover:shadow-md sm:grid sm:grid-cols-[2fr_1fr_1fr_1fr] sm:items-center sm:p-4"
+                        className="rounded-[24px] border border-slate-200 bg-white p-3 shadow-sm transition hover:border-slate-300 hover:shadow-md sm:grid sm:grid-cols-[2fr_1fr_1fr_1fr] sm:items-center sm:p-4"
                       >
                         <div className="min-w-0">
                           <p className="text-xs uppercase tracking-[0.2em] text-slate-400 sm:hidden">Medicine Name</p>
@@ -682,7 +694,7 @@ const ClinicSettings = () => {
                           <p className="mt-2 text-sm font-semibold text-slate-700 sm:mt-0">{medicine.strength || 'N/A'}</p>
                         </div>
 
-                        <div className="mt-4 flex flex-wrap gap-2 justify-start sm:mt-0 sm:justify-center">
+                        <div className="mt-3 flex flex-wrap gap-2 justify-start sm:mt-0 sm:justify-center">
                           <button
                             onClick={() => handleEditMedicine(medicine)}
                             className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700 hover:bg-slate-100"
@@ -709,8 +721,8 @@ const ClinicSettings = () => {
             {/* Add Medicine Modal/Form */}
             {showAddMedicine && (
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                <div className="w-full max-w-lg rounded-[28px] border border-white/10 bg-white p-6 shadow-2xl backdrop-blur-xl">
-                  <div className="flex items-center justify-between gap-4 border-b border-slate-200 pb-4 mb-6">
+                <div className="w-full max-w-lg rounded-[24px] border border-white/10 bg-white p-4 shadow-xl backdrop-blur-xl">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-4 mb-4">
                     <div>
                       <p className="text-sm uppercase tracking-[0.3em] text-slate-500">
                         {medicineModalMode === 'edit' ? 'Edit medicine' : 'New medicine'}
@@ -806,7 +818,7 @@ const ClinicSettings = () => {
                     <button
                       onClick={handleSaveMedicine}
                       disabled={medicineLoading || !newMedicine.medicine_name.trim()}
-                      className="flex-1 rounded-3xl bg-gradient-to-r from-blue-600 to-cyan-500 px-5 py-3 text-white shadow-lg transition hover:from-blue-700 hover:to-cyan-600 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="flex-1 rounded-3xl bg-gradient-to-r from-blue-600 to-cyan-500 px-4 py-2.5 text-white shadow-sm transition hover:from-blue-700 hover:to-cyan-600 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {medicineLoading ? (medicineModalMode === 'edit' ? 'Saving...' : 'Adding...') : medicineModalMode === 'edit' ? 'Save Changes' : 'Add Medicine'}
                     </button>
@@ -819,15 +831,15 @@ const ClinicSettings = () => {
 
         {/* Clinic Information Tab */}
         {activeTab === 'clinic_info' && (
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
+          <div className="space-y-5">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-slate-400">CLINIC INFORMATION</p>
               </div>
               {!clinicEditing ? (
                 <button
                   onClick={() => setClinicEditing(true)}
-                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-lg flex items-center gap-2 font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
+                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-semibold shadow-sm hover:shadow-md transition-all duration-200"
                   disabled={clinicLoading}
                 >
                   <Edit className="w-5 h-5" />
@@ -836,7 +848,7 @@ const ClinicSettings = () => {
               ) : (
                 <button
                   onClick={handleClinicSave}
-                  className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-3 rounded-lg flex items-center gap-2 font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
+                  className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-semibold shadow-sm hover:shadow-md transition-all duration-200"
                   disabled={clinicLoading}
                 >
                   <Save className="w-5 h-5" />
@@ -845,8 +857,8 @@ const ClinicSettings = () => {
               )}
             </div>
 
-            <div className="grid gap-6 xl:grid-cols-[1.3fr_0.9fr]">
-              <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
+              <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
                 {clinicLoading && !clinic ? (
                   <div className="flex flex-col items-center justify-center h-64">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
@@ -888,29 +900,35 @@ const ClinicSettings = () => {
                       </div>
                     </div>
                   ) : (
-                    <div className="grid gap-0 md:grid-cols-2">
-                      <InfoRow label="Clinic Name" value={clinic?.name} />
-                      <InfoRow label="Contact Number" value={clinic?.contact_number} />
-                      <InfoRow label="Address" value={clinic?.address} />
-                      <InfoRow label="City" value={clinic?.city} />
-                      <InfoRow label="Prescription Language" value={clinic?.prescription_language} />
-                      <InfoRow label="Description" value={clinic?.description} />
-                      <InfoRow label="Status" value={clinic?.status} />
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <InfoRow Icon={MapPin} label="Clinic Name" value={clinic?.name} />
+                      <InfoRow Icon={Phone} label="Contact Number" value={clinic?.contact_number} />
+                      <InfoRow Icon={MapPin} label="Address" value={clinic?.address} />
+                      <InfoRow Icon={MapPin} label="City" value={clinic?.city} />
+                      <InfoRow Icon={FileText} label="Prescription Language" value={clinic?.prescription_language} />
+                      <InfoRow Icon={FileText} label="Description" value={clinic?.description} />
+                      <InfoRow Icon={Check} label="Status" value={clinic?.status} />
                     </div>
                   )
                 )}
               </div>
 
-              <div className="space-y-6">
-                <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="space-y-4">
+                <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
                   <p className="text-sm uppercase tracking-[0.28em] text-slate-500">Clinic Details</p>
                   <div className="mt-5 grid gap-4">
                     <div className="rounded-[24px] bg-slate-50 p-4">
-                      <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Status</p>
+                      <div className="flex items-center gap-2">
+                        <Check className="w-4 h-4 text-slate-400" />
+                        <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Status</p>
+                      </div>
                       <p className="mt-2 text-xl font-semibold text-slate-900">{clinic?.status || 'N/A'}</p>
                     </div>
                     <div className="rounded-[24px] bg-slate-50 p-4">
-                      <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Doctors</p>
+                      <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4 text-slate-400" />
+                        <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Doctors</p>
+                      </div>
                       <p className="mt-2 text-xl font-semibold text-slate-900">{clinic?.doctors?.length || members.length || 0}</p>
                     </div>
                   </div>
@@ -921,29 +939,30 @@ const ClinicSettings = () => {
         )}
         {/* Assigned Members List */}
         {activeTab === 'clinic_info' && (
-          <div className="mt-6 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex justify-between items-center mb-4">
+          <div className="mt-6 rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+<div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm uppercase tracking-[0.28em] text-slate-500">Assigned Members</p>
-              <div className="flex items-center gap-2">
-                <button onClick={() => setShowAddMemberModal(true)} className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-lg">Add Member</button>
-              </div>
+              <button onClick={() => setShowAddMemberModal(true)} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
+                <Plus className="h-4 w-4" />
+                <span>Add Member</span>
+              </button>
             </div>
 
             {membersLoading && members.length === 0 ? (
               <div className="py-8 text-center text-slate-600">Loading members...</div>
             ) : members.length === 0 ? (
-              <div className="py-8 text-center text-slate-600">No members assigned yet.</div>
+              <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4 text-center text-slate-600">No members assigned yet.</div>
             ) : (
               <div className="grid gap-3">
                 {members.map((m) => (
-                  <div key={m.id} className="flex items-center justify-between p-3 rounded-md border border-slate-100">
+                  <div key={m.id} className="flex flex-col gap-3 rounded-[20px] border border-slate-100 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <div className="font-semibold">{m.doctor?.first_name} {m.doctor?.last_name}</div>
                       <div className="text-sm text-slate-500">{m.doctor?.email}</div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className="text-sm text-slate-700 mr-4">{m.role}</div>
-                      <button onClick={() => handleRemoveMember(m.id)} className="text-red-600">Remove</button>
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-slate-700">
+                      <span className="rounded-full border border-slate-200 bg-white px-3 py-1">{m.role}</span>
+                      <button onClick={() => handleRemoveMember(m.id)} className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-red-600 transition hover:bg-red-100">Remove</button>
                     </div>
                   </div>
                 ))}
@@ -955,17 +974,17 @@ const ClinicSettings = () => {
         {/* Add Member Modal (Two-step: Create User -> Assign to Clinic) */}
         {showAddMemberModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="w-full max-w-2xl rounded-[28px] border border-white/10 bg-white p-8 shadow-2xl backdrop-blur-xl max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between mb-6">
+            <div className="w-full max-w-2xl rounded-[24px] border border-white/10 bg-white p-5 shadow-2xl backdrop-blur-xl max-h-[90vh] overflow-y-auto">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center justify-between mb-4">
                 <h3 className="text-2xl font-bold text-slate-900">Add Clinic Member</h3>
                 <button onClick={() => { setShowAddMemberModal(false); setAddMemberStep('createUser'); setCreatedUser(null); setError(null); }} className="text-slate-400 hover:text-slate-600">✕</button>
               </div>
 
               {addMemberStep === 'createUser' ? (
                 <div>
-                  {error && <div className="mb-6 rounded-lg bg-red-50 border border-red-200 p-4 text-sm text-red-700 flex items-center gap-2"><AlertCircle size={18} /> {error}</div>}
+                  {error && <div className="mb-4 rounded-lg bg-red-50 border border-red-200 p-4 text-sm text-red-700 flex items-center gap-2"><AlertCircle size={18} /> {error}</div>}
                   
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <label className="block text-sm font-semibold text-slate-700 mb-3">First Name <span className="text-red-500">*</span></label>
                       <input type="text" required value={newUserForm.first_name} onChange={(e) => setNewUserForm(prev => ({ ...prev, first_name: e.target.value }))} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" placeholder="Enter first name" />
@@ -1032,18 +1051,18 @@ const ClinicSettings = () => {
 
                   <div className="mt-8 flex justify-end gap-3">
                     <button onClick={() => { setShowAddMemberModal(false); setAddMemberStep('createUser'); setCreatedUser(null); setError(null); }} className="rounded-lg border border-slate-300 bg-white px-6 py-2.5 font-medium text-slate-700 hover:bg-slate-50 transition">Cancel</button>
-                    <button onClick={handleCreateUser} disabled={membersLoading} className="rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-6 py-2.5 font-medium text-white hover:shadow-lg transition disabled:opacity-50">{membersLoading ? 'Creating...' : 'Next'}</button>
+                    <button onClick={handleCreateUser} disabled={membersLoading} className="rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-4 py-2.5 font-medium text-white hover:shadow-lg transition disabled:opacity-50">{membersLoading ? 'Creating...' : 'Next'}</button>
                   </div>
                 </div>
               ) : (
                 <div>
-                  <div className="rounded-lg border border-blue-200 bg-blue-50 p-5 mb-6">
+                  <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 mb-4">
                     <div className="font-bold text-slate-900 text-lg">{createdUser?.first_name} {createdUser?.last_name}</div>
                     <div className="text-sm text-slate-600 mt-1">{createdUser?.email}</div>
                     <div className="text-xs text-slate-500 mt-2 bg-white rounded px-3 py-1 inline-block">User created successfully</div>
                   </div>
 
-                  <div className="grid gap-6">
+                  <div className="grid gap-4">
                     <div>
                       <label className="block text-sm font-semibold text-slate-700 mb-3">Clinic</label>
                       <input type="text" readOnly value={clinic?.name || ''} className="w-full rounded-lg border border-slate-300 bg-slate-100 px-4 py-3 text-slate-700 cursor-not-allowed" />
@@ -1066,7 +1085,7 @@ const ClinicSettings = () => {
                     <button onClick={() => { setAddMemberStep('createUser'); setCreatedUser(null); setError(null); }} className="rounded-lg border border-slate-300 bg-white px-6 py-2.5 font-medium text-slate-700 hover:bg-slate-50 transition">Back</button>
                     <div className="flex gap-3">
                       <button onClick={() => { setShowAddMemberModal(false); setAddMemberStep('createUser'); setCreatedUser(null); setError(null); }} className="rounded-lg border border-slate-300 bg-white px-6 py-2.5 font-medium text-slate-700 hover:bg-slate-50 transition">Cancel</button>
-                      <button onClick={handleAssignMember} disabled={membersLoading} className="rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-6 py-2.5 font-medium text-white hover:shadow-lg transition disabled:opacity-50">{membersLoading ? 'Assigning...' : 'Assign'}</button>
+                      <button onClick={handleAssignMember} disabled={membersLoading} className="rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-4 py-2.5 font-medium text-white hover:shadow-lg transition disabled:opacity-50">{membersLoading ? 'Assigning...' : 'Assign'}</button>
                     </div>
                   </div>
                 </div>
@@ -1074,8 +1093,9 @@ const ClinicSettings = () => {
             </div>
           </div>
         )}
+          </main>
+        </div>
       </div>
-    </div>
   );
 };
 
