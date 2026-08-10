@@ -28,24 +28,38 @@ const isNativeAndroid = () => {
   }
 };
 
-const ensureAppointmentChannel = async () => {
+const ensureNotificationChannels = async () => {
   if (!isNativeAndroid()) {
     return;
   }
 
   try {
-    await LocalNotifications.createChannel({
-      id: 'appointments',
-      name: 'Appointment Reminders',
-      description: 'Appointment reminder notifications and quick actions.',
+    const channels = [
+      {
+        id: 'appointments',
+        name: 'Appointment Reminders',
+        description: 'Appointment reminder notifications and quick actions.',
+      },
+      {
+        id: 'plan_expiry',
+        name: 'Plan Expiry Reminders',
+        description: 'Subscription expiry alerts and billing reminders.',
+      },
+    ];
+
+    await Promise.all(channels.map((channel) => LocalNotifications.createChannel({
+      id: channel.id,
+      name: channel.name,
+      description: channel.description,
       importance: 4,
       sound: 'notification_sound',
       lights: true,
       vibration: true,
-    });
-    log('ANDROID: Appointment notification channel ensured');
+    })));
+
+    log('ANDROID: Notification channels ensured', { channels: channels.map((c) => c.id) });
   } catch (error) {
-    console.warn('ANDROID: Failed to create appointments notification channel', error);
+    console.warn('ANDROID: Failed to create notification channels', error);
   }
 };
 
@@ -121,7 +135,7 @@ export const registerDeviceToken = async (user, authToken) => {
         log('ANDROID: Using cached device token before registration', { cachedTokenLength: cachedToken.length });
       }
 
-      await ensureAppointmentChannel();
+      await ensureNotificationChannels();
       step(7, 'Attaching registration event handlers');
       const registrationPromise = waitForRegistration();
 
