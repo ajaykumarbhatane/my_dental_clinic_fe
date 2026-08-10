@@ -494,6 +494,18 @@ const SubscriptionDashboard = () => {
   }, [loadSubscriptions]);
 
   useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash) return undefined;
+
+    const timer = window.setTimeout(() => {
+      const target = document.getElementById(hash.replace('#', ''));
+      target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 150);
+
+    return () => window.clearTimeout(timer);
+  }, [loading]);
+
+  useEffect(() => {
     if (!notice) return undefined;
     const timeout = window.setTimeout(() => setNotice(null), 4500);
     return () => window.clearTimeout(timeout);

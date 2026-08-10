@@ -80,7 +80,7 @@ const DeepLinkHandler = () => {
           const targetPath = `/app/treatments/${treatmentId}${visitId ? `?visit_id=${visitId}` : ''}`;
           navigate(targetPath, { replace: true });
         } else if (url.pathname.startsWith('/subscriptions')) {
-          navigate('/app/subscriptions', { replace: true });
+          navigate('/app/subscriptions#subscription-plans', { replace: true });
         }
       } catch (error) {
         console.warn('Failed to handle deep link', error, { url: event.url });
@@ -105,6 +105,8 @@ const DeepLinkHandler = () => {
           const visitId = url.searchParams.get('visit_id');
           const targetPath = `/app/treatments/${treatmentId}${visitId ? `?visit_id=${visitId}` : ''}`;
           navigate(targetPath, { replace: true });
+        } else if (url.pathname.startsWith('/subscriptions')) {
+          navigate('/app/subscriptions#subscription-plans', { replace: true });
         }
       } catch (error) {
         console.warn('Failed to handle notification action deep link', error, { deepLink });
