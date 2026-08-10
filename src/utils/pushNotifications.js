@@ -36,12 +36,15 @@ const ensureNotificationChannels = async () => {
   try {
     const channels = [
       {
-          id: 'appointments_v2',
-          name: 'Appointment Reminders',
-          description: 'Appointment reminder notifications and quick actions.',
-        },
-        {
-          id: 'plan_expiry_v2',
+        id: 'appointments_v2',
+        name: 'Appointment Reminders',
+        description: 'Appointment reminder notifications and quick actions.',
+      },
+      {
+        id: 'plan_expiry_v2',
+        name: 'Plan Expiry Reminders',
+        description: 'Subscription expiry alerts and billing reminders.',
+      },
     ];
 
     await Promise.all(channels.map((channel) => LocalNotifications.createChannel({
