@@ -35,27 +35,33 @@ const ensureNotificationChannels = async () => {
 
   try {
     const channels = [
-      {
-        id: 'appointments',
-        name: 'Appointment Reminders',
-        description: 'Appointment reminder notifications and quick actions.',
-      },
-      {
-        id: 'plan_expiry',
-        name: 'Plan Expiry Reminders',
-        description: 'Subscription expiry alerts and billing reminders.',
-      },
+        {
+            id: 'appointments_v2',
+            name: 'Appointment Reminders',
+            description: 'Appointment reminder notifications and quick actions.',
+            sound: 'notification_sound',
+        },
+        {
+            id: 'clinic_plan_expiry_v2',
+            name: 'Clinic Plan Expiry',
+            description: 'Subscription expiry alerts and billing reminders.',
+            sound: 'notification_sound',
+        },
     ];
 
-    await Promise.all(channels.map((channel) => LocalNotifications.createChannel({
-      id: channel.id,
-      name: channel.name,
-      description: channel.description,
-      importance: 4,
-      sound: 'notification_sound',
-      lights: true,
-      vibration: true,
-    })));
+    await Promise.all(
+        channels.map((channel) =>
+            LocalNotifications.createChannel({
+                id: channel.id,
+                name: channel.name,
+                description: channel.description,
+                importance: 4,
+                sound: channel.sound,
+                lights: true,
+                vibration: true,
+            })
+        )
+    );
 
     log('ANDROID: Notification channels ensured', { channels: channels.map((c) => c.id) });
   } catch (error) {
@@ -123,10 +129,16 @@ export const registerDeviceToken = async (user, authToken) => {
       const permission = await PushNotifications.requestPermissions();
       step(4, 'Push notification permission response', { permission });
 
-      const granted = permission?.receive?.granted === true || permission?.granted === true;
-      if (permission.receive !== "granted") {
-          step(5, "Permission denied");
-          return;
+      const granted =
+          permission?.receive === 'granted' ||
+          permission?.granted === true;
+
+      if (!granted) {
+          step(5, 'Permission denied', {
+              permission,
+          });
+
+          return null;
       }
 
       step(6, 'Push permission granted; preparing registration');
