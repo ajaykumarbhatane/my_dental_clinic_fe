@@ -12,7 +12,8 @@ class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, errorInfo) {
     this.setState({ errorInfo });
-    console.error('Uncaught error:', error, errorInfo);
+    // Log detailed error for developers (do not expose to users)
+    console.error('Uncaught error captured by ErrorBoundary:', error, errorInfo);
   }
 
   render() {
@@ -22,17 +23,21 @@ class ErrorBoundary extends React.Component {
           <div className="max-w-2xl w-full bg-red-50 border border-red-200 rounded-xl p-8 shadow-lg">
             <h1 className="text-2xl font-bold text-red-700 mb-4">Something went wrong</h1>
             <p className="text-sm text-red-700 mb-4">
-              An unexpected error occurred while rendering the app. The error detail is shown below.
+              We encountered an unexpected problem. Please refresh the page or return to the dashboard.
             </p>
-            <div className="bg-white border border-red-100 rounded-md p-4 overflow-auto max-h-64">
-              <pre className="text-xs text-red-700 whitespace-pre-wrap">
-                {this.state.error?.toString()}
-              </pre>
-              {this.state.errorInfo?.componentStack && (
-                <pre className="text-xs text-red-600 whitespace-pre-wrap mt-2">
-                  {this.state.errorInfo.componentStack}
-                </pre>
-              )}
+            <div className="flex gap-3">
+              <button
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg"
+              >
+                Refresh Page
+              </button>
+              <button
+                onClick={() => (window.location.href = '/')}
+                className="px-4 py-2 bg-white border border-red-200 text-red-600 rounded-lg"
+              >
+                Go to Home
+              </button>
             </div>
           </div>
         </div>

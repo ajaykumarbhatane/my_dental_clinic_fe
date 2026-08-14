@@ -1,10 +1,37 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { App as CapacitorApp } from '@capacitor/app';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import SubscriptionExpiryModal from '../subscription/SubscriptionExpiryModal';
+import { useSubscriptionExpiry } from '../../hooks/useSubscriptionExpiry';
 
 const DashboardLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false); // 🔥 important
+  const { subscription, isModalOpen, closeModal } = useSubscriptionExpiry();
+
+  // Handle Android back button when modal is open
+  useEffect(() => {
+    if (!isModalOpen || !Capacitor.isNativePlatform()) {
+      return undefined;
+    }
+
+    let listener = null;
+
+    const registerBackHandler = async () => {
+      listener = await CapacitorApp.addListener('backButton', (event) => {
+        // Close modal instead of going back
+        closeModal();
+      });
+    };
+
+    registerBackHandler();
+
+    return () => {
+      listener?.remove();
+    };
+  }, [isModalOpen, closeModal]);
 
   const handleMenuClick = () => {
     if (window.innerWidth >= 768) {
@@ -47,6 +74,13 @@ const DashboardLayout = ({ children }) => {
           {children}
         </main>
       </div>
+
+      {/* Subscription Expiry Modal */}
+      <SubscriptionExpiryModal
+        isOpen={isModalOpen}
+        subscription={subscription}
+        onClose={closeModal}
+      />
     </div>
   );
 };

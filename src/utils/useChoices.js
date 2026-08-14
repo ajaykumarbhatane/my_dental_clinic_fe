@@ -39,7 +39,13 @@ export const useChoiceOptions = (which, params = {}) => {
       setChoices(normalized);
     } catch (err) {
       setChoices([]);
-      setError(err);
+      try {
+        const normalize = (await import('./errorUtils')).default;
+        const n = normalize(err);
+        setError(n.message);
+      } catch (e) {
+        setError('Failed to load choices. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

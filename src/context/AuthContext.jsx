@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authApi } from '../api/authApi';
+import normalizeApiError from '../utils/errorUtils';
 import { registerDeviceToken, unregisterDevice } from '../utils/pushNotifications';
 
 const AuthContext = createContext();
@@ -155,30 +156,11 @@ export const AuthProvider = ({ children }) => {
       console.log('[auth] ✓ Login success; state updated and useEffect should trigger');
       return { success: true };
     } catch (error) {
-      console.error('Login error:', error);
-      
-      // Provide detailed error messages for mobile debugging
-      let errorMessage = 'Login failed';
-      
-      if (error.code === 'ECONNABORTED') {
-        errorMessage = 'Request timeout - check your internet connection';
-      } else if (error.message === 'Network Error') {
-        errorMessage = 'Network error - please check your internet connection';
-      } else if (error.response?.status === 0) {
-        errorMessage = 'Unable to reach server - check CORS and network settings';
-      } else if (error.response?.data?.detail) {
-        errorMessage = error.response.data.detail;
-      } else if (error.response?.status === 401) {
-        errorMessage = 'Invalid email or password';
-      } else if (error.response?.status >= 500) {
-        errorMessage = 'Server error - please try again later';
-      }
-      
-      setError(errorMessage);
-      return {
-        success: false,
-        error: errorMessage
-      };
+      console.error('[auth] Login error (sanitized)', { status: error?.response?.status });
+      const normalized = normalizeApiError(error);
+      const message = normalized.message || 'Login failed. Please try again.';
+      setError(message);
+      return { success: false, error: message, code: normalized.type };
     }
   };
 

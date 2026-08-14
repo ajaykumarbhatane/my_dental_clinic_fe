@@ -1,90 +1,7 @@
 import axios from 'axios';
 import { routeTo } from '../utils/routerNavigation';
-
-// Error categorization helper
-const categorizeError = (error) => {
-  if (!error.response) {
-    return {
-      category: 'network',
-      message: 'Network error - please check your connection',
-      isRetryable: true
-    };
-  }
-
-  const status = error.response.status;
-  const data = error.response.data;
-
-  if (status === 401) {
-    return {
-      category: 'auth',
-      message: data?.detail || 'Authentication required',
-      isRetryable: false
-    };
-  }
-
-  if (status === 403) {
-    return {
-      category: 'permission',
-      message: data?.detail || 'Permission denied',
-      isRetryable: false
-    };
-  }
-
-  if (status === 400) {
-    return {
-      category: 'validation',
-      message: data?.detail || data?.error?.message || 'Invalid request data',
-      details: data?.error?.details,
-      isRetryable: false
-    };
-  }
-
-  if (status === 404) {
-    return {
-      category: 'not_found',
-      message: data?.detail || 'Resource not found',
-      isRetryable: false
-    };
-  }
-
-  if (status === 409) {
-    return {
-      category: 'conflict',
-      message: data?.detail || 'Resource conflict',
-      isRetryable: false
-    };
-  }
-
-  if (status === 413) {
-    return {
-      category: 'payload_too_large',
-      message: 'File too large',
-      isRetryable: false
-    };
-  }
-
-  if (status === 422) {
-    return {
-      category: 'unprocessable',
-      message: data?.detail || 'Unprocessable request',
-      isRetryable: false
-    };
-  }
-
-  if (status >= 500) {
-    return {
-      category: 'server',
-      message: 'Server error - please try again later',
-      isRetryable: true
-    };
-  }
-
-  return {
-    category: 'unknown',
-    message: data?.detail || 'An unexpected error occurred',
-    isRetryable: false
-  };
-};
+import normalizeApiError from '../utils/errorUtils';
+import { showError, showInfo } from '../services/notificationService';
 
 // Retry helper function
 const retryAsync = async (fn, maxRetries = 3, delay = 1000, backoff = 2) => {
@@ -95,9 +12,9 @@ const retryAsync = async (fn, maxRetries = 3, delay = 1000, backoff = 2) => {
       return await fn();
     } catch (error) {
       lastError = error;
-      const errorInfo = categorizeError(error);
+      const errorInfo = normalizeApiError(error);
       
-      if (!errorInfo.isRetryable || attempt === maxRetries) {
+      if (!errorInfo.retryable || attempt === maxRetries) {
         throw error;
       }
       
@@ -117,19 +34,9 @@ const ENV_API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const BASE_URL = ENV_API_BASE_URL;
 
 if (!ENV_API_BASE_URL) {
-  console.warn('[api] VITE_API_BASE_URL is not set. Falling back to default API URL.', {
-    mode: import.meta.env.MODE,
-    defaultBaseUrl: DEFAULT_API_BASE_URL,
-    envValue: ENV_API_BASE_URL || null,
-    hint: 'For physical Android device testing against local backend, set VITE_API_BASE_URL to your machine LAN IP in .env or .env.development.',
-  });
+  console.warn('[api] VITE_API_BASE_URL is not set. Falling back to default API URL.');
 }
 
-console.log('[api] Using baseURL:', BASE_URL, {
-  source: ENV_API_BASE_URL ? 'env' : 'default',
-  envValue: ENV_API_BASE_URL || null,
-  mode: import.meta.env.MODE,
-});
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
@@ -151,26 +58,18 @@ apiClient.interceptors.request.use(
     let token = null;
     try {
       token = localStorage.getItem('token');
-      console.log('[api] Request', {
-        url: config.url,
-        authHeaderPresent: Boolean(token),
-        baseURL: config.baseURL,
-      });
     } catch (e) {
       // localStorage might not be available in some mobile/private browse modes
       // Token may be in sessionStorage as fallback
       try {
         token = sessionStorage.getItem('token');
       } catch (e2) {
-        console.warn('Neither localStorage nor sessionStorage available');
+        // Storage unavailable; continue without token
       }
     }
     
     if (token) {
       config.headers.Authorization = `Token ${token}`;
-      console.log('[api] Authorization header attached', { url: config.url });
-    } else {
-      console.warn('[api] Authorization header missing', { url: config.url });
     }
 
     // If using FormData, let Axios set the Content-Type header (including boundary)
@@ -188,40 +87,32 @@ apiClient.interceptors.request.use(
 // Add response interceptor to handle auth errors and network issues
 apiClient.interceptors.response.use(
   (response) => {
-    console.log('[api] Response', {
-      url: response.config?.url,
-      status: response.status,
-      baseURL: response.config?.baseURL,
-    });
+    if (response?.data?.success === false && response.config?.suppressSuccessFalseError !== true) {
+      const generatedError = new Error(response.data?.detail || response.data?.message || 'Request failed.');
+      generatedError.response = response;
+      generatedError.config = response.config;
+      return Promise.reject(generatedError);
+    }
     return response;
   },
   (error) => {
-    // Attach error category to the error object
-    const errorInfo = categorizeError(error);
-    error.category = errorInfo.category;
-    error.userMessage = errorInfo.message;
-    error.details = errorInfo.details;
-    error.isRetryable = errorInfo.isRetryable;
+    const normalized = normalizeApiError(error);
+    error.normalized = normalized;
 
-    const requestUrl = error.config?.url || 'unknown';
-    const requestBase = error.config?.baseURL || BASE_URL;
-    const responseStatus = error.response?.status;
-
-    console.error('[api] Response error', {
-      url: requestUrl,
-      baseURL: requestBase,
-      status: responseStatus,
-      message: error.message,
-      category: errorInfo.category,
-      responseData: error.response?.data,
-    });
-
-    if (error.code === 'ECONNABORTED' || error.message === 'Network Error') {
-      console.error('[api] Network error - check mobile connectivity, API host and Android cleartext policy.');
+    // Log non-sensitive info for developers
+    try {
+      const safeLog = {
+        url: error.config?.url || 'unknown',
+        status: normalized.status,
+        type: normalized.type,
+      };
+      console.error('[api] Response error', safeLog);
+    } catch (e) {
+      // ignore logging errors
     }
 
-    if (error.response?.status === 401) {
-      // Clear auth data on unauthorized responses and redirect to landing
+    const suppressAuthRedirect = error.config?.suppressAuthRedirect === true;
+    if (normalized.status === 401 && !suppressAuthRedirect) {
       try {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
@@ -231,7 +122,14 @@ apiClient.interceptors.response.use(
           sessionStorage.removeItem('user');
         } catch (e2) {}
       }
+      showInfo('Your session has expired. Please log in again.');
       routeTo('/', { replace: true });
+      return Promise.reject(error);
+    }
+
+    const suppress = error.config && error.config.suppressGlobalErrors;
+    if (!suppress && (normalized.type === 'NETWORK_ERROR' || normalized.type === 'SERVER_ERROR' || normalized.type === 'RATE_LIMIT')) {
+      showError(normalized.message);
     }
 
     return Promise.reject(error);
@@ -244,5 +142,5 @@ export const apiClientWithRetry = (config) => {
   return retryAsync(request, 3, 1000, 2);
 };
 
-export { categorizeError, retryAsync };
+export { retryAsync };
 export default apiClient;

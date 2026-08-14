@@ -793,7 +793,7 @@ whitespace-nowrap
             <form onSubmit={handleAddTreatment} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Patient * <span className="text-xs text-red-600">{!formData.patient ? '(Required)' : ''}</span></label>
+                  <label className="block text-sm font-semibold text-gray-700">Patient * <span className="text-xs text-red-600">{!formData.patient ? '(Required)' : ''}</span></label>
                   <select
                     required
                     value={formData.patient}
@@ -811,7 +811,7 @@ whitespace-nowrap
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Treatment Type * <span className="text-xs text-red-600">{!formData.type_of_treatment ? '(Required)' : ''}</span></label>
+                  <label className="block text-sm font-semibold text-gray-700">Treatment Type * <span className="text-xs text-red-600">{!formData.type_of_treatment ? '(Required)' : ''}</span></label>
                   <select
                     required
                     value={formData.type_of_treatment}
@@ -831,7 +831,7 @@ whitespace-nowrap
               {/* conditional options based on selected type */}
               {(selectedTypeName.toLowerCase().includes('ortho') || selectedTypeName.toLowerCase().includes('braces')) && (
                 <div className="mt-3">
-                  <label className="block text-sm font-medium text-gray-700">Braces Type</label>
+                  <label className="block text-sm font-semibold text-gray-700">Braces Type</label>
                   <ChoiceSelect
                     which="treatment/braces-type"
                     value={formData.braces_type}
@@ -843,7 +843,7 @@ whitespace-nowrap
               )}
               {selectedTypeName.toLowerCase().includes('root canal') && (
                 <div className="mt-3">
-                  <label className="block text-sm font-medium text-gray-700">Cap Type</label>
+                  <label className="block text-sm font-semibold text-gray-700">Cap Type</label>
                   <ChoiceSelect
                     which="treatment/cap-type"
                     value={formData.cap_type}
@@ -858,7 +858,7 @@ whitespace-nowrap
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Status *</label>
+                  <label className="block text-sm font-semibold text-gray-700">Status *</label>
                   <ChoiceSelect
                     which="treatment/status"
                     required
@@ -869,7 +869,7 @@ whitespace-nowrap
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-semibold text-gray-700">
                     {selectedTypeName.toLowerCase().includes('root canal')
                       ? 'Estimated Visits'
                       : 'Estimated Duration (Months)'}
@@ -889,7 +889,7 @@ whitespace-nowrap
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Planned Amount (₹)</label>
+                <label className="block text-sm font-semibold text-gray-700">Planned Amount (₹)</label>
                 <input
                   type="number"
                   step="0.01"
@@ -901,7 +901,7 @@ whitespace-nowrap
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Initial Findings</label>
+                <label className="block text-sm font-semibold text-gray-700">Initial Findings</label>
                 <textarea
                   value={formData.initial_findings}
                   onChange={(e) => setFormData({...formData, initial_findings: e.target.value})}
@@ -912,7 +912,7 @@ whitespace-nowrap
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Treatment Plan</label>
+                <label className="block text-sm font-semibold text-gray-700">Treatment Plan</label>
                 <textarea
                   value={formData.treatment_plan}
                   onChange={(e) => setFormData({...formData, treatment_plan: e.target.value})}
@@ -923,7 +923,7 @@ whitespace-nowrap
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Treatment Notes</label>
+                <label className="block text-sm font-semibold text-gray-700">Treatment Notes</label>
                 <textarea
                   value={formData.treatment_notes}
                   onChange={(e) => setFormData({...formData, treatment_notes: e.target.value})}
@@ -1064,7 +1064,7 @@ whitespace-nowrap
 
             <form onSubmit={handleAddVisit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Next Visit Date * <span className="text-xs text-red-600">{!visitFormData.next_visit_date ? '(Required)' : ''}</span></label>
+                <label className="block text-sm font-semibold text-gray-700">Next Visit Date * <span className="text-xs text-red-600">{!visitFormData.next_visit_date ? '(Required)' : ''}</span></label>
                 <input
                   type="date"
                   required
@@ -1080,7 +1080,7 @@ whitespace-nowrap
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Treatment Notes</label>
+                <label className="block text-sm font-semibold text-gray-700">Treatment Notes</label>
                 <textarea
                   value={visitFormData.treatment_notes}
                   onChange={(e) => setVisitFormData({...visitFormData, treatment_notes: e.target.value})}
@@ -1091,7 +1091,7 @@ whitespace-nowrap
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Patient Complaints</label>
+                <label className="block text-sm font-semibold text-gray-700">Patient Complaints</label>
                 <textarea
                   value={visitFormData.patient_complaints}
                   onChange={(e) => setVisitFormData({...visitFormData, patient_complaints: e.target.value})}
@@ -1103,7 +1103,7 @@ whitespace-nowrap
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Payment Amount (₹)</label>
+                  <label className="block text-sm font-semibold text-gray-700">Payment Amount (₹)</label>
                   <input
                     type="number"
                     value={visitFormData.patient_payment_amount}
@@ -1113,7 +1113,7 @@ whitespace-nowrap
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Payment Type</label>
+                  <label className="block text-sm font-semibold text-gray-700">Payment Type</label>
                   <ChoiceSelect
                     which="treatment/payment-type"
                     value={visitFormData.patient_payment_type}
@@ -1125,7 +1125,7 @@ whitespace-nowrap
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Payment Note</label>
+                <label className="block text-sm font-semibold text-gray-700">Payment Note</label>
                 <textarea
                   value={visitFormData.payment_note}
                   onChange={(e) => setVisitFormData({...visitFormData, payment_note: e.target.value})}

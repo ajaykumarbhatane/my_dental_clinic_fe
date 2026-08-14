@@ -36,7 +36,25 @@ const Login = () => {
     
     // Mobile connectivity check
     if (!isOnline) {
-      setError('No internet connection. Please check your network.');
+      setError("You're currently offline. Please check your internet connection.");
+      return;
+    }
+
+    // Client-side validation
+    if (!email || email.trim() === '') {
+      setError('Please enter your email address.');
+      return;
+    }
+
+    // Basic email regex check
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+
+    if (!password || password.trim() === '') {
+      setError('Please enter your password.');
       return;
     }
 
@@ -48,7 +66,16 @@ const Login = () => {
     if (result.success) {
       navigate('/app');
     } else {
-      setError(result.error);
+      const safeMessage = result.error?.trim();
+      if (!safeMessage) {
+        setError('We were unable to sign you in. Please try again.');
+      } else if (result.code === 'AUTHENTICATION_REQUIRED' || /invalid|incorrect|credentials/i.test(safeMessage)) {
+        setError('Email address or password is incorrect.');
+      } else if (/expired|session/i.test(safeMessage)) {
+        setError('Your session has expired. Please log in again.');
+      } else {
+        setError(safeMessage);
+      }
     }
 
     setLoading(false);
@@ -103,7 +130,7 @@ const Login = () => {
                   autoComplete="email"
                   required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => { setEmail(e.target.value); if (error) setError(''); }}
                   className="appearance-none block w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-lg placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 sm:text-sm"
                   placeholder="Enter your email"
                 />
@@ -124,7 +151,7 @@ const Login = () => {
                   autoComplete="current-password"
                   required
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => { setPassword(e.target.value); if (error) setError(''); }}
                   className="appearance-none block w-full pl-12 pr-12 py-3 border-2 border-gray-200 rounded-lg placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 sm:text-sm"
                   placeholder="Enter your password"
                 />

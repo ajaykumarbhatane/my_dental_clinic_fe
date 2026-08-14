@@ -88,6 +88,7 @@ const Landing = () => {
     contact_number: '',
     address: ''
   });
+  const [signupErrors, setSignupErrors] = useState({});
   const [signupError, setSignupError] = useState('');
   const [signupSuccess, setSignupSuccess] = useState('');
   const [signupSubmitting, setSignupSubmitting] = useState(false);
@@ -123,6 +124,71 @@ const Landing = () => {
       }
       return next;
     });
+
+    // Real-time validation for specific fields
+    validateSignupField(field, value);
+  };
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  const validateSignupField = (field, value) => {
+    setSignupErrors((prev) => {
+      const next = { ...prev };
+      const val = (value || '').toString().trim();
+
+      if (field === 'first_name' || field === 'last_name') {
+        // disallow digits in names
+        if (/\d/.test(val)) {
+          next[field] = 'Name cannot contain digits.';
+        } else if (!val) {
+          next[field] = 'This field is required.';
+        } else {
+          delete next[field];
+        }
+      }
+
+      if (field === 'email') {
+        if (!val) {
+          next.email = 'Email is required.';
+        } else if (!emailRegex.test(val)) {
+          next.email = 'Please enter a valid email address.';
+        } else {
+          delete next.email;
+        }
+      }
+
+      if (field === 'mobile' || field === 'contact_number' || field === 'secondary_phone_number') {
+        const digits = (val || '').replace(/\D/g, '');
+        // only validate contact_number and mobile as required 10-digit fields
+        if ((field === 'mobile' || field === 'contact_number') && digits.length !== 10) {
+          next[field] = 'Phone number must contain exactly 10 digits.';
+        } else if (val && /[A-Za-z]/.test(val)) {
+          next[field] = 'Phone number must contain digits only.';
+        } else {
+          delete next[field];
+        }
+      }
+
+      return next;
+    });
+  };
+
+  const validateSignupForm = (form) => {
+    const f = form || signupForm;
+    const errors = {};
+    if (!f.first_name || /\d/.test(f.first_name)) errors.first_name = 'Enter a valid first name (no digits).';
+    if (!f.last_name || /\d/.test(f.last_name)) errors.last_name = 'Enter a valid last name (no digits).';
+    if (!f.email || !emailRegex.test(f.email)) errors.email = 'Enter a valid email address.';
+    const mobileDigits = (f.mobile || '').toString().replace(/\D/g, '');
+    if (mobileDigits.length !== 10) errors.mobile = 'Mobile must be exactly 10 digits.';
+    const contactDigits = (f.contact_number || '').toString().replace(/\D/g, '');
+    if (contactDigits.length !== 10) errors.contact_number = 'Contact number must be exactly 10 digits.';
+    // required fields
+    const required = ['password', 'confirm_password', 'clinic_name', 'address', 'gender'];
+    required.forEach((k) => { if (!f[k]) errors[k] = 'This field is required.'; });
+    if (f.password && f.confirm_password && f.password !== f.confirm_password) errors.confirm_password = 'Passwords do not match.';
+    setSignupErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const resetSignupForm = () => {
@@ -142,6 +208,7 @@ const Landing = () => {
       address: ''
     });
     setSignupError('');
+    setSignupErrors({});
     // Keep signupSuccess when resetting input fields after success submit
   };
 
@@ -471,213 +538,556 @@ const Landing = () => {
       </section>
 
       {showSignupModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
 
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-gray-100">
+          {/* MODAL */}
+          <div
+            className="
+              w-full
+              max-w-6xl
+              max-h-[96dvh]
+              sm:max-h-[94dvh]
+              bg-white
+              rounded-xl
+              sm:rounded-2xl
+              shadow-2xl
+              overflow-hidden
+              flex
+              flex-col
+            "
+          >
 
-            {/* HEADER (EXACT SAME) */}
-            <div className="sticky top-0 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200 px-6 py-5 flex justify-between items-center">
+            {/* =========================
+                HEADER
+            ========================== */}
+            <div
+              className="
+                flex-shrink-0
+                bg-gradient-to-r from-gray-50 to-gray-100
+                border-b border-gray-200
+                px-4 py-4
+                sm:px-6 sm:py-5
+                lg:px-8
+                flex items-center justify-between
+              "
+            >
               <div>
-                <h3 className="text-xl font-bold text-gray-900">Request Signup</h3>
-                <p className="text-sm text-gray-600 mt-1">Fill clinic registration details</p>
+                <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">
+                  Request Signup
+                </h3>
+
+                <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                  Fill Doctor Info and Clinic registration details
+                </p>
               </div>
 
               <button
+                type="button"
                 onClick={closeSignupModal}
-                className="text-gray-400 hover:text-gray-600 hover:bg-gray-200 p-2 rounded-lg transition-colors"
+                aria-label="Close signup modal"
+                className="
+                  flex-shrink-0
+                  text-gray-400
+                  hover:text-gray-700
+                  hover:bg-gray-200
+                  p-2
+                  rounded-lg
+                  transition-colors
+                  text-lg
+                "
               >
                 ✕
               </button>
             </div>
 
-            {/* FORM */}
-            <form onSubmit={handleSignupSubmit} className="p-6 space-y-5">
 
-              {signupError && (
-                <div className="p-3 text-sm text-red-700 bg-red-100 rounded">
-                  {signupError}
-                </div>
-              )}
+            {/* =========================
+                FORM
+            ========================== */}
+            <form
+              onSubmit={handleSignupSubmit}
+              className="flex min-h-0 flex-1 flex-col"
+            >
 
-              {/* USER DETAILS */}
-              <div>
-                <h4 className="text-sm font-bold text-gray-700 mb-2">User Details </h4>
-                <hr style={{ border: 'none', borderTop: '2px dotted orange', width: '100%' }} />
+              {/* =========================
+                  SCROLLABLE FORM CONTENT
+              ========================== */}
+              <div
+                className="
+                  flex-1
+                  min-h-0
+                  overflow-y-auto
+                  px-4 py-5
+                  sm:px-6 sm:py-6
+                  lg:px-8 lg:py-7
+                "
+              >
+
+                {/* ERROR MESSAGE */}
+                {signupError && (
+                  <div className="mb-5 p-3 sm:p-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg">
+                    {signupError}
+                  </div>
+                )}
 
 
+                {/* =========================
+                    DOCTOR USER DETAILS
+                ========================== */}
+                <section className="mb-8">
 
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="label">First Name *</label>
-                    <input
-                      value={signupForm.first_name}
-                      onChange={(e) => handleSignupInput('first_name', e.target.value)}
-                      className="input2"
-                      placeholder="Enter first name"
-                      required
-                    />
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm sm:text-base font-bold text-gray-800">
+                      Doctor User Details
+                    </h4>
                   </div>
 
-                  <div>
-                    <label className="label">Last Name *</label>
-                    <input
-                      value={signupForm.last_name}
-                      onChange={(e) => handleSignupInput('last_name', e.target.value)}
-                      className="input2"
-                      placeholder="Enter last name"
-                      required
-                    />
-                  </div>
-                </div>
+                  <div className="border-t-2 border-dotted border-orange-400 mb-5" />
 
-                <div className="grid md:grid-cols-2 gap-4 mt-4">
-                  <div>
-                    <label className="label">Email *</label>
-                    <input
-                      type="email"
-                      value={signupForm.email}
-                      onChange={(e) => handleSignupInput('email', e.target.value)}
-                      className="input2"
-                      placeholder="Enter email"
-                      required
-                    />
+
+                  {/* FIRST / LAST NAME */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
+
+                    <div>
+                      <label className="label">
+                        First Name *
+                      </label>
+
+                      <input
+                        value={signupForm.first_name}
+                        onChange={(e) =>
+                          handleSignupInput(
+                            "first_name",
+                            e.target.value
+                          )
+                        }
+                        className={`input2 w-full ${
+                          signupErrors.first_name
+                            ? "border-red-500 focus:border-red-500 focus:ring-red-200"
+                            : ""
+                        }`}
+                        placeholder="Enter first name"
+                        required
+                      />
+
+                      {signupErrors.first_name && (
+                        <p className="mt-1 text-xs text-red-600">
+                          {signupErrors.first_name}
+                        </p>
+                      )}
+                    </div>
+
+
+                    <div>
+                      <label className="label">
+                        Last Name *
+                      </label>
+
+                      <input
+                        value={signupForm.last_name}
+                        onChange={(e) =>
+                          handleSignupInput(
+                            "last_name",
+                            e.target.value
+                          )
+                        }
+                        className={`input2 w-full ${
+                          signupErrors.last_name
+                            ? "border-red-500 focus:border-red-500 focus:ring-red-200"
+                            : ""
+                        }`}
+                        placeholder="Enter last name"
+                        required
+                      />
+
+                      {signupErrors.last_name && (
+                        <p className="mt-1 text-xs text-red-600">
+                          {signupErrors.last_name}
+                        </p>
+                      )}
+                    </div>
+
                   </div>
 
-                  <div>
-                    <label className="label">Gender *</label>
-                    <ChoiceSelect
-                      which="user/gender"
-                      value={signupForm.gender}
-                      onChange={(e) => handleSignupInput('gender', e.target.value)}
-                      className="input2"
-                      required
-                      placeholder="Select Gender"
-                    />
-                  </div>
-                </div>
 
-                <div className="grid md:grid-cols-2 gap-4 mt-4">
-                  <div>
-                    <label className="label">Primary Phone *</label>
-                    <input
-                      value={signupForm.mobile}
-                      onChange={(e) => handleSignupInput('mobile', e.target.value)}
-                      className="input2"
-                      placeholder="+91 XXXXX XXXXX"
-                      required
-                    />
+                  {/* EMAIL / GENDER */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 mt-4">
+
+                    <div>
+                      <label className="label">
+                        Email *
+                      </label>
+
+                      <input
+                        type="email"
+                        value={signupForm.email}
+                        onChange={(e) =>
+                          handleSignupInput(
+                            "email",
+                            e.target.value
+                          )
+                        }
+                        className={`input2 w-full ${
+                          signupErrors.email
+                            ? "border-red-500 focus:border-red-500 focus:ring-red-200"
+                            : ""
+                        }`}
+                        placeholder="Enter email"
+                        required
+                      />
+
+                      {signupErrors.email && (
+                        <p className="mt-1 text-xs text-red-600">
+                          {signupErrors.email}
+                        </p>
+                      )}
+                    </div>
+
+
+                    <div>
+                      <label className="label">
+                        Gender *
+                      </label>
+
+                      <ChoiceSelect
+                        which="user/gender"
+                        value={signupForm.gender}
+                        onChange={(e) =>
+                          handleSignupInput(
+                            "gender",
+                            e.target.value
+                          )
+                        }
+                        className="input2 w-full"
+                        required
+                        placeholder="Select Gender"
+                      />
+                    </div>
+
                   </div>
 
-                  <div>
-                    <label className="label">Secondary Phone</label>
-                    <input
-                      value={signupForm.secondary_phone_number}
-                      onChange={(e) => handleSignupInput('secondary_phone_number', e.target.value)}
-                      className="input2"
-                    />
-                  </div>
-                </div>
 
-                <div className="grid md:grid-cols-2 gap-4 mt-4">
+                  {/* PRIMARY / SECONDARY PHONE */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 mt-4">
+
+                    <div>
+                      <label className="label">
+                        Primary Phone *
+                      </label>
+
+                      <input
+                        type="tel"
+                        inputMode="numeric"
+                        value={signupForm.mobile}
+                        onChange={(e) =>
+                          handleSignupInput(
+                            "mobile",
+                            e.target.value
+                          )
+                        }
+                        className={`input2 w-full ${
+                          signupErrors.mobile
+                            ? "border-red-500 focus:border-red-500 focus:ring-red-200"
+                            : ""
+                        }`}
+                        placeholder="+91 XXXXX XXXXX"
+                        required
+                      />
+
+                      {signupErrors.mobile && (
+                        <p className="mt-1 text-xs text-red-600">
+                          {signupErrors.mobile}
+                        </p>
+                      )}
+                    </div>
+
+
+                    <div>
+                      <label className="label">
+                        Secondary Phone
+                      </label>
+
+                      <input
+                        type="tel"
+                        inputMode="numeric"
+                        value={signupForm.secondary_phone_number}
+                        onChange={(e) =>
+                          handleSignupInput(
+                            "secondary_phone_number",
+                            e.target.value
+                          )
+                        }
+                        className={`input2 w-full ${
+                          signupErrors.secondary_phone_number
+                            ? "border-red-500"
+                            : ""
+                        }`}
+                        placeholder="Optional"
+                      />
+
+                      {signupErrors.secondary_phone_number && (
+                        <p className="mt-1 text-xs text-red-600">
+                          {signupErrors.secondary_phone_number}
+                        </p>
+                      )}
+                    </div>
+
+                  </div>
+
+
+                  {/* DOB / CONTACT */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 mt-4">
+
+                    <div>
+                      <label className="label">
+                        Date of Birth *
+                      </label>
+
+                      <input
+                        type="date"
+                        value={toISODate(signupForm.date_of_birth)}
+                        onChange={(e) =>
+                          handleSignupInput(
+                            "date_of_birth",
+                            e.target.value
+                              ? toDDMMYYYY(e.target.value)
+                              : ""
+                          )
+                        }
+                        className="input2 w-full"
+                        required
+                      />
+                    </div>
+
+
+                    <div>
+                      <label className="label">
+                        Contact Number *
+                      </label>
+
+                      <input
+                        type="tel"
+                        inputMode="numeric"
+                        value={signupForm.contact_number}
+                        onChange={(e) =>
+                          handleSignupInput(
+                            "contact_number",
+                            e.target.value
+                          )
+                        }
+                        className={`input2 w-full ${
+                          signupErrors.contact_number
+                            ? "border-red-500 focus:border-red-500 focus:ring-red-200"
+                            : ""
+                        }`}
+                        placeholder="Enter contact number"
+                        required
+                      />
+
+                      {signupErrors.contact_number && (
+                        <p className="mt-1 text-xs text-red-600">
+                          {signupErrors.contact_number}
+                        </p>
+                      )}
+                    </div>
+
+                  </div>
+
+
+                  {/* PASSWORD / CONFIRM PASSWORD */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 mt-4">
+
+                    <div>
+                      <label className="label">
+                        Password *
+                      </label>
+
+                      <input
+                        type="password"
+                        value={signupForm.password}
+                        onChange={(e) =>
+                          handleSignupInput(
+                            "password",
+                            e.target.value
+                          )
+                        }
+                        className="input2 w-full"
+                        placeholder="Enter password"
+                        required
+                      />
+                    </div>
+
+
+                    <div>
+                      <label className="label">
+                        Confirm Password *
+                      </label>
+
+                      <input
+                        type="password"
+                        value={signupForm.confirm_password}
+                        onChange={(e) =>
+                          handleSignupInput(
+                            "confirm_password",
+                            e.target.value
+                          )
+                        }
+                        className={`input2 w-full ${
+                          signupErrors.confirm_password
+                            ? "border-red-500 focus:border-red-500 focus:ring-red-200"
+                            : ""
+                        }`}
+                        placeholder="Confirm password"
+                        required
+                      />
+
+                      {signupErrors.confirm_password && (
+                        <p className="mt-1 text-xs text-red-600">
+                          {signupErrors.confirm_password}
+                        </p>
+                      )}
+                    </div>
+
+                  </div>
+
+                </section>
+
+
+                {/* =========================
+                    CLINIC DETAILS
+                ========================== */}
+                <section className="mb-4">
+
+                  <h4 className="text-sm sm:text-base font-bold text-gray-800 mb-2">
+                    Clinic Details
+                  </h4>
+
+                  <div className="border-t-2 border-dotted border-orange-400 mb-5" />
+
+
+                  {/* CLINIC NAME */}
                   <div>
-                    <label className="label">Date of Birth *</label>
+                    <label className="label">
+                      Clinic Name *
+                    </label>
+
                     <input
-                      type="date"
-                      value={toISODate(signupForm.date_of_birth)}
+                      value={signupForm.clinic_name}
                       onChange={(e) =>
                         handleSignupInput(
-                          'date_of_birth',
-                          e.target.value ? toDDMMYYYY(e.target.value) : ''
+                          "clinic_name",
+                          e.target.value
                         )
                       }
-                      className="input2"
+                      className="input2 w-full"
+                      placeholder="Enter clinic name"
                       required
                     />
                   </div>
 
-                  <div>
-                    <label className="label">Contact Number *</label>
-                    <input
-                      value={signupForm.contact_number}
-                      onChange={(e) => handleSignupInput('contact_number', e.target.value)}
-                      className="input2"
-                      required
-                    />
-                  </div>
-                </div>
 
-                <div className="grid md:grid-cols-2 gap-4 mt-4">
-                  <div>
-                    <label className="label">Password *</label>
-                    <input
-                      type="password"
-                      value={signupForm.password}
-                      onChange={(e) => handleSignupInput('password', e.target.value)}
-                      className="input2"
+                  {/* ADDRESS */}
+                  <div className="mt-4">
+                    <label className="label">
+                      Address *
+                    </label>
+
+                    <textarea
+                      rows={4}
+                      value={signupForm.address}
+                      onChange={(e) =>
+                        handleSignupInput(
+                          "address",
+                          e.target.value
+                        )
+                      }
+                      className="input2 w-full resize-none"
+                      placeholder="Enter complete clinic address"
                       required
                     />
                   </div>
 
-                  <div>
-                    <label className="label">Confirm Password *</label>
-                    <input
-                      type="password"
-                      value={signupForm.confirm_password}
-                      onChange={(e) => handleSignupInput('confirm_password', e.target.value)}
-                      className="input2"
-                      required
-                    />
-                  </div>
-                </div>
+                </section>
+
               </div>
 
-              {/* CLINIC DETAILS */}
-              <div>
-                <h4 className="text-sm font-bold text-gray-700 mb-2">Clinic Details </h4>
-                <hr style={{ border: 'none', borderTop: '2px dotted orange', width: '100%' }} />
 
-                <div>
-                  <label className="label">Clinic Name *</label>
-                  <input
-                    value={signupForm.clinic_name}
-                    onChange={(e) => handleSignupInput('clinic_name', e.target.value)}
-                    className="input2"
-                    required
-                  />
-                </div>
+              {/* =========================
+                  FOOTER / ACTION BUTTONS
+              ========================== */}
+              <div
+                className="
+                  flex-shrink-0
+                  bg-white
+                  border-t border-gray-200
+                  px-4 py-4
+                  sm:px-6
+                  lg:px-8
+                  flex
+                  flex-col-reverse
+                  sm:flex-row
+                  sm:justify-end
+                  gap-3
+                "
+              >
 
-                <div className="mt-4">
-                  <label className="label">Address *</label>
-                  <textarea
-                    rows={3}
-                    value={signupForm.address}
-                    onChange={(e) => handleSignupInput('address', e.target.value)}
-                    className="input2 resize-none"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* FOOTER */}
-              <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
                 <button
                   type="button"
                   onClick={closeSignupModal}
-                  className="px-6 py-2.5 border-2 border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
+                  className="
+                    w-full
+                    sm:w-auto
+                    px-6
+                    py-3
+                    border-2
+                    border-gray-300
+                    rounded-lg
+                    text-sm
+                    font-semibold
+                    text-gray-700
+                    hover:bg-gray-50
+                    transition
+                  "
                 >
                   Cancel
                 </button>
 
+
                 <button
                   type="submit"
-                  disabled={signupSubmitting}
-                  className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg text-sm font-semibold hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 transition shadow-md"
+                  disabled={
+                    signupSubmitting ||
+                    Object.keys(signupErrors).length > 0
+                  }
+                  className={`
+                    w-full
+                    sm:w-auto
+                    px-6
+                    py-3
+                    rounded-lg
+                    text-sm
+                    font-semibold
+                    text-white
+                    transition
+                    shadow-md
+
+                    ${
+                      signupSubmitting ||
+                      Object.keys(signupErrors).length > 0
+                        ? "bg-blue-400/60 cursor-not-allowed"
+                        : "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                    }
+                  `}
                 >
-                  {signupSubmitting ? 'Submitting...' : 'Send Request'}
+                  {signupSubmitting
+                    ? "Submitting..."
+                    : "Send Request"}
                 </button>
+
               </div>
 
             </form>
+
           </div>
         </div>
       )}

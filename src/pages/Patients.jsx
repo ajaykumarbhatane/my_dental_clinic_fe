@@ -9,6 +9,7 @@ import { visitsApi } from '../api/visitsApi';
 import { prescriptionApi } from '../api/prescriptionApi';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
+import normalizeApiError from '../utils/errorUtils';
 import ChoiceSelect from '../components/ChoiceSelect';
 import Pagination from '../components/Pagination';
 import { formatDate } from '../utils/dateUtils';
@@ -169,7 +170,9 @@ useEffect(() => {
         setFilterDoctors(normalizeListResponse(doctorsRes.data));
         setFilterTreatments(normalizeListResponse(treatmentsRes.data));
       } catch (error) {
-        console.error('Error loading filter options:', error);
+        const n = normalizeApiError(error);
+        console.error('Error loading filter options:', { status: n.status, type: n.type });
+        showError(n.message);
       }
     };
     loadFilterOptions();
@@ -202,7 +205,12 @@ useEffect(() => {
       setTotalCount(res.data.count || res.data.length);
       setTotalPages(Math.ceil((res.data.count || res.data.length) / 10));
     } catch (err) {
-      console.error("Fetch error:", err);
+        const n = normalizeApiError(err);
+        console.error("Fetch error:", { status: n.status, type: n.type });
+        setPatients([]);
+        setTotalCount(0);
+        setTotalPages(1);
+        showError(n.message);
     } finally {
       setLoading(false);
     }
@@ -247,7 +255,9 @@ useEffect(() => {
       const preferredClinic = clinicsList[0] || null;
       setClinicLanguage(preferredClinic?.prescription_language || 'english');
     } catch (error) {
-      console.error('Error fetching clinics:', error);
+      const n = normalizeApiError(error);
+      console.error('Error fetching clinics:', { status: n.status });
+      showError(n.message);
     }
   };
 
@@ -260,25 +270,15 @@ useEffect(() => {
   };
 
   const extractErrorMessage = (error) => {
-    const data = error?.response?.data || error;
-    if (!data) return 'Unknown error';
-    if (typeof data === 'string') return data;
-    if (data?.error?.message) return data.error.message;
-    if (data?.message) return data.message;
-    if (Array.isArray(data)) return data.join(', ');
-    if (typeof data === 'object') {
-      const nested = data.error || data.detail || data;
-      if (typeof nested === 'string') return nested;
-      if (nested?.message) return nested.message;
-      return Object.entries(nested)
-        .map(([field, value]) => {
-          if (Array.isArray(value)) return `${field}: ${value.join(', ')}`;
-          if (typeof value === 'object') return `${field}: ${JSON.stringify(value)}`;
-          return `${field}: ${value}`;
-        })
-        .join(' | ');
+    try {
+      const n = normalizeApiError(error);
+      if (n.fieldErrors && Object.keys(n.fieldErrors).length > 0) {
+        return Object.entries(n.fieldErrors).map(([k, v]) => `${k}: ${v}`).join(' | ');
+      }
+      return n.message || 'An error occurred';
+    } catch (e) {
+      return 'An error occurred';
     }
-    return String(data);
   };
 
   // Fetch doctors for dropdown
@@ -290,7 +290,9 @@ useEffect(() => {
         setFormData(prev => ({ ...prev, user: user.id }));
       }
     } catch (error) {
-      console.error('Error fetching doctors:', error);
+      const n = normalizeApiError(error);
+      console.error('Error fetching doctors:', { status: n.status });
+      showError(n.message);
     }
   };
 
@@ -300,7 +302,9 @@ useEffect(() => {
       const response = await treatmentApi.getTypes();
       setTreatmentTypes(normalizeListResponse(response.data));
     } catch (error) {
-      console.error('Error fetching treatment types:', error);
+      const n = normalizeApiError(error);
+      console.error('Error fetching treatment types:', { status: n.status });
+      showError(n.message);
     }
   };
 
@@ -320,7 +324,7 @@ useEffect(() => {
     });
     setTreatmentFormData({
       type_of_treatment: '',
-      status: 'scheduled',
+      status: 'ongoing',
       estimated_duration_months: '',
       planned_amount: '',
       initial_findings: '',
@@ -351,20 +355,36 @@ useEffect(() => {
     setItemSearchOpenId(null);
   };
 
+  const getTodayISO = () => new Date().toISOString().slice(0, 10);
+
   const validateStep = (step) => {
+    const today = getTodayISO();
+
     if (step === 1) {
       if (!formData.first_name || !formData.last_name || !formData.gender || !formData.user) {
         return 'Please complete all required patient fields and doctor selection.';
+      }
+      if (formData.mobile && !/^[0-9]{10}$/.test(formData.mobile)) {
+        return 'Patient mobile number must be exactly 10 digits.';
+      }
+      if (formData.date_of_birth && formData.date_of_birth > today) {
+        return 'Date of birth cannot be in the future.';
       }
     }
     if (step === 2) {
       if (!treatmentFormData.type_of_treatment) {
         return 'Please select a treatment type to continue.';
       }
+      if (treatmentFormData.estimated_duration_months && (Number(treatmentFormData.estimated_duration_months) < 1 || Number(treatmentFormData.estimated_duration_months) > 30)) {
+        return 'Estimated Duration must be between 1 and 30 months.';
+      }
     }
     if (step === 3) {
       if (!visitFormData.next_visit_date) {
         return 'Please select the initial visit date.';
+      }
+      if (visitFormData.next_visit_date < today) {
+        return 'Next visit date cannot be in the past.';
       }
     }
     if (step === 4) {
@@ -472,9 +492,13 @@ useEffect(() => {
           setCurrentStep(4);
           setStepError('');
         } catch (error) {
-          console.error('Error creating patient/treatment/visit:', error);
-          const message = extractErrorMessage(error);
+          const n = normalizeApiError(error);
+          console.error('Error creating patient/treatment/visit:', { status: n.status, type: n.type });
+          const message = n.fieldErrors && Object.keys(n.fieldErrors).length > 0
+            ? Object.entries(n.fieldErrors).map(([k, v]) => `${k}: ${v}`).join(' | ')
+            : n.message;
           setStepError(message);
+          showError(message);
         } finally {
           setIsSubmitting(false);
         }
@@ -537,9 +561,13 @@ useEffect(() => {
         setShowAddModal(false);
         fetchPatients(currentPage, searchTerm);
       } catch (error) {
-        console.error('Error creating prescription:', error);
-        const message = extractErrorMessage(error);
+        const n = normalizeApiError(error);
+        console.error('Error creating prescription:', { status: n.status, type: n.type });
+        const message = n.fieldErrors && Object.keys(n.fieldErrors).length > 0
+          ? Object.entries(n.fieldErrors).map(([k, v]) => `${k}: ${v}`).join(' | ')
+          : n.message;
         setStepError(message);
+        showError(message);
       } finally {
         setIsSubmitting(false);
       }
@@ -562,6 +590,16 @@ useEffect(() => {
   // Handle form input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+
+    if (name === 'mobile') {
+      const sanitized = value.replace(/\D/g, '').slice(0, 10);
+      setFormData(prev => ({
+        ...prev,
+        [name]: sanitized
+      }));
+      return;
+    }
+
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -570,6 +608,17 @@ useEffect(() => {
 
   const handleTreatmentChange = (e) => {
     const { name, value } = e.target;
+
+    if (name === 'estimated_duration_months') {
+      const digits = value.replace(/\D/g, '');
+      const clamped = digits === '' ? '' : String(Math.min(Math.max(Number(digits), 1), 30));
+      setTreatmentFormData(prev => ({
+        ...prev,
+        [name]: clamped
+      }));
+      return;
+    }
+
     setTreatmentFormData(prev => ({
       ...prev,
       [name]: value
@@ -582,6 +631,12 @@ useEffect(() => {
       ...prev,
       [name]: value
     }));
+  };
+
+  // Name validation: only letters, spaces, hyphens and apostrophes allowed
+  const isNameInvalid = (name) => {
+    if (!name) return false;
+    return /\d/.test(name) || /[^A-Za-z\s'\-]/.test(name);
   };
 
   // Prescription Helper Functions
@@ -693,7 +748,9 @@ useEffect(() => {
       const response = await prescriptionApi.getClinicMedicines();
       setClinicMedicines(response.data?.results || response.data || []);
     } catch (error) {
-      console.error('Error fetching clinic medicines:', error);
+        const n = normalizeApiError(error);
+        console.error('Error fetching clinic medicines:', { status: n.status });
+        showError(n.message);
     }
   };
 
@@ -713,8 +770,9 @@ useEffect(() => {
       setPatientToDelete(null);
       fetchPatients(currentPage, searchTerm);
     } catch (error) {
-      console.error("Delete failed:", error);
-      alert("Failed to delete patient");
+      const n = normalizeApiError(error);
+      console.error("Delete failed:", { status: n.status });
+      showError(n.message || 'We could not delete this patient. Please try again.');
     } finally {
       setIsDeletingPatient(false);
     }
@@ -1151,7 +1209,7 @@ useEffect(() => {
               {currentStep === 1 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div className="sm:col-span-2 lg:col-span-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Doctor Selection *</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Doctor Selection *</label>
                     <select
                       name="user"
                       value={formData.user}
@@ -1169,33 +1227,41 @@ useEffect(() => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">First Name *</label>
                     <input
                       type="text"
                       name="first_name"
                       value={formData.first_name}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      aria-invalid={isNameInvalid(formData.first_name)}
+                      className={`w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${isNameInvalid(formData.first_name) ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
                       placeholder="Enter patient first name"
                     />
+                    {isNameInvalid(formData.first_name) && (
+                      <p className="mt-1 text-xs text-red-600">First name must contain only letters.</p>
+                    )}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Last Name *</label>
                     <input
                       type="text"
                       name="last_name"
                       value={formData.last_name}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      aria-invalid={isNameInvalid(formData.last_name)}
+                      className={`w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${isNameInvalid(formData.last_name) ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
                       placeholder="Enter patient last name"
                     />
+                    {isNameInvalid(formData.last_name) && (
+                      <p className="mt-1 text-xs text-red-600">Last name must contain only letters.</p>
+                    )}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Gender *</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Gender *</label>
                     <ChoiceSelect
                       which="user/gender"
                       name="gender"
@@ -1208,9 +1274,12 @@ useEffect(() => {
                   </div>
 
                   <div className="sm:col-span-2 lg:col-span-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Mobile</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Mobile</label>
                     <input
                       type="tel"
+                      inputMode="numeric"
+                      pattern="[0-9]{10}"
+                      maxLength={10}
                       name="mobile"
                       value={formData.mobile}
                       onChange={handleInputChange}
@@ -1220,18 +1289,19 @@ useEffect(() => {
                   </div>
 
                   <div className="md:col-span-2 lg:col-span-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Date of Birth</label>
                     <input
                       type="date"
                       name="date_of_birth"
                       value={formData.date_of_birth}
                       onChange={handleInputChange}
+                      max={getTodayISO()}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Address</label>
                     <textarea
                       name="address"
                       value={formData.address}
@@ -1243,7 +1313,7 @@ useEffect(() => {
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Medical History</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Medical History</label>
                     <textarea
                       name="medical_history"
                       value={formData.medical_history}
@@ -1255,7 +1325,7 @@ useEffect(() => {
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Dental History</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Dental History</label>
                     <textarea
                       name="dental_history"
                       value={formData.dental_history}
@@ -1271,7 +1341,7 @@ useEffect(() => {
               {currentStep === 2 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Treatment Type *</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Treatment Type *</label>
                     <select
                       name="type_of_treatment"
                       value={treatmentFormData.type_of_treatment}
@@ -1289,7 +1359,7 @@ useEffect(() => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Status *</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Status *</label>
                     <ChoiceSelect
                       which="treatment/status"
                       name="status"
@@ -1303,7 +1373,7 @@ useEffect(() => {
 
                   {(selectedTreatmentTypeName.toLowerCase().includes('ortho') || selectedTreatmentTypeName.toLowerCase().includes('braces')) && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Braces Type</label>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">Braces Type</label>
                       <ChoiceSelect
                         which="treatment/braces-type"
                         name="braces_type"
@@ -1317,7 +1387,7 @@ useEffect(() => {
 
                   {selectedTreatmentTypeName.toLowerCase().includes('root canal') && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Cap Type</label>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">Cap Type</label>
                       <ChoiceSelect
                         which="treatment/cap-type"
                         name="cap_type"
@@ -1330,13 +1400,15 @@ useEffect(() => {
                   )}
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">
                       {selectedTreatmentTypeName.toLowerCase().includes('root canal')
                         ? 'Estimated Visits'
                         : 'Estimated Duration (Months)'}
                     </label>
                     <input
                       type="number"
+                      min="1"
+                      max="30"
                       name="estimated_duration_months"
                       value={treatmentFormData.estimated_duration_months}
                       onChange={handleTreatmentChange}
@@ -1346,7 +1418,7 @@ useEffect(() => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Planned Amount (₹)</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Planned Amount (₹)</label>
                     <input
                       type="number"
                       name="planned_amount"
@@ -1358,7 +1430,7 @@ useEffect(() => {
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Initial Findings</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Initial Findings</label>
                     <textarea
                       name="initial_findings"
                       value={treatmentFormData.initial_findings}
@@ -1370,7 +1442,7 @@ useEffect(() => {
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Treatment Plan</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Treatment Plan</label>
                     <textarea
                       name="treatment_plan"
                       value={treatmentFormData.treatment_plan}
@@ -1386,19 +1458,20 @@ useEffect(() => {
               {currentStep === 3 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Next Visit Date *</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Next Visit Date *</label>
                     <input
                       type="date"
                       name="next_visit_date"
                       value={visitFormData.next_visit_date}
                       onChange={handleVisitChange}
+                      min={getTodayISO()}
                       required
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Treatment Notes</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Treatment Notes</label>
                     <textarea
                       name="treatment_notes"
                       value={visitFormData.treatment_notes}
@@ -1410,7 +1483,7 @@ useEffect(() => {
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Patient Complaints</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Patient Complaints</label>
                     <textarea
                       name="patient_complaints"
                       value={visitFormData.patient_complaints}
@@ -1422,7 +1495,7 @@ useEffect(() => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Payment Amount (₹)</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Payment Amount (₹)</label>
                     <input
                       type="number"
                       name="patient_payment_amount"
@@ -1434,7 +1507,7 @@ useEffect(() => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Payment Type</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Payment Type</label>
                     <ChoiceSelect
                       which="treatment/payment-type"
                       name="patient_payment_type"
@@ -1446,7 +1519,7 @@ useEffect(() => {
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Payment Note</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Payment Note</label>
                     <textarea
                       name="payment_note"
                       value={visitFormData.payment_note}
@@ -1463,7 +1536,7 @@ useEffect(() => {
                 <div className="space-y-4 max-h-[50vh] overflow-y-auto">
                   {/* Treatment Dropdown */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Treatment (Auto-filled)</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Treatment (Auto-filled)</label>
                     <input
                       type="text"
                       disabled
@@ -1474,7 +1547,7 @@ useEffect(() => {
 
                   {/* Patient Complaints */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Patient Complaints</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Patient Complaints</label>
                     <textarea
                       value={prescriptionFormData.complaints}
                       onChange={(e) => setPrescriptionFormData(prev => ({...prev, complaints: e.target.value}))}
@@ -1486,7 +1559,7 @@ useEffect(() => {
 
                   {/* Diagnosis */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Diagnosis</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Diagnosis</label>
                     <textarea
                       value={prescriptionFormData.diagnosis}
                       onChange={(e) => setPrescriptionFormData(prev => ({...prev, diagnosis: e.target.value}))}
@@ -1498,7 +1571,7 @@ useEffect(() => {
 
                   {/* Advice */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">{clinicLanguage === 'marathi' ? 'सल्ला' : clinicLanguage === 'hindi' ? 'सलाह' : 'Advice'}</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">{clinicLanguage === 'marathi' ? 'सल्ला' : clinicLanguage === 'hindi' ? 'सलाह' : 'Advice'}</label>
                     <textarea
                       value={prescriptionFormData.instructions}
                       onChange={(e) => setPrescriptionFormData(prev => ({...prev, instructions: e.target.value}))}
@@ -1510,7 +1583,7 @@ useEffect(() => {
 
                   {/* Next Visit Date */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Next Visit Date</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Next Visit Date</label>
                     <input
                       type="date"
                       value={prescriptionFormData.next_visit_date || visitFormData.next_visit_date}
@@ -1696,7 +1769,7 @@ useEffect(() => {
                   )}
                   <button
                     type="submit"
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || (currentStep === 1 && (isNameInvalid(formData.first_name) || isNameInvalid(formData.last_name)))}
                     className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSubmitting

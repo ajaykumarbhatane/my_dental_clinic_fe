@@ -916,6 +916,9 @@ const ClinicSettings = () => {
               <div className="space-y-4">
                 <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
                   <p className="text-sm uppercase tracking-[0.28em] text-slate-500">Clinic Details</p>
+                  <div className="mt-2">
+                    <h3 className="text-sm font-semibold uppercase tracking-[0.35em] text-blue-600">Clinic Information</h3>
+                  </div>
                   <div className="mt-5 grid gap-4">
                     <div className="rounded-[24px] bg-slate-50 p-4">
                       <div className="flex items-center gap-2">

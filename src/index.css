@@ -44,6 +44,13 @@
   }
 }
 
+/* Ensure all native label elements use slightly bolder weight for better readability */
+@layer base {
+  label {
+    @apply font-semibold;
+  }
+}
+
 /* Custom animations */
 @layer utilities {
   .animate-in {

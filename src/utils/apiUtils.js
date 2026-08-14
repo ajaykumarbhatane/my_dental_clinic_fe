@@ -28,27 +28,29 @@ export const useApiWithErrorHandling = () => {
       return result;
     } catch (error) {
       let message = errorMessage;
-      
+
       if (!message) {
         if (error.userMessage) {
           message = error.userMessage;
         } else if (error.response?.data?.detail) {
-          message = error.response.data.detail;
-        } else if (error.response?.data?.error?.message) {
-          message = error.response.data.error.message;
-        } else {
-          message = 'An unexpected error occurred';
+          try {
+            const normalize = (await import('./errorUtils')).default;
+            const n = normalize(error);
+            message = n.message;
+          } catch (e) {
+            message = 'An unexpected error occurred';
+          }
         }
       }
-      
+
       if (showErrorNotification) {
         showError(message);
       }
-      
+
       if (onError) {
         onError(error);
       }
-      
+
       throw error;
     }
   };

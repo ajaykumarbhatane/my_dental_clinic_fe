@@ -50,11 +50,11 @@ const StatCard = ({ icon: Icon, label, value, tone }) => (
    <div className={`group rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${tone || ''}`}>
       <div className="flex items-start justify-between gap-3">
          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-400">{label}</p>
-            <p className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">{value}</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-600">{label}</p>
+            <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">{value}</p>
          </div>
-         <div className="rounded-2xl bg-slate-100 p-3 text-slate-600 transition group-hover:bg-blue-50 group-hover:text-blue-600">
-            <Icon className="h-5 w-5" />
+         <div className="rounded-2xl bg-slate-50 p-3 text-slate-600 transition group-hover:bg-blue-50 group-hover:text-blue-600">
+            <Icon className="h-6 w-6" />
          </div>
       </div>
    </div>
@@ -225,23 +225,23 @@ hover:shadow-blue-100
 
       <div className="mt-5 grid gap-3 sm:grid-cols-3">
          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">Total Amount</p>
-            <p className="mt-2 text-base font-semibold text-slate-900">{totalAmount}</p>
+            <p className="text-sm font-semibold text-slate-600">Total Amount</p>
+            <p className="mt-2 text-lg font-bold text-slate-900">{totalAmount}</p>
          </div>
          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">Paid</p>
-            <p className="mt-2 text-base font-semibold text-slate-900">{paidAmount}</p>
+            <p className="text-sm font-semibold text-slate-600">Paid</p>
+            <p className="mt-2 text-lg font-bold text-emerald-700">{paidAmount}</p>
          </div>
          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">Remaining</p>
-            <p className="mt-2 text-base font-semibold text-slate-900">{remainingAmount}</p>
+            <p className="text-sm font-semibold text-slate-600">Remaining</p>
+            <p className="mt-2 text-lg font-bold text-yellow-700">{remainingAmount}</p>
          </div>
       </div>
 
-      <div className="mt-5">
-         <div className="mb-2 flex items-center justify-between text-xs text-slate-500">
-            <span>Progress</span>
-            <span>{progress}%</span>
+         <div className="mt-5">
+         <div className="mb-2 flex items-center justify-between text-sm text-slate-700">
+            <span className="font-semibold">Progress</span>
+            <span className="font-semibold">{progress}%</span>
          </div>
          <div className="h-2 overflow-hidden rounded-full bg-slate-100">
             <div className="h-full rounded-full bg-gradient-to-r from-blue-600 to-indigo-500 transition-all duration-500" style={{ width: `${progress}%` }} />
@@ -1632,7 +1632,7 @@ const PatientDetail = () => {
                      <form onSubmit={handleEditPatient} className="space-y-5">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                            <div>
-                              <label className="block text-sm font-medium text-gray-700">First Name</label>
+                              <label className="block text-sm font-semibold text-gray-700">First Name</label>
                               <input
                                  required
                                  value={patientFormData.first_name}
@@ -1641,7 +1641,7 @@ const PatientDetail = () => {
                               />
                            </div>
                            <div>
-                              <label className="block text-sm font-medium text-gray-700">Last Name</label>
+                              <label className="block text-sm font-semibold text-gray-700">Last Name</label>
                               <input
                                  required
                                  value={patientFormData.last_name}
@@ -1652,7 +1652,7 @@ const PatientDetail = () => {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                            <div>
-                              <label className="block text-sm font-medium text-gray-700">Mobile</label>
+                              <label className="block text-sm font-semibold text-gray-700">Mobile</label>
                               <input
                                  value={patientFormData.mobile}
                                  onChange={(e) => setPatientFormData({ ...patientFormData, mobile: e.target.value })}
@@ -1660,7 +1660,7 @@ const PatientDetail = () => {
                               />
                            </div>
                            <div>
-                              <label className="block text-sm font-medium text-gray-700">Gender</label>
+                              <label className="block text-sm font-semibold text-gray-700">Gender</label>
                               <ChoiceSelect
                                  which="user/gender"
                                  value={patientFormData.gender}
@@ -1674,7 +1674,7 @@ const PatientDetail = () => {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                            <div>
-                              <label className="block text-sm font-medium text-gray-700">Date of Birth</label>
+                              <label className="block text-sm font-semibold text-gray-700">Date of Birth</label>
                               <input
                                  type="date"
                                  value={patientFormData.date_of_birth}
@@ -1683,7 +1683,7 @@ const PatientDetail = () => {
                               />
                            </div>
                            <div>
-                              <label className="block text-sm font-medium text-gray-700">Doctor</label>
+                              <label className="block text-sm font-semibold text-gray-700">Doctor</label>
                               <select
                                  required
                                  value={patientFormData.user}
@@ -1705,7 +1705,7 @@ const PatientDetail = () => {
                            </div>
                         </div>
                         <div>
-                           <label className="block text-sm font-medium text-gray-700">Address</label>
+                           <label className="block text-sm font-semibold text-gray-700">Address</label>
                            <textarea
                               value={patientFormData.address}
                               onChange={(e) => setPatientFormData({ ...patientFormData, address: e.target.value })}
@@ -1715,7 +1715,7 @@ const PatientDetail = () => {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                            <div>
-                              <label className="block text-sm font-medium text-gray-700">Medical History</label>
+                              <label className="block text-sm font-semibold text-gray-700">Medical History</label>
                               <textarea
                                  value={patientFormData.medical_history}
                                  onChange={(e) => setPatientFormData({ ...patientFormData, medical_history: e.target.value })}
@@ -1724,7 +1724,7 @@ const PatientDetail = () => {
                               />
                            </div>
                            <div>
-                              <label className="block text-sm font-medium text-gray-700">Dental History</label>
+                              <label className="block text-sm font-semibold text-gray-700">Dental History</label>
                               <textarea
                                  value={patientFormData.dental_history}
                                  onChange={(e) => setPatientFormData({ ...patientFormData, dental_history: e.target.value })}
@@ -1861,7 +1861,7 @@ const PatientDetail = () => {
                   </div>
                   <form onSubmit={handleSaveTreatment} className="space-y-4">
                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Treatment Type * <span className="text-xs text-red-600">{!treatmentFormData.type_of_treatment ? '(Required)' : ''}</span></label>
+                        <label className="block text-sm font-semibold text-gray-700">Treatment Type * <span className="text-xs text-red-600">{!treatmentFormData.type_of_treatment ? '(Required)' : ''}</span></label>
                         {isEditingTreatment ? (
                            <div className="mt-1 block w-full rounded-md border border-gray-300 bg-gray-100 py-2 px-3 text-gray-700">
                               {treatmentTypes.find(type => String(type.id) === String(treatmentFormData.type_of_treatment))?.name || 'Unknown'}
@@ -1888,7 +1888,7 @@ const PatientDetail = () => {
                         {treatmentTypes.find(type => String(type.id) === String(treatmentFormData.type_of_treatment))?.name?.toLowerCase().includes('ortho') ||
                            treatmentTypes.find(type => String(type.id) === String(treatmentFormData.type_of_treatment))?.name?.toLowerCase().includes('braces') && (
                               <div className="mt-3">
-                                 <label className="block text-sm font-medium text-gray-700">Braces Type</label>
+                                 <label className="block text-sm font-semibold text-gray-700">Braces Type</label>
                                  <ChoiceSelect
                                     which="treatment/braces-type"
                                     value={treatmentFormData.braces_type}
@@ -1901,7 +1901,7 @@ const PatientDetail = () => {
                            )}
                         {treatmentTypes.find(type => String(type.id) === String(treatmentFormData.type_of_treatment))?.name?.toLowerCase().includes('root canal') && (
                            <div className="mt-3">
-                              <label className="block text-sm font-medium text-gray-700">Cap Type</label>
+                              <label className="block text-sm font-semibold text-gray-700">Cap Type</label>
                               <ChoiceSelect
                                  which="treatment/cap-type"
                                  value={treatmentFormData.cap_type}
@@ -1915,7 +1915,7 @@ const PatientDetail = () => {
                      </div>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                           <label className="block text-sm font-medium text-gray-700">Status *</label>
+                           <label className="block text-sm font-semibold text-gray-700">Status *</label>
                            <ChoiceSelect
                               which="treatment/status"
                               value={treatmentFormData.status}
@@ -1927,7 +1927,7 @@ const PatientDetail = () => {
                            />
                         </div>
                         <div>
-                           <label className="block text-sm font-medium text-gray-700">
+                           <label className="block text-sm font-semibold text-gray-700">
                               {treatmentTypes.find(type => String(type.id) === String(treatmentFormData.type_of_treatment))?.name?.toLowerCase().includes('root canal')
                                  ? 'Estimated Visits'
                                  : 'Estimated Duration (Months)'}
@@ -1946,7 +1946,7 @@ const PatientDetail = () => {
                         </div>
                      </div>
                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Planned Amount (₹)</label>
+                        <label className="block text-sm font-semibold text-gray-700">Planned Amount (₹)</label>
                         <input
                            type="number"
                            step="0.01"
@@ -1957,7 +1957,7 @@ const PatientDetail = () => {
                         />
                      </div>
                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Initial Findings</label>
+                        <label className="block text-sm font-semibold text-gray-700">Initial Findings</label>
                         <textarea
                            value={treatmentFormData.initial_findings}
                            onChange={(e) => setTreatmentFormData({ ...treatmentFormData, initial_findings: e.target.value })}
@@ -1967,7 +1967,7 @@ const PatientDetail = () => {
                         />
                      </div>
                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Treatment Plan</label>
+                        <label className="block text-sm font-semibold text-gray-700">Treatment Plan</label>
                         <textarea
                            value={treatmentFormData.treatment_plan}
                            onChange={(e) => setTreatmentFormData({ ...treatmentFormData, treatment_plan: e.target.value })}
@@ -1977,7 +1977,7 @@ const PatientDetail = () => {
                         />
                      </div>
                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Treatment Notes</label>
+                        <label className="block text-sm font-semibold text-gray-700">Treatment Notes</label>
                         <textarea
                            value={treatmentFormData.treatment_notes}
                            onChange={(e) => setTreatmentFormData({ ...treatmentFormData, treatment_notes: e.target.value })}
@@ -2021,7 +2021,7 @@ const PatientDetail = () => {
                   </div>
                   <form onSubmit={handleAddVisit} className="space-y-4">
                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Next Visit Date * <span className="text-xs text-red-600">{!visitFormData.next_visit_date ? '(Required)' : ''}</span></label>
+                        <label className="block text-sm font-semibold text-gray-700">Next Visit Date * <span className="text-xs text-red-600">{!visitFormData.next_visit_date ? '(Required)' : ''}</span></label>
                         <input
                            type="date"
                            required
@@ -2035,7 +2035,7 @@ const PatientDetail = () => {
                         />
                      </div>
                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Treatment Notes</label>
+                        <label className="block text-sm font-semibold text-gray-700">Treatment Notes</label>
                         <textarea
                            value={visitFormData.treatment_notes}
                            onChange={(e) => setVisitFormData({ ...visitFormData, treatment_notes: e.target.value })}
@@ -2045,7 +2045,7 @@ const PatientDetail = () => {
                         />
                      </div>
                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Patient Complaints</label>
+                        <label className="block text-sm font-semibold text-gray-700">Patient Complaints</label>
                         <textarea
                            value={visitFormData.patient_complaints}
                            onChange={(e) => setVisitFormData({ ...visitFormData, patient_complaints: e.target.value })}
@@ -2056,7 +2056,7 @@ const PatientDetail = () => {
                      </div>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                           <label className="block text-sm font-medium text-gray-700">Payment Amount (₹)</label>
+                           <label className="block text-sm font-semibold text-gray-700">Payment Amount (₹)</label>
                            <input
                               type="number"
                               value={visitFormData.patient_payment_amount}
@@ -2066,7 +2066,7 @@ const PatientDetail = () => {
                            />
                         </div>
                         <div>
-                           <label className="block text-sm font-medium text-gray-700">Payment Type</label>
+                           <label className="block text-sm font-semibold text-gray-700">Payment Type</label>
                            <ChoiceSelect
                               which="treatment/payment-type"
                               value={visitFormData.patient_payment_type}
@@ -2078,7 +2078,7 @@ const PatientDetail = () => {
                         </div>
                      </div>
                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Payment Note</label>
+                        <label className="block text-sm font-semibold text-gray-700">Payment Note</label>
                         <textarea
                            value={visitFormData.payment_note}
                            onChange={(e) => setVisitFormData({ ...visitFormData, payment_note: e.target.value })}

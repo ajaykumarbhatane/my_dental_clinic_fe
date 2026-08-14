@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { registerNotifier } from '../services/notificationService';
 
 const NotificationContext = createContext();
 
@@ -35,6 +36,14 @@ export const NotificationProvider = ({ children }) => {
   const showError = useCallback((message, duration) => addNotification(message, 'error', duration), [addNotification]);
   const showWarning = useCallback((message, duration) => addNotification(message, 'warning', duration), [addNotification]);
   const showInfo = useCallback((message, duration) => addNotification(message, 'info', duration), [addNotification]);
+
+  // Register a global notifier for non-React modules (api client, services)
+  useEffect(() => {
+    registerNotifier((message, type = 'info', duration = 5000) => {
+      addNotification(message, type, duration);
+    });
+    // no cleanup required — provider lives for app lifetime
+  }, [addNotification]);
 
   return (
     <NotificationContext.Provider value={{

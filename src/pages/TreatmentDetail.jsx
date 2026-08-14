@@ -807,33 +807,36 @@ transition-colors
     <div className="grid grid-cols-1 md:grid-cols-2">
 
     <div className="flex justify-between items-center border-b md:border-r border-white/10 px-6 py-5">
-        <span className="text-white/70">
-            Total Amount
-        </span>
+      <span className="flex items-center gap-2 text-white/70">
+        <DollarSign className="w-4 h-4 text-white/60" />
+        Total Amount
+      </span>
 
-        <span className="font-semibold text-lg">
-            {formatAmount(treatment.planned_amount)}
-        </span>
+      <span className="font-bold text-xl text-white">
+        {formatAmount(treatment.planned_amount)}
+      </span>
     </div>
 
     <div className="flex justify-between items-center border-b border-white/10 px-6 py-5">
-        <span className="text-white/70">
-            Paid
-        </span>
+      <span className="flex items-center gap-2 text-white/70">
+        <DollarSign className="w-4 h-4 text-emerald-300" />
+        Paid
+      </span>
 
-        <span className="font-semibold text-emerald-300 text-lg">
-            {formatAmount(totalPaid)}
-        </span>
+      <span className="font-bold text-lg text-emerald-300">
+        {formatAmount(totalPaid)}
+      </span>
     </div>
 
     <div className="flex justify-between items-center md:border-r border-white/10 px-6 py-5">
-        <span className="text-white/70">
-            Remaining
-        </span>
+      <span className="flex items-center gap-2 text-white/70">
+        <DollarSign className="w-4 h-4 text-yellow-300" />
+        Remaining
+      </span>
 
-        <span className="font-semibold text-yellow-300 text-lg">
-            {formatAmount(remainingAmount)}
-        </span>
+      <span className="font-bold text-lg text-yellow-300">
+        {formatAmount(remainingAmount)}
+      </span>
     </div>
 
     <div className="flex justify-between items-center px-6 py-5">
@@ -1069,7 +1072,7 @@ hover:bg-blue-700
 
             <form onSubmit={handleAddVisit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Next Visit Date * <span className="text-xs text-red-600">{!visitFormData.next_visit_date ? '(Required)' : ''}</span></label>
+                <label className="block text-sm font-semibold text-gray-700">Next Visit Date * <span className="text-xs text-red-600">{!visitFormData.next_visit_date ? '(Required)' : ''}</span></label>
                 <input
                   type="date"
                   required
@@ -1082,7 +1085,7 @@ hover:bg-blue-700
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Treatment Notes</label>
+                <label className="block text-sm font-semibold text-gray-700">Treatment Notes</label>
                 <textarea
                   value={visitFormData.treatment_notes}
                   onChange={(e) => setVisitFormData({...visitFormData, treatment_notes: e.target.value})}
@@ -1093,7 +1096,7 @@ hover:bg-blue-700
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Patient Complaints</label>
+                <label className="block text-sm font-semibold text-gray-700">Patient Complaints</label>
                 <textarea
                   value={visitFormData.patient_complaints}
                   onChange={(e) => setVisitFormData({...visitFormData, patient_complaints: e.target.value})}
@@ -1105,7 +1108,7 @@ hover:bg-blue-700
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Payment Amount (₹)</label>
+                  <label className="block text-sm font-semibold text-gray-700">Payment Amount (₹)</label>
                   <input
                     type="number"
                     value={visitFormData.patient_payment_amount}
@@ -1115,7 +1118,7 @@ hover:bg-blue-700
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Payment Type</label>
+                  <label className="block text-sm font-semibold text-gray-700">Payment Type</label>
                   <select
                     value={visitFormData.patient_payment_type}
                     onChange={(e) => setVisitFormData({...visitFormData, patient_payment_type: e.target.value})}
@@ -1128,7 +1131,7 @@ hover:bg-blue-700
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Payment Note</label>
+                <label className="block text-sm font-semibold text-gray-700">Payment Note</label>
                 <textarea
                   value={visitFormData.payment_note}
                   onChange={(e) => setVisitFormData({...visitFormData, payment_note: e.target.value})}
@@ -1178,7 +1181,7 @@ hover:bg-blue-700
 
             <form onSubmit={handleEditVisit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Next Visit Date * <span className="text-xs text-red-600">{!visitFormData.next_visit_date ? '(Required)' : ''}</span></label>
+                <label className="block text-sm font-semibold text-gray-700">Next Visit Date * <span className="text-xs text-red-600">{!visitFormData.next_visit_date ? '(Required)' : ''}</span></label>
                 <input
                   type="date"
                   required
@@ -1191,7 +1194,7 @@ hover:bg-blue-700
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Treatment Notes</label>
+                <label className="block text-sm font-semibold text-gray-700">Treatment Notes</label>
                 <textarea
                   value={visitFormData.treatment_notes}
                   onChange={(e) => setVisitFormData({...visitFormData, treatment_notes: e.target.value})}
@@ -1202,7 +1205,7 @@ hover:bg-blue-700
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Patient Complaints</label>
+                <label className="block text-sm font-semibold text-gray-700">Patient Complaints</label>
                 <textarea
                   value={visitFormData.patient_complaints}
                   onChange={(e) => setVisitFormData({...visitFormData, patient_complaints: e.target.value})}
@@ -1214,7 +1217,7 @@ hover:bg-blue-700
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Payment Amount (₹)</label>
+                  <label className="block text-sm font-semibold text-gray-700">Payment Amount (₹)</label>
                   <input
                     type="number"
                     value={visitFormData.patient_payment_amount}
@@ -1224,7 +1227,7 @@ hover:bg-blue-700
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Payment Type</label>
+                  <label className="block text-sm font-semibold text-gray-700">Payment Type</label>
                   <select
                     value={visitFormData.patient_payment_type}
                     onChange={(e) => setVisitFormData({...visitFormData, patient_payment_type: e.target.value})}
@@ -1237,7 +1240,7 @@ hover:bg-blue-700
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Payment Note</label>
+                <label className="block text-sm font-semibold text-gray-700">Payment Note</label>
                 <textarea
                   value={visitFormData.payment_note}
                   onChange={(e) => setVisitFormData({...visitFormData, payment_note: e.target.value})}
@@ -1313,7 +1316,7 @@ hover:bg-blue-700
 
             <form onSubmit={handleUploadImage} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-semibold text-gray-700">
                   Select Image * <span className="text-xs text-red-600">{!imageUploadData.image ? '(Required)' : ''}</span>
                 </label>
                 <div className="mt-2 flex gap-2 flex-wrap">
@@ -1376,7 +1379,7 @@ hover:bg-blue-700
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Image Caption (Optional)</label>
+                <label className="block text-sm font-semibold text-gray-700">Image Caption (Optional)</label>
                 <textarea
                   value={imageUploadData.caption}
                   onChange={(e) => setImageUploadData({...imageUploadData, caption: e.target.value})}
@@ -1432,7 +1435,7 @@ hover:bg-blue-700
             <form onSubmit={handleSaveTreatment} className="space-y-4">
               <div className="grid grid-cols-1 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Treatment Type</label>
+                  <label className="block text-sm font-semibold text-gray-700">Treatment Type</label>
                   <input
                     type="text"
                     disabled
@@ -1448,7 +1451,7 @@ hover:bg-blue-700
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Cap Type</label>
+                    <label className="block text-sm font-semibold text-gray-700">Cap Type</label>
                     <ChoiceSelect
                       which="treatment/cap-type"
                       value={treatmentFormData.cap_type}
@@ -1458,7 +1461,7 @@ hover:bg-blue-700
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Status</label>
+                    <label className="block text-sm font-semibold text-gray-700">Status</label>
                     <ChoiceSelect
                       which="treatment/status"
                       value={treatmentFormData.status}
@@ -1471,7 +1474,7 @@ hover:bg-blue-700
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Estimated Visits</label>
+                    <label className="block text-sm font-semibold text-gray-700">Estimated Visits</label>
                     <input
                       type="number"
                       value={treatmentFormData.estimated_duration_months}
@@ -1480,7 +1483,7 @@ hover:bg-blue-700
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Planned Amount (₹)</label>
+                    <label className="block text-sm font-semibold text-gray-700">Planned Amount (₹)</label>
                     <input
                       type="number"
                       value={treatmentFormData.planned_amount}
@@ -1492,7 +1495,7 @@ hover:bg-blue-700
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Initial Findings</label>
+                <label className="block text-sm font-semibold text-gray-700">Initial Findings</label>
                 <textarea
                   rows={3}
                   value={treatmentFormData.initial_findings}
@@ -1503,7 +1506,7 @@ hover:bg-blue-700
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Treatment Plan</label>
+                <label className="block text-sm font-semibold text-gray-700">Treatment Plan</label>
                 <textarea
                   rows={4}
                   value={treatmentFormData.treatment_plan}
@@ -1514,7 +1517,7 @@ hover:bg-blue-700
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Treatment Notes</label>
+                <label className="block text-sm font-semibold text-gray-700">Treatment Notes</label>
                 <textarea
                   rows={3}
                   value={treatmentFormData.treatment_notes}

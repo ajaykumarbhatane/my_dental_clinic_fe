@@ -19,6 +19,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { subscriptionService } from '../../api/subscriptionService';
+import normalizeApiError from '../../utils/errorUtils';
 
 const durationOptions = [30, 90, 180, 365];
 
@@ -78,12 +79,10 @@ const getPricing = (plan, duration) => (
 
 const getSelectedDuration = (plan) => Number(plan?.pricing?.[0]?.duration_days || durationOptions[0]);
 
-const getErrorMessage = (error) => (
-  error?.response?.data?.detail
-  || error?.response?.data?.duration_days?.[0]
-  || error?.response?.data?.error
-  || 'We could not load subscription information. Please try again.'
-);
+const getErrorMessage = (error) => {
+  const normalized = normalizeApiError(error);
+  return normalized.message || 'We could not load subscription information. Please try again.';
+};
 
 const SkeletonBlock = ({ className = '' }) => (
   <div className={`skeleton rounded-xl ${className}`} aria-hidden="true" />
