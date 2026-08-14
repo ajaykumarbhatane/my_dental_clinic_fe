@@ -10,6 +10,8 @@ import {
   Shield,
   Clock,
   TrendingUp,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { clinicApi } from "../api/clinicApi";
 import ChoiceSelect from "../components/ChoiceSelect";
@@ -56,42 +58,45 @@ const benefits = [
   },
 ];
 
-const Landing = () => {
-  useEffect(() => {
-    AOS.init({
-      duration: 900,
-      once: true,
-      easing: "ease-in-out",
+  
+  const Landing = () => {
+    useEffect(() => {
+      AOS.init({ duration: 900, once: true, easing: 'ease-in-out' });
+    }, []);
+
+    const slides = [
+      { img: dashboardimg },
+      { img: treatmentsimg },
+    ];
+
+    const [current, setCurrent] = useState(0);
+    const [paused, setPaused] = useState(false);
+    const [showSignupModal, setShowSignupModal] = useState(false);
+
+    const [signupForm, setSignupForm] = useState({
+      first_name: '',
+      last_name: '',
+      email: '',
+      gender: '',
+      mobile: '',
+      secondary_phone_number: '',
+      date_of_birth: '',
+      password: '',
+      confirm_password: '',
+      role: 'Doctor',
+      clinic_name: '',
+      contact_number: '',
+      qualification: '',
+      registration_number: '',
+      address: ''
     });
-  }, []);
 
-  const slides = [
-    { img: dashboardimg },
-    { img: treatmentsimg }
-  ];
-
-  const [current, setCurrent] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const [showSignupModal, setShowSignupModal] = useState(false);
-  const [signupForm, setSignupForm] = useState({
-    first_name: '',
-    last_name: '',
-    email: '',
-    gender: '',
-    mobile: '',
-    secondary_phone_number: '',
-    date_of_birth: '',
-    password: '',
-    confirm_password: '',
-    role: 'Doctor',
-    clinic_name: '',
-    contact_number: '',
-    address: ''
-  });
   const [signupErrors, setSignupErrors] = useState({});
   const [signupError, setSignupError] = useState('');
   const [signupSuccess, setSignupSuccess] = useState('');
   const [signupSubmitting, setSignupSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [globalMessage, setGlobalMessage] = useState('');
   const [globalMessageType, setGlobalMessageType] = useState('success');
@@ -205,10 +210,14 @@ const Landing = () => {
       role: 'Doctor',
       clinic_name: '',
       contact_number: '',
+      qualification: '',
+      registration_number: '',
       address: ''
     });
     setSignupError('');
     setSignupErrors({});
+    setShowPassword(false);
+    setShowConfirmPassword(false);
     // Keep signupSuccess when resetting input fields after success submit
   };
 
@@ -860,9 +869,9 @@ const Landing = () => {
                     </div>
 
 
-                    <div>
+                    {/* <div>
                       <label className="label">
-                        Contact Number *
+                        Clinic Contact Number *
                       </label>
 
                       <input
@@ -889,7 +898,7 @@ const Landing = () => {
                           {signupErrors.contact_number}
                         </p>
                       )}
-                    </div>
+                    </div> */}
 
                   </div>
 
@@ -902,19 +911,30 @@ const Landing = () => {
                         Password *
                       </label>
 
-                      <input
-                        type="password"
-                        value={signupForm.password}
-                        onChange={(e) =>
-                          handleSignupInput(
-                            "password",
-                            e.target.value
-                          )
-                        }
-                        className="input2 w-full"
-                        placeholder="Enter password"
-                        required
-                      />
+                      <div className="relative">
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          value={signupForm.password}
+                          onChange={(e) =>
+                            handleSignupInput(
+                              "password",
+                              e.target.value
+                            )
+                          }
+                          className="input2 w-full"
+                          placeholder="Enter password"
+                          required
+                        />
+
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((s) => !s)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                          aria-label="Toggle password visibility"
+                        >
+                          {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
                     </div>
 
 
@@ -923,23 +943,35 @@ const Landing = () => {
                         Confirm Password *
                       </label>
 
-                      <input
-                        type="password"
-                        value={signupForm.confirm_password}
-                        onChange={(e) =>
-                          handleSignupInput(
-                            "confirm_password",
-                            e.target.value
-                          )
-                        }
-                        className={`input2 w-full ${
-                          signupErrors.confirm_password
-                            ? "border-red-500 focus:border-red-500 focus:ring-red-200"
-                            : ""
-                        }`}
-                        placeholder="Confirm password"
-                        required
-                      />
+
+                      <div className="relative">
+                        <input
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          value={signupForm.confirm_password}
+                          onChange={(e) =>
+                            handleSignupInput(
+                              "confirm_password",
+                              e.target.value
+                            )
+                          }
+                          className={`input2 w-full ${
+                            signupErrors.confirm_password
+                              ? "border-red-500 focus:border-red-500 focus:ring-red-200"
+                              : ""
+                          }`}
+                          placeholder="Confirm password"
+                          required
+                        />
+
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword((s) => !s)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                          aria-label="Toggle confirm password visibility"
+                        >
+                          {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
 
                       {signupErrors.confirm_password && (
                         <p className="mt-1 text-xs text-red-600">
@@ -948,6 +980,45 @@ const Landing = () => {
                       )}
                     </div>
 
+                  </div>
+
+                  {/* QUALIFICATION / REGISTRATION NUMBER */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 mt-4">
+                    <div>
+                      <label className="label">Qualification</label>
+
+                      <input
+                        value={signupForm.qualification}
+                        onChange={(e) =>
+                          handleSignupInput(
+                            "qualification",
+                            e.target.value
+                          )
+                        }
+                        className={`input2 w-full ${
+                          signupErrors.qualification ? "border-red-500" : ""
+                        }`}
+                        placeholder="e.g., BDS, MDS Orthodontics"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="label">Registration Number</label>
+
+                      <input
+                        value={signupForm.registration_number}
+                        onChange={(e) =>
+                          handleSignupInput(
+                            "registration_number",
+                            e.target.value
+                          )
+                        }
+                        className={`input2 w-full ${
+                          signupErrors.registration_number ? "border-red-500" : ""
+                        }`}
+                        placeholder="Dental/Medical registration number"
+                      />
+                    </div>
                   </div>
 
                 </section>
@@ -983,6 +1054,36 @@ const Landing = () => {
                       placeholder="Enter clinic name"
                       required
                     />
+                  </div>
+
+                  {/* CLINIC CONTACT NUMBER */}
+                  <div className="mt-4">
+                    <label className="label">Clinic Contact Number *</label>
+
+                    <input
+                      type="tel"
+                      inputMode="numeric"
+                      value={signupForm.contact_number}
+                      onChange={(e) =>
+                        handleSignupInput(
+                          "contact_number",
+                          e.target.value
+                        )
+                      }
+                      className={`input2 w-full ${
+                        signupErrors.contact_number
+                          ? "border-red-500 focus:border-red-500 focus:ring-red-200"
+                          : ""
+                      }`}
+                      placeholder="Enter contact number"
+                      required
+                    />
+
+                    {signupErrors.contact_number && (
+                      <p className="mt-1 text-xs text-red-600">
+                        {signupErrors.contact_number}
+                      </p>
+                    )}
                   </div>
 
 
