@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   AlertCircle,
   ArrowRight,
@@ -20,6 +21,11 @@ import {
 } from 'lucide-react';
 import { subscriptionService } from '../../api/subscriptionService';
 import normalizeApiError from '../../utils/errorUtils';
+import { loadRazorpay } from '../../services/razorpay';
+import {
+  createSubscriptionOrder,
+  verifySubscriptionPayment,
+} from '../../services/subscriptionPaymentService';
 
 const durationOptions = [30, 90, 180, 365];
 
@@ -117,7 +123,7 @@ const Stat = ({ icon: Icon, label, value, tone = 'blue' }) => {
   );
 };
 
-const ActiveSubscriptionCard = ({ subscription, onChoosePlan }) => {
+const ActiveSubscriptionCard = ({ subscription, onChoosePlan, onRenew }) => {
   if (!subscription) {
     return (
       <section className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-slate-950 via-blue-950 to-cyan-700 p-6 text-white shadow-[0_18px_50px_-24px_rgba(29,78,216,0.65)] sm:p-7">
@@ -201,14 +207,13 @@ const ActiveSubscriptionCard = ({ subscription, onChoosePlan }) => {
             </div> */}
           </div>
 
-          {/* <button
+          <button
             type="button"
-            disabled
-            title="Renewal will be available in a future release"
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/12 px-4 py-2.5 text-sm font-semibold text-white opacity-75 ring-1 ring-white/20"
+            onClick={() => onRenew && onRenew(subscription.plan || subscription.current_plan)}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/12 px-4 py-2.5 text-sm font-semibold text-white ring-1 ring-white/20 hover:bg-white/20"
           >
-            <RefreshCw size={16} aria-hidden="true" /> Renew <span className="text-[10px] uppercase tracking-[0.2em] text-blue-100">Soon</span>
-          </button> */}
+            <RefreshCw size={16} aria-hidden="true" /> Renew
+          </button>
         </div>
       </div>
     </section>
@@ -412,11 +417,21 @@ const ConfirmPlanModal = ({ plan, duration, onCancel, onConfirm, submitting }) =
       <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-700">
         <CreditCard size={20} aria-hidden="true" />
       </div>
-      <h3 className="mt-4 text-xl font-semibold text-slate-950">Confirm plan activation</h3>
+      <h3 className="mt-4 text-xl font-semibold text-slate-950">
+  Confirm your subscription
+</h3>
       <p className="mt-2 text-sm leading-6 text-slate-600">
-        You are about to activate <span className="font-semibold text-slate-900">{plan?.name}</span> for <span className="font-semibold text-slate-900">{duration} days</span>.
-        The current active plan will be paused and resumed later automatically when the new plan expires.
-      </p>
+  You are about to purchase{' '}
+  <span className="font-semibold text-slate-900">
+    {plan?.name}
+  </span>{' '}
+  for{' '}
+  <span className="font-semibold text-slate-900">
+    {duration} days
+  </span>.
+  You will be redirected to Razorpay Checkout to complete
+  your payment securely.
+</p>
       <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
         <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-blue-600">Included features</p>
         <div className="mt-3 flex flex-wrap gap-2">
@@ -432,12 +447,120 @@ const ConfirmPlanModal = ({ plan, duration, onCancel, onConfirm, submitting }) =
           Cancel
         </button>
         <button type="button" onClick={onConfirm} disabled={submitting} className="rounded-xl bg-gradient-to-r from-blue-700 to-cyan-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60">
-          {submitting ? 'Activating...' : 'Confirm activation'}
+          {submitting ? 'Opening payment...' : 'Continue to payment'}
         </button>
       </div>
     </div>
   </div>
 );
+
+const RenewSubscriptionModal = ({ plan, initialDuration, currentSubscription, onCancel, onConfirm, submitting }) => {
+  const defaultDuration = Number(currentSubscription?.duration_days || currentSubscription?.total_days || initialDuration || getSelectedDuration(plan));
+  const [duration, setDuration] = useState(defaultDuration);
+
+  const pricing = getPricing(plan, duration);
+
+  const parseDate = (value) => {
+    if (!value) return null;
+    if (value instanceof Date) return value;
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      const isoMatch = trimmed.match(/^\d{4}-\d{2}-\d{2}/);
+      if (isoMatch) return new Date(trimmed);
+      const dmY = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      const dmYDash = trimmed.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+      if (dmY || dmYDash) {
+        const [, day, month, year] = dmY || dmYDash;
+        return new Date(Number(year), Number(month) - 1, Number(day));
+      }
+      const t = new Date(trimmed);
+      return Number.isNaN(t.getTime()) ? null : t;
+    }
+    return null;
+  };
+
+  const computeEstimatedDates = (current, dur) => {
+    const durDays = Number(dur) || 0;
+    const endDate = parseDate(current?.end_date);
+    let start = new Date();
+    if (endDate) {
+      start = new Date(endDate);
+      start.setDate(start.getDate() + 1);
+    }
+    const end = new Date(start);
+    end.setDate(end.getDate() + durDays - 1);
+    return { start, end };
+  };
+
+  const { start: estimatedStart, end: estimatedEnd } = computeEstimatedDates(currentSubscription, duration);
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/45 p-4">
+      <div className="w-full max-w-lg rounded-[28px] border border-slate-200 bg-white p-6 shadow-2xl">
+        <div className="flex items-start gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-700"><RefreshCw size={20} aria-hidden="true" /></div>
+          <div>
+            <h3 className="mt-1 text-xl font-semibold text-slate-950">Schedule Renewal</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-600">This will schedule a renewal for your current plan. Start date is calculated as the day after the current plan ends.</p>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div>
+            <h4 className="text-sm font-semibold text-slate-900">Plan</h4>
+            <p className="mt-1 text-sm text-slate-700">{plan?.name} — {plan?.description}</p>
+            <PlanFeatureList features={plan?.features || []} />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-slate-700">Duration</label>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {[90, 180, 365].map((d) => {
+                const available = Boolean(getPricing(plan, d));
+                const selected = Number(duration) === Number(d);
+                return (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => available && setDuration(Number(d))}
+                    disabled={!available}
+                    className={`rounded-xl px-3 py-2 text-sm font-semibold ${selected ? 'bg-blue-700 text-white' : 'bg-white ring-1 ring-slate-200 text-slate-700'} ${!available ? 'opacity-40 cursor-not-allowed' : ''}`}
+                  >
+                    {d} days
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+          <div>
+            <p className="text-xs text-slate-500">Price</p>
+            <p className="mt-1 text-sm font-semibold text-slate-900">{formatCurrency(pricing?.price)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-500">Selected duration</p>
+            <p className="mt-1 text-sm font-semibold text-slate-900">{duration} days</p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-500">Current plan end</p>
+            <p className="mt-1 text-sm font-semibold text-slate-900">{formatDate(currentSubscription?.end_date)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-500">Estimated renewal window</p>
+            <p className="mt-1 text-sm font-semibold text-slate-900">{formatDate(estimatedStart)} — {formatDate(estimatedEnd)}</p>
+          </div>
+        </div>
+
+        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <button type="button" onClick={onCancel} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700">Cancel</button>
+          <button type="button" onClick={() => onConfirm(duration)} disabled={submitting} className="rounded-xl bg-gradient-to-r from-blue-700 to-cyan-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md disabled:cursor-not-allowed disabled:opacity-60">{submitting ? 'Scheduling...' : 'Schedule Renewal'}</button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const SubscriptionLoading = () => (
   <div className="space-y-8" aria-label="Loading subscriptions">
@@ -456,7 +579,11 @@ const SubscriptionDashboard = () => {
   const [loadingError, setLoadingError] = useState('');
   const [purchasingKey, setPurchasingKey] = useState(null);
   const [notice, setNotice] = useState(null);
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [pendingPlan, setPendingPlan] = useState(null);
+  const [showRenewModal, setShowRenewModal] = useState(false);
+  const [renewPlan, setRenewPlan] = useState(null);
+  const [renewSubmitting, setRenewSubmitting] = useState(false);
   const [activatingPlanId, setActivatingPlanId] = useState(null);
   const [showAllHistory, setShowAllHistory] = useState(false);
 
@@ -492,6 +619,22 @@ const SubscriptionDashboard = () => {
     loadSubscriptions();
   }, [loadSubscriptions]);
 
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (location?.state?.openRenewModal && current) {
+      const planToRenew = current?.plan || current?.current_plan;
+      if (planToRenew) {
+        const matched = plans.find((p) => Number(p.id) === Number(planToRenew?.id) || p.code === planToRenew?.code) || planToRenew;
+        setRenewPlan(matched);
+        setShowRenewModal(true);
+      }
+      // clear navigation state so modal doesn't reopen on back/refresh
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location, current, navigate]);
+
   useEffect(() => {
     const hash = window.location.hash;
     if (!hash) return undefined;
@@ -520,28 +663,278 @@ const SubscriptionDashboard = () => {
     setPendingPlan({ plan, duration });
   };
 
-  const confirmPendingPurchase = async () => {
-    if (!pendingPlan) return;
-
-    const { plan, duration } = pendingPlan;
-    const purchaseKey = `${plan.id}-${duration}`;
-    setActivatingPlanId(plan.id);
-    setPurchasingKey(purchaseKey);
+  const handleRenew = async (plan, duration) => {
     setNotice(null);
-
     try {
-      await subscriptionService.purchaseSubscription({ plan: plan.id, duration_days: duration });
+      const response = await subscriptionService.renewSubscription({ plan: plan.id, duration_days: duration });
       await loadSubscriptions();
-      setNotice({ type: 'success', message: 'Subscription Activated', detail: `${plan.name} is now active for your clinic.` });
+      // Try to locate the scheduled subscription in history to show its start date
+      const historyResp = await subscriptionService.getSubscriptionHistory();
+      const historyList = unwrapList(historyResp);
+      const scheduled = historyList.find((h) => h.id === response?.data?.subscription_id);
+      const detail = scheduled ? `Your ${plan.name} renewal is scheduled to start on ${formatDate(scheduled.start_date)}.` : `Your ${plan.name} renewal has been scheduled.`;
+      setNotice({ type: 'success', message: 'Renewal scheduled', detail });
     } catch (error) {
-      console.error('Subscription purchase failed:', error);
-      setNotice({ type: 'error', message: 'Purchase could not be completed', detail: getErrorMessage(error) });
-    } finally {
-      setPurchasingKey(null);
-      setActivatingPlanId(null);
-      setPendingPlan(null);
+      console.error('Renewal request failed:', error);
+      setNotice({ type: 'error', message: 'Renewal failed', detail: getErrorMessage(error) });
     }
   };
+
+  const handlePaymentSuccess = async (response, plan) => {
+  try {
+    setPaymentProcessing(true);
+
+    setNotice(null);
+
+    const {
+      razorpay_payment_id,
+      razorpay_order_id,
+      razorpay_signature,
+    } = response || {};
+
+    // Basic frontend validation.
+    // Backend remains the source of truth.
+    if (
+      !razorpay_payment_id ||
+      !razorpay_order_id ||
+      !razorpay_signature
+    ) {
+      throw new Error(
+        'Razorpay returned an incomplete payment response.'
+      );
+    }
+
+    const verificationResponse =
+      await verifySubscriptionPayment({
+        razorpayPaymentId: razorpay_payment_id,
+        razorpayOrderId: razorpay_order_id,
+        razorpaySignature: razorpay_signature,
+      });
+
+    console.log(
+      'Subscription payment verified:',
+      verificationResponse
+    );
+
+    await loadSubscriptions();
+
+    setNotice({
+      type: 'success',
+      message: 'Payment successful',
+      detail: `${plan.name} is now active for your clinic.`,
+    });
+
+  } catch (error) {
+    console.error(
+      'Payment verification failed:',
+      error
+    );
+
+    setNotice({
+      type: 'error',
+      message: 'Payment verification failed',
+      detail:
+        getErrorMessage(error) ||
+        'Payment could not be verified. Please check your subscription status.',
+    });
+
+  } finally {
+    setPaymentProcessing(false);
+    setPurchasingKey(null);
+    setActivatingPlanId(null);
+    setPendingPlan(null);
+  }
+};
+
+const openRazorpayCheckout = async (plan, duration) => {
+  try {
+    setPaymentProcessing(true);
+    setNotice(null);
+
+    // --------------------------------------------------
+    // 1. Load Razorpay Checkout
+    // --------------------------------------------------
+
+    const loaded = await loadRazorpay();
+
+    if (!loaded || !window.Razorpay) {
+      throw new Error(
+        'Unable to load Razorpay Checkout. Please try again.'
+      );
+    }
+
+    // --------------------------------------------------
+    // 2. Create Razorpay order through OUR backend
+    // --------------------------------------------------
+
+    const order = await createSubscriptionOrder({
+      plan: plan.id,
+      durationDays: duration,
+    });
+
+    console.log(
+      'Subscription payment order created:',
+      order
+    );
+
+    // --------------------------------------------------
+    // 3. Validate backend response
+    // --------------------------------------------------
+
+    if (!order?.razorpay_order_id) {
+      throw new Error(
+        'Payment order was not created correctly.'
+      );
+    }
+
+    if (!order?.razorpay_key_id) {
+      throw new Error(
+        'Razorpay Key ID was not returned by the server.'
+      );
+    }
+
+    if (!order?.amount) {
+      throw new Error(
+        'Payment amount was not returned by the server.'
+      );
+    }
+
+    // --------------------------------------------------
+    // 4. Create Checkout options
+    // --------------------------------------------------
+
+    const options = {
+      key: order.razorpay_key_id,
+
+      amount: Number(order.amount),
+
+      currency: order.currency || 'INR',
+
+      name: 'MyDentalClinicPro',
+
+      description:
+        `${plan.name} - ${duration} days subscription`,
+
+      order_id: order.razorpay_order_id,
+
+      handler: async (response) => {
+        await handlePaymentSuccess(
+          response,
+          plan
+        );
+      },
+
+      modal: {
+        confirm_close: true,
+        escape: false,
+        backdropclose: false,
+        animation: true,
+      },
+
+      retry: {
+        enabled: true,
+        max_count: 4,
+      },
+
+      theme: {
+        color: '#2563EB',
+      },
+    };
+
+    // --------------------------------------------------
+    // 5. Create Razorpay instance
+    // --------------------------------------------------
+
+    const razorpay = new window.Razorpay(options);
+
+    razorpay.on(
+  'modal.ondismiss',
+  () => {
+    console.log(
+      'Razorpay Checkout dismissed by user.'
+    );
+
+    setPaymentProcessing(false);
+    setPurchasingKey(null);
+    setActivatingPlanId(null);
+
+    setNotice({
+      type: 'error',
+      message: 'Payment cancelled',
+      detail:
+        'The payment window was closed. Your subscription has not been activated.',
+    });
+  }
+);
+
+    // --------------------------------------------------
+    // 6. Handle payment failure
+    // --------------------------------------------------
+
+    razorpay.on(
+      'payment.failed',
+      (response) => {
+        console.error(
+          'Razorpay payment failed:',
+          response
+        );
+
+        setPaymentProcessing(false);
+        setPurchasingKey(null);
+        setActivatingPlanId(null);
+
+        setNotice({
+          type: 'error',
+          message: 'Payment failed',
+          detail:
+            response?.error?.description ||
+            'Your payment could not be completed. Please try again.',
+        });
+      }
+    );
+
+    // --------------------------------------------------
+    // 7. Open Checkout
+    // --------------------------------------------------
+
+    razorpay.open();
+
+  } catch (error) {
+    console.error(
+      'Unable to initiate Razorpay payment:',
+      error
+    );
+
+    setPaymentProcessing(false);
+    setPurchasingKey(null);
+    setActivatingPlanId(null);
+
+    setNotice({
+      type: 'error',
+      message: 'Payment could not be started',
+      detail: getErrorMessage(error),
+    });
+  }
+};
+
+  const confirmPendingPurchase = async () => {
+  if (!pendingPlan) {
+    return;
+  }
+
+  const { plan, duration } = pendingPlan;
+
+  const purchaseKey = `${plan.id}-${duration}`;
+
+  setActivatingPlanId(plan.id);
+  setPurchasingKey(purchaseKey);
+  setNotice(null);
+
+  await openRazorpayCheckout(
+    plan,
+    duration
+  );
+};
 
   const activeFeatures = useMemo(() => current?.features || [], [current]);
 
@@ -568,11 +961,38 @@ const SubscriptionDashboard = () => {
 
       {pendingPlan && (
         <ConfirmPlanModal
-          plan={pendingPlan.plan}
-          duration={pendingPlan.duration}
-          submitting={Boolean(purchasingKey)}
-          onCancel={() => setPendingPlan(null)}
-          onConfirm={confirmPendingPurchase}
+  plan={pendingPlan.plan}
+  duration={pendingPlan.duration}
+  submitting={
+    Boolean(purchasingKey) ||
+    paymentProcessing
+  }
+  onCancel={() => {
+    if (!paymentProcessing) {
+      setPendingPlan(null);
+    }
+  }}
+  onConfirm={confirmPendingPurchase}
+/>
+      )}
+
+      {showRenewModal && renewPlan && (
+        <RenewSubscriptionModal
+          plan={renewPlan}
+          currentSubscription={current}
+          initialDuration={current?.duration_days || current?.total_days || getSelectedDuration(renewPlan)}
+          submitting={renewSubmitting}
+          onCancel={() => { setShowRenewModal(false); setRenewPlan(null); }}
+          onConfirm={async (duration) => {
+            setRenewSubmitting(true);
+            try {
+              await handleRenew(renewPlan, duration);
+              setShowRenewModal(false);
+              setRenewPlan(null);
+            } finally {
+              setRenewSubmitting(false);
+            }
+          }}
         />
       )}
 
@@ -581,7 +1001,11 @@ const SubscriptionDashboard = () => {
         <button type="button" onClick={loadSubscriptions} className="inline-flex items-center gap-2 self-start rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"><RefreshCw size={15} /> Refresh</button>
       </div> */}
 
-      <div id="subscription-current"><ActiveSubscriptionCard subscription={current} onChoosePlan={() => document.getElementById('subscription-plans')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} /></div>
+      <div id="subscription-current"><ActiveSubscriptionCard subscription={current} onChoosePlan={() => document.getElementById('subscription-plans')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} onRenew={(plan) => {
+        const matched = plans.find((p) => Number(p.id) === Number(plan?.id) || p.code === plan?.code) || plan;
+        setRenewPlan(matched);
+        setShowRenewModal(true);
+      }} /></div>
 
       <section>
         <SubscriptionStats current={current} history={history} />

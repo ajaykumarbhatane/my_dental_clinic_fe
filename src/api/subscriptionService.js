@@ -5,4 +5,5 @@ export const subscriptionService = {
   purchaseSubscription: (data) => apiClient.post('/clinic-subscriptions/purchase/', data),
   getCurrentSubscription: () => apiClient.get('/clinic-subscriptions/current/'),
   getSubscriptionHistory: () => apiClient.get('/clinic-subscriptions/history/'),
+  renewSubscription: (data) => apiClient.post('/clinic-subscriptions/renew/', data),
 };

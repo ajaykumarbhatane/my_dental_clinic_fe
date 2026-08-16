@@ -74,7 +74,8 @@ const SubscriptionExpiryModal = ({ isOpen, subscription, onClose }) => {
 
   const handleRenewClick = () => {
     onClose();
-    navigate('/app/subscriptions');
+    // Navigate to subscriptions and request the subscriptions page open the renew modal
+    navigate('/app/subscriptions', { state: { openRenewModal: true } });
   };
 
   const handleBackdropClick = (e) => {
