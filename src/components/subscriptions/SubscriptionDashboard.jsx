@@ -22,6 +22,7 @@ import {
 import { subscriptionService } from '../../api/subscriptionService';
 import normalizeApiError from '../../utils/errorUtils';
 import { loadRazorpay } from '../../services/razorpay';
+import razorpayNative from '../../services/razorpayNative';
 import {
   createSubscriptionOrder,
   verifySubscriptionPayment,
@@ -752,19 +753,7 @@ const openRazorpayCheckout = async (plan, duration) => {
     setNotice(null);
 
     // --------------------------------------------------
-    // 1. Load Razorpay Checkout
-    // --------------------------------------------------
-
-    const loaded = await loadRazorpay();
-
-    if (!loaded || !window.Razorpay) {
-      throw new Error(
-        'Unable to load Razorpay Checkout. Please try again.'
-      );
-    }
-
-    // --------------------------------------------------
-    // 2. Create Razorpay order through OUR backend
+    // 1. Create Razorpay order through OUR backend
     // --------------------------------------------------
 
     const order = await createSubscriptionOrder({
@@ -772,13 +761,14 @@ const openRazorpayCheckout = async (plan, duration) => {
       durationDays: duration,
     });
 
-    console.log(
-      'Subscription payment order created:',
-      order
-    );
+    console.log('[Razorpay] Backend order created:', {
+      orderId: order?.razorpay_order_id,
+      amount: order?.amount,
+      currency: order?.currency,
+    });
 
     // --------------------------------------------------
-    // 3. Validate backend response
+    // 2. Validate backend response
     // --------------------------------------------------
 
     if (!order?.razorpay_order_id) {
@@ -800,21 +790,78 @@ const openRazorpayCheckout = async (plan, duration) => {
     }
 
     // --------------------------------------------------
-    // 4. Create Checkout options
+    // 3. Detect native Android
     // --------------------------------------------------
+
+    const isNative =
+      typeof window !== 'undefined' &&
+      window.Capacitor?.isNativePlatform?.();
+
+    const platform =
+      window.Capacitor?.getPlatform?.() || 'unknown';
+
+    console.log('[Razorpay] Platform:', platform);
+    console.log('[Razorpay] Native:', isNative);
+
+    // --------------------------------------------------
+    // 4. Native Android Razorpay
+    // --------------------------------------------------
+
+    if (isNative && platform === 'android') {
+      console.log(
+        '[Razorpay Native] Calling RazorpayBridge.open()'
+      );
+
+      const nativeResponse =
+        await razorpayNative.openNativeRazorpay({
+          key: order.razorpay_key_id,
+          order_id: order.razorpay_order_id,
+          amount: Number(order.amount),
+          currency: order.currency || 'INR',
+        });
+
+      console.log(
+        '[Razorpay Native] Response:',
+        nativeResponse
+      );
+
+      // The native plugin should return:
+      // razorpay_payment_id
+      // razorpay_order_id
+      // razorpay_signature
+
+      if (
+        nativeResponse?.razorpay_payment_id &&
+        nativeResponse?.razorpay_order_id &&
+        nativeResponse?.razorpay_signature
+      ) {
+        await handlePaymentSuccess(
+          nativeResponse,
+          plan
+        );
+      }
+
+      return;
+    }
+
+    // --------------------------------------------------
+    // 5. Browser / Desktop Razorpay Checkout
+    // --------------------------------------------------
+
+    const loaded = await loadRazorpay();
+
+    if (!loaded || !window.Razorpay) {
+      throw new Error(
+        'Unable to load Razorpay Checkout. Please try again.'
+      );
+    }
 
     const options = {
       key: order.razorpay_key_id,
-
       amount: Number(order.amount),
-
       currency: order.currency || 'INR',
-
       name: 'MyDentalClinicPro',
-
-      description:
-        `${plan.name} - ${duration} days subscription`,
-
+      description: `${plan.name} - ${duration} days subscription`,
       order_id: order.razorpay_order_id,
 
       handler: async (response) => {
@@ -841,67 +888,46 @@ const openRazorpayCheckout = async (plan, duration) => {
       },
     };
 
-    // --------------------------------------------------
-    // 5. Create Razorpay instance
-    // --------------------------------------------------
+    const razorpay =
+      new window.Razorpay(options);
 
-    const razorpay = new window.Razorpay(options);
+    razorpay.on('modal.ondismiss', () => {
+      setPaymentProcessing(false);
+      setPurchasingKey(null);
+      setActivatingPlanId(null);
 
-    razorpay.on(
-  'modal.ondismiss',
-  () => {
-    console.log(
-      'Razorpay Checkout dismissed by user.'
-    );
-
-    setPaymentProcessing(false);
-    setPurchasingKey(null);
-    setActivatingPlanId(null);
-
-    setNotice({
-      type: 'error',
-      message: 'Payment cancelled',
-      detail:
-        'The payment window was closed. Your subscription has not been activated.',
+      setNotice({
+        type: 'error',
+        message: 'Payment cancelled',
+        detail:
+          'The payment window was closed. Your subscription has not been activated.',
+      });
     });
-  }
-);
 
-    // --------------------------------------------------
-    // 6. Handle payment failure
-    // --------------------------------------------------
+    razorpay.on('payment.failed', (response) => {
+      console.error(
+        'Razorpay payment failed:',
+        response
+      );
 
-    razorpay.on(
-      'payment.failed',
-      (response) => {
-        console.error(
-          'Razorpay payment failed:',
-          response
-        );
+      setPaymentProcessing(false);
+      setPurchasingKey(null);
+      setActivatingPlanId(null);
 
-        setPaymentProcessing(false);
-        setPurchasingKey(null);
-        setActivatingPlanId(null);
-
-        setNotice({
-          type: 'error',
-          message: 'Payment failed',
-          detail:
-            response?.error?.description ||
-            'Your payment could not be completed. Please try again.',
-        });
-      }
-    );
-
-    // --------------------------------------------------
-    // 7. Open Checkout
-    // --------------------------------------------------
+      setNotice({
+        type: 'error',
+        message: 'Payment failed',
+        detail:
+          response?.error?.description ||
+          'Your payment could not be completed. Please try again.',
+      });
+    });
 
     razorpay.open();
 
   } catch (error) {
     console.error(
-      'Unable to initiate Razorpay payment:',
+      '[Razorpay] Unable to initiate payment:',
       error
     );
 
@@ -912,7 +938,9 @@ const openRazorpayCheckout = async (plan, duration) => {
     setNotice({
       type: 'error',
       message: 'Payment could not be started',
-      detail: getErrorMessage(error),
+      detail:
+        error?.message ||
+        getErrorMessage(error),
     });
   }
 };
