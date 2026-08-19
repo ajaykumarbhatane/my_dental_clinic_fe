@@ -582,98 +582,90 @@ const TreatmentDetail = () => {
 
     <div>
 
-        <div className="space-y-2">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
 
-    <div className="flex items-center gap-2 min-w-0">
-        <span className="text-sm font-semibold uppercase tracking-[0.15em] text-blue-200">
-            PT:
-        </span>
+            <div className="flex items-center gap-2 min-w-0">
+                <span className="text-sm font-semibold uppercase tracking-[0.15em] text-blue-200">
+                    PT:
+                </span>
 
-        <span
-            title={patientDisplayName}
-            className="text-2xl font-bold text-white"
-        >
-            {patientDisplayName}
-        </span>
-    </div>
+                <span
+                    title={patientDisplayName}
+                    className="text-2xl font-bold text-white"
+                >
+                    {patientDisplayName}
+                </span>
+            </div>
 
-    {patientMobile && (
-    <a
-        href={`tel:${patientMobile}`}
-        className="
-            inline-flex
-            items-center
-            gap-2
-            mt-1
+            {patientMobile && (
+                <a
+                    href={`tel:${patientMobile}`}
+                    className="
+                        inline-flex
+                        items-center
+                        gap-2
 
-            rounded-full
+                        rounded-full
 
-            bg-gradient-to-r
-            from-green-500
-            to-emerald-600
+                        bg-gradient-to-r
+                        from-green-500
+                        to-emerald-600
 
-            px-4
-            py-2
+                        px-3.5
+                        py-1.5
 
-            text-sm
-            font-semibold
-            text-white
+                        text-sm
+                        font-semibold
+                        text-white
 
-            shadow-lg
-            shadow-green-500/30
+                        shadow-lg
+                        shadow-green-500/30
 
-            transition-all
-            duration-200
+                        transition-all
+                        duration-200
 
-            hover:from-green-600
-            hover:to-emerald-700
+                        hover:from-green-600
+                        hover:to-emerald-700
 
-            active:scale-95
-        "
-    >
-        <Phone className="w-4 h-4 text-white" />
-        <span>{patientMobile}</span>
-    </a>
-)}
+                        active:scale-95
+                    "
+                >
+                    <Phone className="w-3.5 h-3.5 text-white" />
+                    <span>{patientMobile}</span>
+                </a>
+            )}
 
-</div>
+            <div className="flex flex-wrap items-center gap-3">
+                <span className="text-lg font-semibold text-white/95">
+                    {treatment.treatment_name || treatment.type_of_treatment_name}
+                </span>
 
-        
+                <span
+                    className="
+                    inline-flex
+                    items-center
+                    gap-2
 
-        <div className="mt-4 flex flex-wrap items-center gap-3">
+                    rounded-full
 
-            <span className="text-lg font-semibold">
-                {treatment.treatment_name || treatment.type_of_treatment_name}
-            </span>
+                    bg-emerald-500/20
 
-            <span
-                className="
-                inline-flex
-                items-center
-                gap-2
+                    border
+                    border-emerald-400/30
 
-                rounded-full
+                    px-3
+                    py-1
 
-                bg-emerald-500/20
+                    text-xs
+                    font-semibold
 
-                border
-                border-emerald-400/30
-
-                px-3
-                py-1
-
-                text-xs
-                font-semibold
-
-                text-emerald-200
-                "
-            >
-
-                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-
-                {statusText}
-
-            </span>
+                    text-emerald-200
+                    "
+                >
+                    <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    {statusText}
+                </span>
+            </div>
 
         </div>
 
@@ -792,105 +784,107 @@ transition-colors
 
 </div>
 
+            {/* UNIFIED TREATMENT TABLE CARD */}
             <div className="rounded-3xl bg-white/10 backdrop-blur-lg border border-white/10 overflow-hidden">
 
-    <div className="px-6 py-4 border-b border-white/10">
+                <div className="px-6 py-4 border-b border-white/10 bg-white/5">
 
-        <h3 className="text-sm uppercase tracking-[0.35em] text-blue-200">
+                    <h3 className="text-sm uppercase tracking-[0.35em] text-blue-200">
 
-            Treatment Summary
+                        Treatment Summary
 
-        </h3>
+                    </h3>
 
-    </div>
+                </div>
 
-    <div className="grid grid-cols-1 md:grid-cols-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 border-b border-white/10">
 
-    <div className="flex justify-between items-center border-b md:border-r border-white/10 px-6 py-5">
-      <span className="flex items-center gap-2 text-white/70">
-        <DollarSign className="w-4 h-4 text-white/60" />
-        Total Amount
-      </span>
+                    <div className="flex justify-between items-center border-b md:border-r lg:border-b-0 lg:border-r border-white/10 px-6 py-5">
+                      <span className="flex items-center gap-2 text-white/70">
+                        <DollarSign className="w-4 h-4 text-white/60" />
+                        Total Amount
+                      </span>
 
-      <span className="font-bold text-xl text-white">
-        {formatAmount(treatment.planned_amount)}
-      </span>
-    </div>
+                      <span className="font-bold text-xl text-white">
+                        {formatAmount(treatment.planned_amount)}
+                      </span>
+                    </div>
 
-    <div className="flex justify-between items-center border-b border-white/10 px-6 py-5">
-      <span className="flex items-center gap-2 text-white/70">
-        <DollarSign className="w-4 h-4 text-emerald-300" />
-        Paid
-      </span>
+                    <div className="flex justify-between items-center border-b lg:border-b-0 lg:border-r border-white/10 px-6 py-5">
+                      <span className="flex items-center gap-2 text-white/70">
+                        <DollarSign className="w-4 h-4 text-emerald-300" />
+                        Paid
+                      </span>
 
-      <span className="font-bold text-lg text-emerald-300">
-        {formatAmount(totalPaid)}
-      </span>
-    </div>
+                      <span className="font-bold text-lg text-emerald-300">
+                        {formatAmount(totalPaid)}
+                      </span>
+                    </div>
 
-    <div className="flex justify-between items-center md:border-r border-white/10 px-6 py-5">
-      <span className="flex items-center gap-2 text-white/70">
-        <DollarSign className="w-4 h-4 text-yellow-300" />
-        Remaining
-      </span>
+                    <div className="flex justify-between items-center border-b md:border-b-0 lg:border-r border-white/10 px-6 py-5">
+                      <span className="flex items-center gap-2 text-white/70">
+                        <DollarSign className="w-4 h-4 text-yellow-300" />
+                        Remaining
+                      </span>
 
-      <span className="font-bold text-lg text-yellow-300">
-        {formatAmount(remainingAmount)}
-      </span>
-    </div>
+                      <span className="font-bold text-lg text-yellow-300">
+                        {formatAmount(remainingAmount)}
+                      </span>
+                    </div>
 
-    <div className="flex justify-between items-center px-6 py-5">
-        <span className="text-white/70">
-            Braces / Cap Type
-        </span>
+                    <div className="flex justify-between items-center px-6 py-5">
+                        <span className="text-white/70">
+                            Braces / Cap Type
+                        </span>
 
-        <span className="font-semibold">
-            {bracesOrCapValue || "-"}
-        </span>
-    </div>
+                        <span className="font-semibold text-white">
+                            {bracesOrCapValue || "-"}
+                        </span>
+                    </div>
 
-</div>
+                </div>
 
-</div>
+                {/* TREATMENT PLAN & TREATMENT NOTES IN SAME TABLE */}
+                <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-white/10">
 
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-2">
-              
+                    <div className="p-6">
 
-              <div className="rounded-3xl bg-white/10 border border-white/10 p-6">
+                        <h3 className="text-sm uppercase tracking-[0.35em] text-blue-200 mb-3">
 
-<h3 className="text-sm uppercase tracking-[0.35em] text-blue-200 mb-5">
+                            Treatment Plan
 
-Treatment Plan
+                        </h3>
 
-</h3>
+                        <p className="leading-7 text-white/90">
 
-<p className="leading-7">
+                            {treatmentPlanEmpty
+                            ? "No treatment plan available."
+                            : treatment.treatment_plan}
 
-{treatmentPlanEmpty
-? "No treatment plan available."
-: treatment.treatment_plan}
+                        </p>
 
-</p>
+                    </div>
 
-</div>
+                    <div className="p-6">
 
-              <div className="rounded-3xl bg-white/10 border border-white/10 p-6">
+                        <h3 className="text-sm uppercase tracking-[0.35em] text-blue-200 mb-3">
 
-<h3 className="text-sm uppercase tracking-[0.35em] text-blue-200 mb-5">
+                            Treatment Notes
 
-Treatment Notes
+                        </h3>
 
-</h3>
+                        <p className="leading-7 text-white/90">
 
-<p className="leading-7">
+                            {treatmentNotesEmpty
+                            ? "No treatment notes recorded."
+                            : treatment.treatment_notes}
 
-{treatmentNotesEmpty
-? "No treatment notes recorded."
-: treatment.treatment_notes}
+                        </p>
 
-</p>
+                    </div>
 
-</div>
+                </div>
+
             </div>
           </div>
         </div>
