@@ -30,31 +30,37 @@ const RouteLoading = () => (
 // Handle native Android back button using the same history stack as React Router.
 const NativeBackHandler = () => {
   const navigate = useNavigate();
-  const location = useLocation();
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) {
       return undefined;
     }
 
-    let listener = null;
+    let listenerHandle = null;
+    let isSubscribed = true;
 
-    const registerBackHandler = async () => {
-      listener = await CapacitorApp.addListener('backButton', ({ canGoBack }) => {
-        if (canGoBack) {
-          navigate(-1);
-        } else {
-          CapacitorApp.exitApp();
-        }
-      });
-    };
-
-    registerBackHandler();
+    CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+      const hasHistory = window.history.state && typeof window.history.state.idx === 'number' && window.history.state.idx > 0;
+      if (hasHistory || canGoBack) {
+        navigate(-1);
+      } else {
+        CapacitorApp.exitApp();
+      }
+    }).then((handle) => {
+      if (!isSubscribed) {
+        handle.remove();
+      } else {
+        listenerHandle = handle;
+      }
+    });
 
     return () => {
-      listener?.remove();
+      isSubscribed = false;
+      if (listenerHandle) {
+        listenerHandle.remove();
+      }
     };
-  }, [navigate, location.key]);
+  }, [navigate]);
 
   return null;
 };

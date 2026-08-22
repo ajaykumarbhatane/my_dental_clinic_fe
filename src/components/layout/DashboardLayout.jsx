@@ -17,19 +17,24 @@ const DashboardLayout = ({ children }) => {
       return undefined;
     }
 
-    let listener = null;
+    let listenerHandle = null;
+    let isSubscribed = true;
 
-    const registerBackHandler = async () => {
-      listener = await CapacitorApp.addListener('backButton', (event) => {
-        // Close modal instead of going back
-        closeModal();
-      });
-    };
-
-    registerBackHandler();
+    CapacitorApp.addListener('backButton', () => {
+      closeModal();
+    }).then((handle) => {
+      if (!isSubscribed) {
+        handle.remove();
+      } else {
+        listenerHandle = handle;
+      }
+    });
 
     return () => {
-      listener?.remove();
+      isSubscribed = false;
+      if (listenerHandle) {
+        listenerHandle.remove();
+      }
     };
   }, [isModalOpen, closeModal]);
 

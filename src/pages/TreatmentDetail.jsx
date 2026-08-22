@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
-ArrowLeft,
+Download,
 Plus,
 Trash2,
 Calendar,
@@ -29,6 +29,8 @@ const TreatmentDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+
+
 
   const [treatment, setTreatment] = useState(null);
   const [visits, setVisits] = useState([]);
@@ -69,9 +71,63 @@ const TreatmentDetail = () => {
   });
   const [uploadWarning, setUploadWarning] = useState('');
   const [compressionInfo, setCompressionInfo] = useState('');
-  const [previewImageUrl, setPreviewImageUrl] = useState(null);
+  const [previewImage, setPreviewImage] = useState(null); // string url or { url, caption, id }
   const [highlightedVisitId, setHighlightedVisitId] = useState(null);
   const [scrollTargetVisitId, setScrollTargetVisitId] = useState(null);
+
+  const handleDownloadImage = async (imageUrl, defaultFileName = 'visit-image.jpg') => {
+    if (!imageUrl) return;
+
+    let fileName = defaultFileName;
+    try {
+      const urlObj = new URL(imageUrl, window.location.origin);
+      const extracted = urlObj.pathname.split('/').pop();
+      if (extracted && (extracted.includes('.') || extracted.length > 5)) {
+        fileName = extracted;
+      }
+    } catch (e) {
+      // ignore parsing error
+    }
+
+    try {
+      const response = await fetch(imageUrl, { mode: 'cors' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = fileName;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => {
+        if (document.body.contains(link)) document.body.removeChild(link);
+        window.URL.revokeObjectURL(blobUrl);
+      }, 300);
+    } catch (error) {
+      console.warn('Blob download failed, using direct link fallback:', error);
+      const link = document.createElement('a');
+      link.href = imageUrl;
+      link.download = fileName;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => {
+        if (document.body.contains(link)) document.body.removeChild(link);
+      }, 300);
+    }
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && previewImage) {
+        setPreviewImage(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [previewImage]);
 
   const [visitFormData, setVisitFormData] = useState({
     next_visit_date: '',
@@ -578,6 +634,8 @@ const TreatmentDetail = () => {
 
 {/* ================= HEADER ================= */}
 
+
+
 <div className="flex items-start justify-between gap-6">
 
     <div>
@@ -987,26 +1045,31 @@ hover:bg-blue-700
                 <div className="mt-3">
 
                   {/* Images */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                     {visit.visit_images?.map((img) => (
-                      <div key={img.id} className="relative group">
+                      <div
+                        key={img.id}
+                        className="relative group overflow-hidden rounded-xl border border-slate-200 bg-slate-100 shadow-sm cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPreviewImage({ url: img.image_url, caption: img.caption, id: img.id });
+                        }}
+                      >
                         <img
                           src={img.image_url}
-                          className="rounded-lg h-28 w-full object-cover cursor-pointer"
+                          className="h-28 w-full object-cover transition-transform duration-300 group-hover:scale-105"
                           alt={img.caption || `Visit image ${img.id}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setPreviewImageUrl(img.image_url);
-                          }}
                         />
                         <button
+                          type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDeleteImage(img);
                           }}
-                          className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded opacity-0 group-hover:opacity-100"
+                          className="absolute top-1.5 right-1.5 bg-slate-900/70 hover:bg-red-600 text-white p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 shadow"
+                          title="Delete Image"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     ))}
@@ -1270,21 +1333,65 @@ hover:bg-blue-700
       )}
 
       {/* Full-screen preview modal */}
-      {previewImageUrl && (
-        <div className="fixed inset-0 z-70 flex items-center justify-center bg-black bg-opacity-75 p-4">
-          <div className="relative w-full max-w-4xl rounded-lg overflow-hidden bg-transparent">
-            <button
-              onClick={() => setPreviewImageUrl(null)}
-              className="absolute top-2 right-2 z-20 bg-white/90 text-gray-800 rounded-full p-2 border border-gray-200 hover:bg-white"
-              aria-label="Close preview"
-            >
-              ✕
-            </button>
-            <img
-              src={previewImageUrl}
-              alt="Preview"
-              className="h-screen max-h-[90vh] w-auto max-w-full object-contain mx-auto"
-            />
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-slate-950/85 backdrop-blur-md p-4 sm:p-6"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div
+            className="relative flex flex-col items-center max-w-5xl w-full max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header bar with controls */}
+            <div className="w-full flex items-center justify-between bg-slate-900/90 backdrop-blur-md text-white px-4 py-3 rounded-2xl mb-3 border border-white/10 shadow-2xl">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Visit Image</span>
+                {typeof previewImage === 'object' && previewImage.caption && (
+                  <span className="text-xs text-slate-300 truncate max-w-[200px] sm:max-w-md">
+                    – {previewImage.caption}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const url = typeof previewImage === 'string' ? previewImage : previewImage.url;
+                    handleDownloadImage(url, `visit-image-${Date.now()}.jpg`);
+                  }}
+                  className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-md hover:bg-blue-500 active:scale-95 transition"
+                >
+                  <Download className="h-4 w-4" />
+                  <span>Download</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewImage(null)}
+                  className="rounded-xl bg-white/10 p-1.5 text-slate-300 hover:bg-white/20 hover:text-white transition"
+                  aria-label="Close preview"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Main Image Container */}
+            <div className="relative flex items-center justify-center w-full overflow-hidden rounded-2xl bg-black/40 border border-white/10 p-2 max-h-[78vh]">
+              <img
+                src={typeof previewImage === 'string' ? previewImage : previewImage.url}
+                alt={typeof previewImage === 'object' ? previewImage.caption || 'Visit Preview' : 'Visit Preview'}
+                className="max-h-[75vh] w-auto max-w-full object-contain rounded-xl shadow-2xl"
+              />
+            </div>
+
+            {/* Caption Footer if exists */}
+            {typeof previewImage === 'object' && previewImage.caption && (
+              <div className="mt-3 w-full text-center">
+                <p className="inline-block rounded-xl bg-slate-900/80 px-4 py-2 text-xs text-slate-200 border border-white/10 backdrop-blur-md">
+                  {previewImage.caption}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}

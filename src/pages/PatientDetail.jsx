@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import {
-   Edit, ArrowLeft, ArrowRight, Plus, Users, X, UploadCloud, Eye, Printer, Trash2, Check, ChevronDown, FileText, Phone, MapPin, CalendarDays, ClipboardCheck, CircleDollarSign, Wallet, Heart, MoreVertical
+   Edit, ArrowRight, Plus, Users, X, UploadCloud, Eye, Printer, Trash2, Check, ChevronDown, FileText, Phone, MapPin, CalendarDays, ClipboardCheck, CircleDollarSign, Wallet, Heart, MoreVertical
 } from 'lucide-react';
 import { patientApi } from '../api/patientApi';
 import { treatmentApi } from '../api/treatmentApi';
@@ -20,14 +20,8 @@ const HeroCard = ({ patient, patientInitials, patientAge, doctorLabel, actionLab
       <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
          <div>
             <div className="space-y-3">
-               {/* <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-slate-200">Patient Profile</p> */}
                <div>
-                  <h1 className="
-text-xl
-sm:text-2xl
-lg:text-3xl
-font-semibold
-">
+                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold">
                      {patient.first_name} {patient.last_name}
                   </h1>
                </div>
@@ -345,6 +339,8 @@ const PatientDetail = () => {
    const { id } = useParams();
    const navigate = useNavigate();
    const location = useLocation();
+
+
    const queryParams = new URLSearchParams(location.search);
    const patientsPage = parseInt(queryParams.get('page') || 1, 10);
    const searchTerm = queryParams.get('search') || '';
@@ -935,6 +931,7 @@ const PatientDetail = () => {
    };
    const handleSelectPrescriptionTab = (tab) => {
       setActiveTab(tab);
+      navigate(`/app/patients/${id}?tab=${tab}`, { replace: true });
    };
    const openEditPatientModal = async () => {
       let doctorsList = doctors;
@@ -1025,12 +1022,19 @@ const PatientDetail = () => {
       }
    };
    useEffect(() => {
-      const query = new URLSearchParams(location.search);
-      const tab = query.get('tab');
-      setActiveTab(['patient_info', 'treatments', 'prescription'].includes(tab) ? tab : 'patient_info');
       loadData();
       fetchDoctors();
    }, [id]);
+
+   useEffect(() => {
+      const query = new URLSearchParams(location.search);
+      const tab = query.get('tab');
+      const stateTab = location.state?.returnTab || location.state?.tab;
+      const targetTab = ['patient_info', 'treatments', 'prescription'].includes(tab)
+         ? tab
+         : (['patient_info', 'treatments', 'prescription'].includes(stateTab) ? stateTab : 'patient_info');
+      setActiveTab(targetTab);
+   }, [id, location.search, location.state]);
    useEffect(() => {
       const handleClickOutside = (event) => {
          if (
@@ -1092,7 +1096,8 @@ const PatientDetail = () => {
          state: {
             fromPatientDetail: true,
             patientId: patient?.id,
-            returnTab: 'treatments'
+            returnTab: 'treatments',
+            from: `/app/patients/${id}?tab=treatments`
          }
       });
    };
