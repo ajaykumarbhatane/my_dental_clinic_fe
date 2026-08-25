@@ -11,4 +11,5 @@ export const prescriptionApi = {
   createClinicMedicine: (data) => apiClient.post('/clinic-medicines/', data),
   updateClinicMedicine: (id, data) => apiClient.put(`/clinic-medicines/${id}/`, data),
   deleteClinicMedicine: (id) => apiClient.delete(`/clinic-medicines/${id}/`),
+  aiAssist: (data) => apiClient.post('/prescriptions/ai-assist/', data),
 };

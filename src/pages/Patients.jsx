@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Search, Plus, Eye, Edit, Trash2, Phone, User, Stethoscope, X } from 'lucide-react';
+import PrescriptionAIReviewModal from '../components/PrescriptionAIReviewModal';
 import { patientApi } from '../api/patientApi';
 import { clinicApi } from '../api/clinicApi';
 import { userApi } from '../api/userApi';
@@ -91,6 +92,9 @@ const Patients = () => {
   });
   const [prescriptionItems, setPrescriptionItems] = useState([]);
   const [clinicMedicines, setClinicMedicines] = useState([]);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiDraft, setAiDraft] = useState(null);
+  const [isAiReviewOpen, setIsAiReviewOpen] = useState(false);
   const [clinicLanguage, setClinicLanguage] = useState('english');
   const [medicineFilter, setMedicineFilter] = useState('');
   const [itemSearchOpenId, setItemSearchOpenId] = useState(null);
@@ -752,6 +756,55 @@ useEffect(() => {
         console.error('Error fetching clinic medicines:', { status: n.status });
         showError(n.message);
     }
+  };
+
+  const applyAiDraftToPrescription = (draft) => {
+    if (!draft) return;
+    // Map diagnosis
+    setPrescriptionFormData((prev) => ({ ...prev, diagnosis: draft.diagnosis || prev.diagnosis }));
+    // Map treatment_summary into instructions
+    if (draft.treatment_summary) {
+      setPrescriptionFormData((prev) => ({ ...prev, instructions: (prev.instructions ? prev.instructions + '\n' : '') + draft.treatment_summary }));
+    }
+    if (draft.instructions && draft.instructions.length > 0) {
+      const instText = draft.instructions.join('\n');
+      setPrescriptionFormData((prev) => ({ ...prev, instructions: (prev.instructions ? prev.instructions + '\n' : '') + instText }));
+    }
+    // Map medicines
+    if (Array.isArray(draft.medications)) {
+      const mapped = draft.medications.map((m, idx) => {
+        const found = m.medicine_id ? clinicMedicines.find((cm) => String(cm.id) === String(m.medicine_id)) : null;
+        return {
+          localId: Math.random().toString(36).substr(2, 9),
+          medicine: found || null,
+          custom_medicine_name: found ? '' : (m.name || ''),
+          search: found ? (found.medicine_name || '') : (m.name || ''),
+          dosage: m.dosage || '',
+          frequency: m.frequency || '1-0-1',
+          duration: m.duration || '',
+          before_after_food: m.timing || 'AFTER_FOOD',
+          notes: m.notes || '',
+          sequence: idx + 1,
+          highlightedId: null
+        };
+      });
+      setPrescriptionItems(mapped.length > 0 ? mapped : [
+        {
+          localId: Math.random().toString(36).substr(2, 9),
+          medicine: null,
+          custom_medicine_name: '',
+          search: '',
+          dosage: '6',
+          frequency: '1-0-1',
+          duration: '3 Days',
+          before_after_food: 'AFTER_FOOD',
+          notes: '',
+          sequence: 1,
+          highlightedId: null
+        }
+      ]);
+    }
+    setIsAiReviewOpen(false);
   };
 
   // ✅ DELETE FUNCTION
@@ -1567,6 +1620,66 @@ useEffect(() => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Enter diagnosis..."
                     />
+                    <div className="mt-3">
+                      <button
+                        type="button"
+                        disabled={aiLoading}
+                        onClick={async () => {
+                          const meaningful = Boolean(prescriptionFormData.diagnosis || prescriptionFormData.complaints || prescriptionFormData.instructions || prescriptionFormData.treatment);
+                          if (!meaningful) {
+                            showError('Please provide diagnosis, symptoms, treatment, or clinical notes before using AI Assist.');
+                            return;
+                          }
+                          const computeAge = (dob) => {
+                            if (!dob) return null;
+                            try {
+                              const birth = new Date(dob);
+                              const now = new Date();
+                              let age = now.getFullYear() - birth.getFullYear();
+                              const m = now.getMonth() - birth.getMonth();
+                              if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
+                              return age;
+                            } catch (e) {
+                              return null;
+                            }
+                          };
+                          const payload = {
+                            patient_age: computeAge(formData.date_of_birth) || null,
+                            patient_gender: formData.gender || null,
+                            known_allergies: formData.allergies || '',
+                            relevant_medical_history: formData.medical_history || '',
+                            treatment: prescriptionFormData.treatment ? String(prescriptionFormData.treatment) : '',
+                            current_diagnosis: prescriptionFormData.diagnosis || '',
+                            symptoms: prescriptionFormData.complaints || '',
+                            clinical_notes: prescriptionFormData.instructions || '',
+                            medication_history: [],
+                            language: clinicLanguage || 'english',
+                          };
+                          try {
+                            setAiLoading(true);
+                            setAiDraft(null);
+                            const resp = await prescriptionApi.aiAssist(payload);
+                            setAiDraft(resp.data);
+                            setIsAiReviewOpen(true);
+                          } catch (err) {
+                            const status = err?.response?.status;
+                            if (status === 400) showError('Please provide sufficient clinical information.');
+                            else if (status === 401) showError('Authentication required. Please login again.');
+                            else if (status === 403) showError("You don't have permission to use AI assistance.");
+                            else if (status === 422) showError('AI returned an invalid prescription suggestion. Please try again.');
+                            else if (status === 429) showError('AI service is temporarily busy. Please try again shortly.');
+                            else if (status === 503) showError('AI service is currently unavailable. Please try again later.');
+                            else if (status === 504) showError('AI request timed out. Please try again.');
+                            else showError('Unable to connect to AI service. Please check your connection and try again.');
+                          } finally {
+                            setAiLoading(false);
+                          }
+                        }}
+                        className={`mt-2 inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold ${aiLoading ? 'bg-slate-100 text-slate-400' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'}`}
+                      >
+                        {aiLoading ? '⟳ Generating...' : '✨ AI Assist'}
+                      </button>
+                    </div>
                   </div>
 
                   {/* Advice */}
@@ -1597,6 +1710,13 @@ useEffect(() => {
                     <div className="flex justify-between items-center mb-4">
                       <h3 className="text-lg font-semibold">Medicines</h3>
                     </div>
+                    <PrescriptionAIReviewModal
+                      isOpen={isAiReviewOpen}
+                      aiDraft={aiDraft}
+                      setAiDraft={setAiDraft}
+                      onClose={() => setIsAiReviewOpen(false)}
+                      onApply={applyAiDraftToPrescription}
+                    />
 
                     <div className="mb-3">
                       <input

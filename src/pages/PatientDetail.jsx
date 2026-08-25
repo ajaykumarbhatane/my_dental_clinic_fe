@@ -9,6 +9,7 @@ import { visitsApi } from '../api/visitsApi';
 import { userApi } from '../api/userApi';
 import { clinicApi } from '../api/clinicApi';
 import { prescriptionApi } from '../api/prescriptionApi';
+import PrescriptionAIReviewModal from '../components/PrescriptionAIReviewModal';
 import { useApiWithErrorHandling } from '../utils/apiUtils';
 import { useNotification } from '../context/NotificationContext';
 import ChoiceSelect from '../components/ChoiceSelect';
@@ -445,6 +446,9 @@ const PatientDetail = () => {
    const [itemSearchOpenId, setItemSearchOpenId] = useState(null);
    const [prescriptionNotes, setPrescriptionNotes] = useState('');
    const [formErrors, setFormErrors] = useState({});
+   const [aiLoading, setAiLoading] = useState(false);
+   const [aiDraft, setAiDraft] = useState(null);
+   const [isAiReviewOpen, setIsAiReviewOpen] = useState(false);
    const newItemRef = useRef(null);
    const dropdownRef = useRef(null);
    const handleAddVisit = async (e) => {
@@ -867,6 +871,41 @@ const PatientDetail = () => {
             .filter((item) => item.medicine?.id || (item.custom_medicine_name || '').trim())
             .map(preparePrescriptionItemPayload),
       };
+
+        const applyAiDraftToPrescription = (draft) => {
+           if (!draft) return;
+           // Map diagnosis
+           setPrescriptionFormData((prev) => ({ ...prev, diagnosis: draft.diagnosis || prev.diagnosis }));
+           // Map treatment_summary into instructions field if appropriate (do not overwrite treatment relationship)
+           if (draft.treatment_summary) {
+              setPrescriptionFormData((prev) => ({ ...prev, instructions: (prev.instructions ? prev.instructions + '\n' : '') + draft.treatment_summary }));
+           }
+           // Map instructions array
+           if (draft.instructions && draft.instructions.length > 0) {
+              const instText = draft.instructions.join('\n');
+              setPrescriptionFormData((prev) => ({ ...prev, instructions: (prev.instructions ? prev.instructions + '\n' : '') + instText }));
+           }
+           // Map medicines into prescriptionItems
+           if (Array.isArray(draft.medications)) {
+              const mappedItems = draft.medications.map((m, idx) => {
+                 const found = m.medicine_id ? clinicMedicines.find((cm) => String(cm.id) === String(m.medicine_id)) : null;
+                 return {
+                    localId: Math.random().toString(36).substr(2, 9),
+                    medicine: found || null,
+                    custom_medicine_name: found ? '' : (m.name || ''),
+                    search: found ? (found.medicine_name || '') : (m.name || ''),
+                    dosage: m.dosage || '',
+                    frequency: m.frequency || '1-0-1',
+                    duration: m.duration || '',
+                    before_after_food: m.timing || 'AFTER_FOOD',
+                    notes: m.notes || '',
+                    sequence: idx + 1,
+                 };
+              });
+              setPrescriptionItems(mappedItems.length > 0 ? mappedItems : [createPrescriptionItem(1)]);
+           }
+           setIsAiReviewOpen(false);
+        };
       try {
          let savedPrescription = activePrescription;
          if (prescriptionModalMode === 'edit' && activePrescription) {
@@ -1458,6 +1497,57 @@ const PatientDetail = () => {
                                  value={prescriptionFormData.diagnosis}
                                  onChange={(e) => handlePrescriptionFieldChange('diagnosis', e.target.value)}
                               />
+                                <div className="mt-3">
+                                   <button
+                                      type="button"
+                                      disabled={aiLoading}
+                                      onClick={async () => {
+                                         // Validate minimal inputs before calling AI
+                                         const meaningful = Boolean(prescriptionFormData.diagnosis || prescriptionFormData.complaints || prescriptionFormData.instructions || prescriptionFormData.treatment);
+                                         if (!meaningful) {
+                                            showError('Please provide diagnosis, symptoms, treatment, or clinical notes before using AI Assist.');
+                                            return;
+                                         }
+                                         // Prepare payload — exclude PII
+                                         const payload = {
+                                            patient_age: patient.age || null,
+                                            patient_gender: patient.gender || null,
+                                            known_allergies: patient.allergies || '',
+                                            relevant_medical_history: patient.medical_history || '',
+                                            treatment: prescriptionFormData.treatment ? String(prescriptionFormData.treatment) : '',
+                                            current_diagnosis: prescriptionFormData.diagnosis || '',
+                                            symptoms: prescriptionFormData.complaints || '',
+                                            clinical_notes: prescriptionFormData.instructions || '',
+                                            medication_history: [],
+                                            language: clinicLanguage || 'english',
+                                         };
+                                         try {
+                                            setAiLoading(true);
+                                            setAiDraft(null);
+                                            // Call API
+                                            const resp = await prescriptionApi.aiAssist(payload);
+                                            const data = resp.data;
+                                            setAiDraft(data);
+                                            setIsAiReviewOpen(true);
+                                         } catch (err) {
+                                            const status = err?.response?.status;
+                                            if (status === 400) showError('Please provide sufficient clinical information.');
+                                            else if (status === 401) showError('Authentication required. Please login again.');
+                                            else if (status === 403) showError("You don't have permission to use AI assistance.");
+                                            else if (status === 422) showError('AI returned an invalid prescription suggestion. Please try again.');
+                                            else if (status === 429) showError('AI service is temporarily busy. Please try again shortly.');
+                                            else if (status === 503) showError('AI service is currently unavailable. Please try again later.');
+                                            else if (status === 504) showError('AI request timed out. Please try again.');
+                                            else showError('Unable to connect to AI service. Please check your connection and try again.');
+                                         } finally {
+                                            setAiLoading(false);
+                                         }
+                                      }}
+                                      className={`mt-2 inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold ${aiLoading ? 'bg-slate-100 text-slate-400' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'}`}
+                                   >
+                                      {aiLoading ? '⟳ Generating...' : '✨ AI Assist'}
+                                   </button>
+                                </div>
                            </div>
                         </div>
 
@@ -1547,6 +1637,7 @@ const PatientDetail = () => {
                                                 ) : (
                                                    <div className="px-4 py-4 text-center text-sm text-slate-500">No medicine found</div>
                                                 )}
+                          
                                              </div>
                                           </div>
                                        )}
@@ -1596,6 +1687,14 @@ const PatientDetail = () => {
                         </div>
                      </div>
                   </form>
+                  <PrescriptionAIReviewModal
+                     isOpen={isAiReviewOpen}
+                     aiDraft={aiDraft}
+                     setAiDraft={setAiDraft}
+                     onClose={() => setIsAiReviewOpen(false)}
+                     onApply={applyAiDraftToPrescription}
+                  />
+
                   <div className="flex flex-col gap-3 border-t border-slate-200 bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-8">
                      <button onClick={closePrescriptionModal} className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
                         Cancel
