@@ -99,8 +99,15 @@ const DashboardLayout = ({ children }) => {
                           assistant.setLastUsageMetadata(data.usage || null);
 
                           // update context and selections/actions
+                          // Always prefer backend-provided context. If missing, derive
+                          // an explicit context from the action or selection to avoid
+                          // falling back to stale local state.
                           if (data.context) {
                             assistant.setContext(data.context);
+                          } else if (data.action && data.action.type === 'OPEN_PATIENT' && data.action.patient_id) {
+                            assistant.setContext({ patient_id: data.action.patient_id, treatment_id: null });
+                          } else if (data.action && data.action.type === 'OPEN_TREATMENT' && data.action.treatment_id) {
+                            assistant.setContext({ patient_id: data.action.patient_id || assistant.context.patient_id, treatment_id: data.action.treatment_id });
                           }
 
                           assistant.setLastAction(data.action || null);
@@ -119,6 +126,16 @@ const DashboardLayout = ({ children }) => {
                             const url = data.action.visit_id ? `${base}?visit_id=${data.action.visit_id}` : base;
                             routeTo(url);
                             setAssistantOpen(false);
+                          }
+
+                          // If SHOW_TREATMENTS action, navigate to the patient's treatments tab.
+                          if (data.action && data.action.type === 'SHOW_TREATMENTS') {
+                            const patientId = data.action.patient_id || (data.context && data.context.patient_id) || assistant.context.patient_id;
+                            if (patientId) {
+                              // navigate to patient detail with tab=treatments
+                              routeTo(`/app/patients/${patientId}?tab=treatments`);
+                              setAssistantOpen(false);
+                            }
                           }
 
                         } catch (err) {
@@ -153,7 +170,9 @@ const DashboardLayout = ({ children }) => {
                           const resp = await apiClient.post('/voice-assistant/', { message: `Select patient ${p.id}`, context: { patient_id: p.id } });
                           const data = resp.data;
                           assistant.addMessage('assistant', data.message || 'No response');
-                          assistant.setContext(data.context || assistant.context);
+                          // Prefer backend context; if absent, set to explicit patient
+                          if (data.context) assistant.setContext(data.context);
+                          else assistant.setContext({ patient_id: p.id, treatment_id: null });
                           if (data.action && data.action.type === 'OPEN_PATIENT') {
                             routeTo(`/app/patients/${data.action.patient_id}`);
                             setAssistantOpen(false);
@@ -169,10 +188,13 @@ const DashboardLayout = ({ children }) => {
                         assistant.addMessage('user', `Select treatment ${t.id}`);
                         try {
                           assistant.setLoading(true);
-                          const resp = await apiClient.post('/voice-assistant/', { message: `Select treatment ${t.id}`, context: { patient_id: assistant.context.patient_id, treatment_id: t.id } });
+                          // Ensure the selected treatment is sent with an explicit patient id where possible.
+                          const explicitPatientId = t.patient_id || assistant.context.patient_id;
+                          const resp = await apiClient.post('/voice-assistant/', { message: `Select treatment ${t.id}`, context: { patient_id: explicitPatientId, treatment_id: t.id } });
                           const data = resp.data;
                           assistant.addMessage('assistant', data.message || 'No response');
-                          assistant.setContext(data.context || assistant.context);
+                          if (data.context) assistant.setContext(data.context);
+                          else assistant.setContext({ patient_id: explicitPatientId, treatment_id: t.id });
                           if (data.action && data.action.type === 'OPEN_TREATMENT') {
                             const base = `/app/treatments/${data.action.treatment_id}`;
                             const url = data.action.visit_id ? `${base}?visit_id=${data.action.visit_id}` : base;
