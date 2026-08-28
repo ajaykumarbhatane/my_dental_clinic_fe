@@ -86,6 +86,7 @@ const DashboardLayout = ({ children }) => {
                       lastAction: assistant.lastAction,
                       patientOptions: assistant.patientOptions,
                       treatmentOptions: assistant.treatmentOptions,
+                      pendingSelection: assistant.pendingSelection,
                     }}
                     actions={{
                       onSend: async (text) => {
@@ -93,7 +94,8 @@ const DashboardLayout = ({ children }) => {
                         assistant.addMessage('user', text);
                         assistant.setLoading(true);
                         try {
-                          const resp = await apiClient.post('/voice-assistant/', { message: text, context: assistant.context });
+                          const history = (assistant.messages || []).map(m => ({ role: m.role, content: m.text }));
+                          const resp = await apiClient.post('/voice-assistant/', { message: text, context: assistant.context, history });
                           const data = resp.data;
                           assistant.addMessage('assistant', data.message || 'No response');
                           assistant.setLastUsageMetadata(data.usage || null);
@@ -113,6 +115,22 @@ const DashboardLayout = ({ children }) => {
                           assistant.setLastAction(data.action || null);
                           assistant.setPatientOptions((data.selection && data.selection.type === 'PATIENT') ? (data.selection.options || []) : []);
                           assistant.setTreatmentOptions((data.selection && data.selection.type === 'TREATMENT') ? (data.selection.options || []) : []);
+
+                          // Handle assistant preview actions
+                          if (data.action && data.action.type === 'ADD_PATIENT_PREVIEW') {
+                            assistant.setPendingSelection({ confirmation: data.confirmation || null, prefill: data.prefill || null });
+                          } else {
+                            assistant.setPendingSelection(null);
+                          }
+
+                          // If OPEN_ADD_PATIENT action, navigate to Patients page and dispatch event for prefill
+                          if (data.action && data.action.type === 'OPEN_ADD_PATIENT') {
+                            const prefill = data.prefill || {};
+                            try { sessionStorage.setItem('assistant_add_patient_prefill', JSON.stringify(prefill)); } catch (e) { console.error(e); }
+                            routeTo('/app/patients');
+                            setAssistantOpen(false);
+                            window.dispatchEvent(new CustomEvent('assistant:open_add_patient'));
+                          }
 
                           // If immediate OPEN_PATIENT action, navigate
                           if (data.action && data.action.type === 'OPEN_PATIENT' && data.action.patient_id) {
@@ -203,6 +221,48 @@ const DashboardLayout = ({ children }) => {
                           }
                         } catch (err) {
                           showError('Selection failed. Please try again.');
+                        } finally {
+                          assistant.setLoading(false);
+                        }
+                      },
+                      onConfirmAddPatient: async (token) => {
+                        if (assistant.loading) return;
+                        assistant.addMessage('user', 'confirm');
+                        assistant.setLoading(true);
+                        try {
+                          const resp = await apiClient.post('/voice-assistant/', { message: 'confirm', context: assistant.context, action_token: token });
+                          const data = resp.data;
+                          assistant.addMessage('assistant', data.message || 'No response');
+                          assistant.setLastAction(data.action || null);
+                          assistant.setPendingSelection(null);
+                          if (data.action && data.action.type === 'OPEN_PATIENT') {
+                            routeTo(`/app/patients/${data.action.patient_id}`);
+                            setAssistantOpen(false);
+                          } else if (data.action && data.action.type === 'OPEN_ADD_PATIENT') {
+                            const prefill = data.prefill || {};
+                            try { sessionStorage.setItem('assistant_add_patient_prefill', JSON.stringify(prefill)); } catch (e) { console.error(e); }
+                            routeTo('/app/patients');
+                            setAssistantOpen(false);
+                            window.dispatchEvent(new CustomEvent('assistant:open_add_patient'));
+                          }
+                        } catch (err) {
+                          showError('Confirmation failed. Please try again.');
+                        } finally {
+                          assistant.setLoading(false);
+                        }
+                      },
+                      onCancelAddPatient: async (token) => {
+                        if (assistant.loading) return;
+                        assistant.addMessage('user', 'cancel');
+                        assistant.setLoading(true);
+                        try {
+                          const resp = await apiClient.post('/voice-assistant/', { message: 'cancel', context: assistant.context, action_token: token });
+                          const data = resp.data;
+                          assistant.addMessage('assistant', data.message || 'Cancelled');
+                          assistant.setPendingSelection(null);
+                          assistant.setLastAction(data.action || null);
+                        } catch (err) {
+                          showError('Cancel failed. Please try again.');
                         } finally {
                           assistant.setLoading(false);
                         }

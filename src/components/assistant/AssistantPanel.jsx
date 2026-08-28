@@ -6,8 +6,8 @@ import AssistantPatientSelection from './AssistantPatientSelection';
 import AssistantTreatmentSelection from './AssistantTreatmentSelection';
 
 export default function AssistantPanel({ state, actions }) {
-  const { messages, loading, lastUsageMetadata } = state;
-  const { onSend, onOpenPatient, onOpenTreatment, onSelectPatient, onSelectTreatment } = actions;
+  const { messages, loading, lastUsageMetadata, pendingSelection } = state;
+  const { onSend, onOpenPatient, onOpenTreatment, onSelectPatient, onSelectTreatment, onConfirmAddPatient, onCancelAddPatient } = actions;
 
   return (
     <div className="h-full w-full max-w-md border-l border-slate-200 bg-slate-50">
@@ -27,7 +27,7 @@ export default function AssistantPanel({ state, actions }) {
         </div>
 
         <div className="mt-3">
-          <AssistantAction action={state.lastAction} onOpenPatient={onOpenPatient} onOpenTreatment={onOpenTreatment} />
+          <AssistantAction action={state.lastAction} pendingSelection={pendingSelection} onOpenPatient={onOpenPatient} onOpenTreatment={onOpenTreatment} onConfirmAddPatient={onConfirmAddPatient} onCancelAddPatient={onCancelAddPatient} />
         </div>
 
         <div className="mt-3">

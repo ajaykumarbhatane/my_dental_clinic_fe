@@ -194,6 +194,29 @@ useEffect(() => {
     }
   }, [showAddModal]);
 
+  // Listen for assistant open add patient event and load prefill from sessionStorage
+  useEffect(() => {
+    const handler = () => {
+      try {
+        const raw = sessionStorage.getItem('assistant_add_patient_prefill');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          // Apply prefill to form states but do not overwrite existing user edits
+          if (parsed.patient) setFormData(prev => ({ ...prev, ...parsed.patient }));
+          if (parsed.treatment) setTreatmentFormData(prev => ({ ...prev, ...parsed.treatment }));
+          if (parsed.visit) setVisitFormData(prev => ({ ...prev, ...parsed.visit }));
+          // Remove prefill after consumption to avoid reuse
+          try { sessionStorage.removeItem('assistant_add_patient_prefill'); } catch (e) { console.error(e); }
+        }
+      } catch (e) {
+        console.error('Failed to load assistant prefill', e);
+      }
+      setShowAddModal(true);
+    };
+    window.addEventListener('assistant:open_add_patient', handler);
+    return () => window.removeEventListener('assistant:open_add_patient', handler);
+  }, []);
+
   const fetchPatients = async (page = 1, search = '', treatment = '', doctor = '') => {
     try {
       setLoading(true);
@@ -895,8 +918,11 @@ useEffect(() => {
           />
         </div> */}
 
-        <button
-  onClick={() => setShowAddModal(true)}
+          <button
+        onClick={() => {
+          try { sessionStorage.removeItem('assistant_add_patient_prefill'); } catch (e) { console.error(e); }
+          setShowAddModal(true);
+        }}
   className="
     hidden
     md:flex
@@ -1643,6 +1669,13 @@ useEffect(() => {
                               return null;
                             }
                           };
+
+                          // Ensure prefill is cleared when modal is closed to avoid stale reuse
+                          useEffect(() => {
+                            if (!showAddModal) {
+                              try { sessionStorage.removeItem('assistant_add_patient_prefill'); } catch (e) { /* ignore */ }
+                            }
+                          }, [showAddModal]);
                           const payload = {
                             patient_age: computeAge(formData.date_of_birth) || null,
                             patient_gender: formData.gender || null,
