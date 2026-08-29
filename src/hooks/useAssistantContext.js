@@ -2,6 +2,8 @@ import { useState, useCallback, useRef } from 'react';
 
 export default function useAssistantContext() {
   const [open, setOpen] = useState(false);
+  const [conversationId, setConversationId] = useState(null);
+  const [conversationsList, setConversationsList] = useState([]);
   const [messages, setMessages] = useState([]);
   const [context, setContext] = useState({ patient_id: null, treatment_id: null });
   const [pendingSelection, setPendingSelection] = useState(null);
@@ -33,7 +35,12 @@ export default function useAssistantContext() {
   return {
     open,
     setOpen,
+    conversationId,
+    setConversationId,
+    conversationsList,
+    setConversationsList,
     messages,
+    setMessages,
     addMessage,
     context,
     setContext,

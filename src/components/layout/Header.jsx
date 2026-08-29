@@ -6,7 +6,8 @@ import { clinicApi } from '../../api/clinicApi';
 import { visitApi } from '../../api/visitApi';
 import { subscriptionService } from '../../api/subscriptionService';
 
-const Header = ({ onMenuClick }) => {
+const Header = ({ onMenuClick, handleMenuClick }) => {
+  const menuClick = onMenuClick || handleMenuClick;
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [showDropdown, setShowDropdown] = useState(false);
@@ -180,7 +181,7 @@ const Header = ({ onMenuClick }) => {
       <div className="h-full w-full max-w-full px-3 sm:px-4 md:px-6 flex items-center justify-between gap-2 overflow-visible">
         <div className="flex items-center gap-2 sm:gap-3">
           <button
-            onClick={onMenuClick}
+            onClick={menuClick}
             className="p-2 rounded-lg bg-gray-100 hover-common text-gray-600 hover:bg-gray-200 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             aria-label="Toggle sidebar"
           >
