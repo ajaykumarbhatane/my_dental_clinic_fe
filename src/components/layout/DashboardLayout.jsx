@@ -197,13 +197,23 @@ const DashboardLayout = ({ children }) => {
                   lastUsageMetadata: assistant.lastUsageMetadata,
                   lastAction: assistant.lastAction,
                   patientOptions: assistant.patientOptions,
-                  treatmentOptions: assistant.treatmentOptions,
+                  doctorOptions: assistant.doctorOptions,
+                  statusOptions: assistant.statusOptions,
+                  paymentTypeOptions: assistant.paymentTypeOptions,
+                  confirmationOptions: assistant.confirmationOptions,
+                  prescriptionOptions: assistant.prescriptionOptions,
                   pendingSelection: assistant.pendingSelection,
                 }}
                 actions={{
                   onClose: () => setAssistantOpen(false),
                   onSend: async (text) => {
                     if (assistant.loading) return;
+                    assistant.setGenderOptions([]);
+                    assistant.setDoctorOptions([]);
+                    assistant.setStatusOptions([]);
+                    assistant.setPaymentTypeOptions([]);
+                    assistant.setConfirmationOptions([]);
+                    assistant.setPrescriptionOptions([]);
                     assistant.addMessage('user', text);
                     assistant.setLoading(true);
                     try {
@@ -228,6 +238,12 @@ const DashboardLayout = ({ children }) => {
                       assistant.setLastAction(data.action || null);
                       assistant.setPatientOptions((data.selection && data.selection.type === 'PATIENT') ? (data.selection.options || []) : []);
                       assistant.setTreatmentOptions((data.selection && data.selection.type === 'TREATMENT') ? (data.selection.options || []) : []);
+                      assistant.setDoctorOptions((data.selection && data.selection.type === 'DOCTOR') ? (data.selection.options || []) : []);
+                      assistant.setGenderOptions((data.selection && data.selection.type === 'GENDER') ? (data.selection.options || []) : []);
+                      assistant.setStatusOptions((data.selection && data.selection.type === 'TREATMENT_STATUS') ? (data.selection.options || []) : []);
+                      assistant.setPaymentTypeOptions((data.selection && data.selection.type === 'PAYMENT_TYPE') ? (data.selection.options || []) : []);
+                      assistant.setConfirmationOptions((data.selection && data.selection.type === 'ADD_PATIENT_CONFIRMATION') ? (data.selection.options || []) : []);
+                      assistant.setPrescriptionOptions((data.selection && data.selection.type === 'PRESCRIPTION_CHOICE') ? (data.selection.options || []) : []);
 
                       if (data.action && data.action.type === 'ADD_PATIENT_PREVIEW') {
                         assistant.setPendingSelection({ confirmation: data.confirmation || null, prefill: data.prefill || null });

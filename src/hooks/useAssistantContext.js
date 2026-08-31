@@ -9,6 +9,12 @@ export default function useAssistantContext() {
   const [pendingSelection, setPendingSelection] = useState(null);
   const [patientOptions, setPatientOptions] = useState([]);
   const [treatmentOptions, setTreatmentOptions] = useState([]);
+  const [genderOptions, setGenderOptions] = useState([]);
+  const [statusOptions, setStatusOptions] = useState([]);
+  const [paymentTypeOptions, setPaymentTypeOptions] = useState([]);
+  const [confirmationOptions, setConfirmationOptions] = useState([]);
+  const [doctorOptions, setDoctorOptions] = useState([]);
+  const [prescriptionOptions, setPrescriptionOptions] = useState([]);
   const [lastAction, setLastAction] = useState(null);
   const [loading, setLoading] = useState(false);
   const [lastUsageMetadata, setLastUsageMetadata] = useState(null);
@@ -27,6 +33,12 @@ export default function useAssistantContext() {
     setPendingSelection(null);
     setPatientOptions([]);
     setTreatmentOptions([]);
+    setDoctorOptions([]);
+    setGenderOptions([]);
+    setStatusOptions([]);
+    setPaymentTypeOptions([]);
+    setConfirmationOptions([]);
+    setPrescriptionOptions([]);
     setLastAction(null);
     setLoading(false);
     setLastUsageMetadata(null);
@@ -50,6 +62,18 @@ export default function useAssistantContext() {
     setPatientOptions,
     treatmentOptions,
     setTreatmentOptions,
+    genderOptions,
+    setGenderOptions,
+    statusOptions,
+    setStatusOptions,
+    paymentTypeOptions,
+    setPaymentTypeOptions,
+    confirmationOptions,
+    setConfirmationOptions,
+    doctorOptions,
+    setDoctorOptions,
+    prescriptionOptions,
+    setPrescriptionOptions,
     lastAction,
     setLastAction,
     loading,

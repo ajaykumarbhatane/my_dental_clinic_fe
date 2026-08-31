@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import AssistantMessage from './AssistantMessage';
 import AssistantInput from './AssistantInput';
 import AssistantAction from './AssistantAction';
 import AssistantPatientSelection from './AssistantPatientSelection';
 import AssistantTreatmentSelection from './AssistantTreatmentSelection';
+import AssistantGenderSelection from './AssistantGenderSelection';
+import AssistantWorkflowSelection from './AssistantWorkflowSelection';
 import { PlusCircle, History, Trash2, MessageSquare, X, Sparkles, Bot } from 'lucide-react';
 
 export default function AssistantPanel({ state, actions }) {
@@ -31,6 +33,27 @@ export default function AssistantPanel({ state, actions }) {
   } = actions;
 
   const [showHistory, setShowHistory] = useState(false);
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, loading, pendingSelection, state.doctorOptions, state.confirmationOptions, state.prescriptionOptions]);
+
+  const ctx = state.context || {};
+  const wf = ctx.new_patient_workflow || {};
+  const wfPatient = wf.patient || {};
+  const doctorAlreadyConfirmed = Boolean(
+    ctx.doctor_confirmed ||
+    ctx.doctor_id ||
+    ctx.current_doctor_id ||
+    wf.doctor_confirmed ||
+    wfPatient.doctor_id ||
+    wfPatient.doctor_name
+  );
 
   const samplePrompts = [
     "Create patient Mauli Bande",
@@ -202,6 +225,32 @@ export default function AssistantPanel({ state, actions }) {
         <AssistantPatientSelection options={state.patientOptions} onSelect={onSelectPatient} />
 
         <AssistantTreatmentSelection options={state.treatmentOptions} onSelect={onSelectTreatment} />
+
+        {state.doctorOptions && state.doctorOptions.length > 0 && !doctorAlreadyConfirmed && (
+          <AssistantWorkflowSelection options={state.doctorOptions} title="Select Doctor:" onSelect={(label) => onSend(label)} />
+        )}
+
+        {state.genderOptions && state.genderOptions.length > 0 && (
+          <AssistantGenderSelection options={state.genderOptions} onSelect={(label) => onSend(label)} />
+        )}
+
+        {state.statusOptions && state.statusOptions.length > 0 && (
+          <AssistantWorkflowSelection options={state.statusOptions} title="Treatment Status Options:" onSelect={(label) => onSend(label)} />
+        )}
+
+        {state.paymentTypeOptions && state.paymentTypeOptions.length > 0 && (
+          <AssistantWorkflowSelection options={state.paymentTypeOptions} title="Payment Type Options:" onSelect={(label) => onSend(label)} />
+        )}
+
+        {state.prescriptionOptions && state.prescriptionOptions.length > 0 && (
+          <AssistantWorkflowSelection options={state.prescriptionOptions} title="Prescription Options:" onSelect={(label) => onSend(label)} />
+        )}
+
+        {state.confirmationOptions && state.confirmationOptions.length > 0 && (
+          <AssistantWorkflowSelection options={state.confirmationOptions} title="Confirm Patient Creation:" onSelect={(label) => onSend(label)} confirmStyle={true} />
+        )}
+
+        <div ref={messagesEndRef} />
       </div>
 
       {/* 3. FIXED COMPOSER AT BOTTOM */}

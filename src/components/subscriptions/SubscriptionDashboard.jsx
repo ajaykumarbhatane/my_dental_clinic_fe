@@ -52,19 +52,14 @@ const getFeatureIcon = (feature) => {
   return CheckCircle2;
 };
 
+import { formatCurrencyINR } from '../../utils/currencyUtils';
+
 const unwrapList = (response) => {
   const data = response?.data;
   return Array.isArray(data) ? data : data?.results || [];
 };
 
-const formatCurrency = (value) => {
-  if (value === null || value === undefined || value === '') return '₹0';
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 0,
-  }).format(Number(value));
-};
+const formatCurrency = (value) => formatCurrencyINR(value, { fractionDigits: 0, allowNullAsZero: true });
 
 const formatDate = (value) => {
   if (!value) return 'Not available';

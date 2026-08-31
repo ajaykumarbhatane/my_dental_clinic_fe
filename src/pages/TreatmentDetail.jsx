@@ -19,6 +19,7 @@ import { treatmentApi } from '../api/treatmentApi';
 import { visitsApi, visitImagesApi } from '../api/visitsApi';
 import { compressImage } from '../utils/imageOptimizer';
 import { formatDate, toISODate } from '../utils/dateUtils';
+import { formatCurrencyINR } from '../utils/currencyUtils';
 import ChoiceSelect from '../components/ChoiceSelect';
 
 const treatmentDetailRequestCache = new Map();
@@ -581,14 +582,7 @@ const TreatmentDetail = () => {
     }
   };
 
-  const formatAmount = (amount) => {
-    if (amount == null) return '₹0';
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0
-    }).format(amount);
-  };
+  const formatAmount = (amount) => formatCurrencyINR(amount, { fractionDigits: 0, allowNullAsZero: true });
 
   // Compute total paid from visits and remaining amount for the treatment
   const totalPaid = (visits || []).reduce((sum, v) => sum + (Number(v.patient_payment_amount) || 0), 0);
