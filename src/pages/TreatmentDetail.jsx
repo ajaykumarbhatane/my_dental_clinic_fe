@@ -622,7 +622,7 @@ const TreatmentDetail = () => {
 
   return (
     <div className="space-y-8">
-      <div className="rounded-[32px] bg-white shadow-2xl border border-slate-200 overflow-hidden sticky top-4 z-30">
+      <div className="rounded-[32px] bg-white shadow-2xl border border-slate-200 overflow-hidden">
         <div className="bg-gradient-to-r from-slate-900 via-indigo-800 to-sky-700 text-white px-6 py-6 md:px-10 md:py-8">
           <div className="space-y-6">
 
