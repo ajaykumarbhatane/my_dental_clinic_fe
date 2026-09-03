@@ -1066,6 +1066,16 @@ const PatientDetail = () => {
    }, [id]);
 
    useEffect(() => {
+      const handlePatientUpdated = (e) => {
+         if (!e.detail?.patient_id || e.detail.patient_id === id) {
+            loadData();
+         }
+      };
+      window.addEventListener('patient-updated', handlePatientUpdated);
+      return () => window.removeEventListener('patient-updated', handlePatientUpdated);
+   }, [id]);
+
+   useEffect(() => {
       const query = new URLSearchParams(location.search);
       const tab = query.get('tab');
       const stateTab = location.state?.returnTab || location.state?.tab;

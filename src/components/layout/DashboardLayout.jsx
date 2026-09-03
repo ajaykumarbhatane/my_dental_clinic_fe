@@ -259,6 +259,11 @@ const DashboardLayout = ({ children }) => {
                         window.dispatchEvent(new CustomEvent('assistant:open_add_patient'));
                       }
 
+                      const activePatientId = (data.action && data.action.patient_id) || (data.context && data.context.patient_id);
+                      if (activePatientId) {
+                        window.dispatchEvent(new CustomEvent('patient-updated', { detail: { patient_id: activePatientId } }));
+                      }
+
                       if (data.action && data.action.type === 'OPEN_PATIENT' && data.action.patient_id) {
                         routeTo(`/app/patients/${data.action.patient_id}`);
                         setAssistantOpen(false);
