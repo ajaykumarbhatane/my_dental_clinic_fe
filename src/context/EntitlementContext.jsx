@@ -90,6 +90,19 @@ export const EntitlementProvider = ({ children }) => {
         return true;
       }
 
+      // Core features (Patients, Treatments, Dashboard) are always accessible
+      const CORE_FEATURES = new Set([
+        'PATIENTS',
+        'PATIENT_MANAGEMENT',
+        'TREATMENTS',
+        'TREATMENT_MANAGEMENT',
+        'DASHBOARD',
+        'DASHBOARD_ACCESS',
+      ]);
+      if (CORE_FEATURES.has(target.toUpperCase())) {
+        return true;
+      }
+
       // Check legacy / alias mapping
       const legacyMap = {
         AI_ASSISTANT: ['AI', 'AI_ASSISTANT'],

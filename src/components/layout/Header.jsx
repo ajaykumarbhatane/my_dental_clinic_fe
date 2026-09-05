@@ -1,23 +1,26 @@
-import { Menu, User, LogOut, ChevronDown, Bell, Sparkles, Eye, Phone, X } from 'lucide-react';
+import { Menu, User, LogOut, ChevronDown, Bell, Sparkles, Eye, Phone, X, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useEntitlements } from '../../context/EntitlementContext';
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { clinicApi } from '../../api/clinicApi';
 import { visitApi } from '../../api/visitApi';
-import { subscriptionService } from '../../api/subscriptionService';
 
 const Header = ({ onMenuClick, handleMenuClick }) => {
   const menuClick = onMenuClick || handleMenuClick;
   const { user, logout } = useAuth();
+  const { plan } = useEntitlements();
   const navigate = useNavigate();
   const [showDropdown, setShowDropdown] = useState(false);
   const [showReminders, setShowReminders] = useState(false);
+  const [loadingReminders, setLoadingReminders] = useState(false);
   const [clinicName, setClinicName] = useState('');
-  const [currentPlanName, setCurrentPlanName] = useState('');
   const [reminders, setReminders] = useState([]);
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
   const dropdownRef = useRef(null);
   const reminderRef = useRef(null);
+
+  const currentPlanName = plan?.name || '';
 
   // Close dropdown outside click
   useEffect(() => {
@@ -103,28 +106,6 @@ const Header = ({ onMenuClick, handleMenuClick }) => {
     resolveClinicName();
   }, [user]);
 
-  useEffect(() => {
-    const loadCurrentPlan = async () => {
-      if (!user) {
-        setCurrentPlanName('');
-        return;
-      }
-
-      try {
-        const response = await subscriptionService.getCurrentSubscription();
-        const planName = response?.data?.plan?.name || '';
-        setCurrentPlanName(planName);
-      } catch (error) {
-        if (error?.response?.status !== 404) {
-          console.warn('Could not load current plan:', error);
-        }
-        setCurrentPlanName('');
-      }
-    };
-
-    loadCurrentPlan();
-  }, [user]);
-
   const getTodayLocalDate = () => {
     const now = new Date();
     const year = now.getFullYear();
@@ -155,24 +136,28 @@ const Header = ({ onMenuClick, handleMenuClick }) => {
     window.location.href = `tel:${sanitized}`;
   };
 
-  useEffect(() => {
+  const loadReminders = useCallback(async () => {
     if (!user) return;
-
-    const loadReminders = async () => {
-      try {
-        const today = getTodayLocalDate();
-        const response = await visitApi.getReminders(today);
-        const reminderResults = response?.data?.results || [];
-        setReminders(reminderResults);
-      } catch (error) {
-        console.warn('Could not load reminders:', error);
-      }
-    };
-
-    loadReminders();
-    const interval = window.setInterval(loadReminders, 60000);
-    return () => window.clearInterval(interval);
+    try {
+      setLoadingReminders(true);
+      const today = getTodayLocalDate();
+      const response = await visitApi.getReminders(today);
+      const reminderResults = response?.data?.results || [];
+      setReminders(reminderResults);
+    } catch (error) {
+      console.warn('Could not load reminders:', error);
+    } finally {
+      setLoadingReminders(false);
+    }
   }, [user]);
+
+  const handleToggleReminders = async () => {
+    const nextState = !showReminders;
+    setShowReminders(nextState);
+    if (nextState && !loadingReminders) {
+      await loadReminders();
+    }
+  };
 
 
 
@@ -228,7 +213,7 @@ const Header = ({ onMenuClick, handleMenuClick }) => {
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="relative" ref={reminderRef}>
             <button
-              onClick={() => setShowReminders(!showReminders)}
+              onClick={handleToggleReminders}
               className="relative p-2 rounded-lg bg-gray-100 hover-common text-gray-600 hover:bg-gray-200 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               aria-label="Upcoming reminders"
             >
@@ -260,7 +245,11 @@ const Header = ({ onMenuClick, handleMenuClick }) => {
                     </div>
 
                     <div className="flex-1 overflow-y-auto bg-slate-50">
-                      {reminders.length === 0 ? (
+                      {loadingReminders ? (
+                        <div className="flex h-full items-center justify-center p-8">
+                          <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+                        </div>
+                      ) : reminders.length === 0 ? (
                         <div className="flex h-full items-center justify-center px-4">
                           <p className="text-sm text-slate-500 text-center">No reminders for now.</p>
                         </div>
@@ -349,7 +338,11 @@ disabled:to-slate-400
                     </span>
                   </div>
                   <div className="max-h-[24rem] overflow-auto bg-slate-50">
-                    {reminders.length === 0 ? (
+                    {loadingReminders ? (
+                      <div className="flex items-center justify-center p-6 text-blue-600">
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      </div>
+                    ) : reminders.length === 0 ? (
                       <p className="px-4 py-6 text-sm text-slate-500">No reminders for now.</p>
                     ) : reminders.map((reminder) => (
                       <div key={reminder.id} className="px-4 py-3 border-b border-slate-100 last:border-b-0 bg-white">
