@@ -1,13 +1,15 @@
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Stethoscope,
-  Settings, Film, Phone, X, CreditCard
+  Settings, Film, Phone, X, CreditCard, Lock
 } from 'lucide-react';
 import { useRef } from 'react';
 import logo from '../../assets/mydentalclinicpro_logo.png';
+import { useEntitlements } from '../../context/EntitlementContext';
 
 const Sidebar = ({ isOpen, onClose, isExpanded, setIsExpanded, sidebarOpen, setSidebarOpen }) => {
   const location = useLocation();
+  const { hasFeature } = useEntitlements();
   const touchStartX = useRef(null);
 
   const activeOpen = isOpen !== undefined ? isOpen : sidebarOpen;
@@ -25,10 +27,10 @@ const Sidebar = ({ isOpen, onClose, isExpanded, setIsExpanded, sidebarOpen, setS
   };
 
   const menuItems = [
-    { path: '/app', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/app/patients', icon: Users, label: 'Patients' },
-    { path: '/app/treatments', icon: Stethoscope, label: 'Treatments' },
-    { path: '/app/treatment-videos', icon: Film, label: 'Videos' },
+    { path: '/app', icon: LayoutDashboard, label: 'Dashboard', featureCode: 'DASHBOARD_ACCESS' },
+    { path: '/app/patients', icon: Users, label: 'Patients', featureCode: 'PATIENT_MANAGEMENT' },
+    { path: '/app/treatments', icon: Stethoscope, label: 'Treatments', featureCode: 'TREATMENT_MANAGEMENT' },
+    { path: '/app/treatment-videos', icon: Film, label: 'Videos', featureCode: 'TREATMENT_VIDEOS' },
     { path: '/app/subscriptions', icon: CreditCard, label: 'Billing and Subscriptions' },
     { path: '/app/customer-care', icon: Phone, label: 'Support' },
     { path: '/app/settings', icon: Settings, label: 'Settings' },
@@ -168,16 +170,17 @@ const Sidebar = ({ isOpen, onClose, isExpanded, setIsExpanded, sidebarOpen, setS
             {menuItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
+              const isLocked = item.featureCode ? !hasFeature(item.featureCode) : false;
 
               return (
                 <li key={item.path} className="relative group">
                   <Link
                     to={item.path}
                     onClick={activeClose}
-                    title={item.label}
+                    title={isLocked ? `${item.label} (Locked)` : item.label}
                     aria-label={item.label}
                     className={`
-                      flex items-center
+                      flex items-center justify-between
                       rounded-2xl
                       transition-all duration-200
 
@@ -192,22 +195,33 @@ const Sidebar = ({ isOpen, onClose, isExpanded, setIsExpanded, sidebarOpen, setS
 
                       ${isActive
                         ? 'bg-white text-blue-900 shadow-lg'
+                        : isLocked
+                        ? 'hover:bg-amber-500/10 text-slate-300'
                         : 'hover:bg-white/10 text-white'
                       }
                     `}
                   >
-                    <Icon className="w-5 h-5 shrink-0" />
+                    <div className="flex items-center gap-3">
+                      <Icon className="w-5 h-5 shrink-0" />
 
-                    {/* Mobile */}
-                    <span className="md:hidden text-sm font-medium">
-                      {item.label}
-                    </span>
-
-                    {/* Desktop Expanded */}
-                    {isExpanded && (
-                      <span className="hidden md:block text-sm font-medium">
+                      {/* Mobile */}
+                      <span className="md:hidden text-sm font-medium flex items-center gap-1.5">
                         {item.label}
+                        {isLocked && <Lock className="w-3.5 h-3.5 text-amber-400" />}
                       </span>
+
+                      {/* Desktop Expanded */}
+                      {isExpanded && (
+                        <span className="hidden md:flex text-sm font-medium items-center gap-1.5">
+                          {item.label}
+                          {isLocked && <Lock className="w-3.5 h-3.5 text-amber-400" />}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Compact collapsed lock badge */}
+                    {isLocked && !isExpanded && (
+                      <span className="hidden md:block absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-amber-400 ring-2 ring-slate-900" />
                     )}
                   </Link>
                 </li>

@@ -4,9 +4,11 @@ import { Capacitor } from '@capacitor/core';
 import { App as CapacitorApp } from '@capacitor/app';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { EntitlementProvider } from './context/EntitlementContext';
 import { NotificationProvider } from './context/NotificationContext';
 import NotificationContainer from './components/NotificationContainer';
 import DashboardLayout from './components/layout/DashboardLayout';
+import FeatureRoute from './components/common/FeatureRoute';
 import Login from './pages/Login';
 import Landing from './pages/Landing';
 import Dashboard from './pages/Dashboard';
@@ -170,12 +172,12 @@ const AppRoutes = () => {
             <ProtectedRoute>
               <DashboardLayout>
                 <Routes>
-                  <Route path="" element={<Dashboard />} />
-                  <Route path="patients" element={<Patients />} />
-                  <Route path="patients/:id" element={<PatientDetail />} />
-                  <Route path="treatments" element={<Treatments />} />
-                  <Route path="treatments/:id" element={<TreatmentDetail />} />
-                  <Route path="treatment-videos" element={<TreatmentVideos />} />
+                  <Route path="" element={<FeatureRoute feature="DASHBOARD_ACCESS" featureName="Dashboard"><Dashboard /></FeatureRoute>} />
+                  <Route path="patients" element={<FeatureRoute feature="PATIENT_MANAGEMENT" featureName="Patients"><Patients /></FeatureRoute>} />
+                  <Route path="patients/:id" element={<FeatureRoute feature="PATIENT_MANAGEMENT" featureName="Patient Detail"><PatientDetail /></FeatureRoute>} />
+                  <Route path="treatments" element={<FeatureRoute feature="TREATMENT_MANAGEMENT" featureName="Treatments"><Treatments /></FeatureRoute>} />
+                  <Route path="treatments/:id" element={<FeatureRoute feature="TREATMENT_MANAGEMENT" featureName="Treatment Detail"><TreatmentDetail /></FeatureRoute>} />
+                  <Route path="treatment-videos" element={<FeatureRoute feature="TREATMENT_VIDEOS" featureName="Treatment Videos"><TreatmentVideos /></FeatureRoute>} />
                   <Route path="customer-care" element={<CustomerCare />} />
                   <Route path="clinic-settings" element={<Navigate to="/app/settings" replace />} />
                   <Route
@@ -209,8 +211,10 @@ function App() {
   return (
     <NotificationProvider>
       <AuthProvider>
-        <AppRoutes />
-        <NotificationContainer />
+        <EntitlementProvider>
+          <AppRoutes />
+          <NotificationContainer />
+        </EntitlementProvider>
       </AuthProvider>
     </NotificationProvider>
   );

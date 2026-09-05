@@ -220,6 +220,11 @@ const Treatments = () => {
 
       // patient and type IDs are string-based keys (e.g. "PTabc123"/"TTxyz")
       // we only need to ensure they are not empty
+      const selectedTypeObj = treatmentTypes.find((tt) => String(tt.id) === String(formData.type_of_treatment));
+      const selectedTypeName = (selectedTypeObj?.name || '').toLowerCase();
+      const isOrtho = selectedTypeName.includes('ortho') || selectedTypeName.includes('braces');
+      const isRootCanal = selectedTypeName.includes('root canal');
+
       const payload = {
         patient: formData.patient,
         type_of_treatment: formData.type_of_treatment,
@@ -229,8 +234,8 @@ const Treatments = () => {
         initial_findings: formData.initial_findings || null,
         treatment_plan: formData.treatment_plan || null,
         treatment_notes: formData.treatment_notes || null,
-        braces_type: formData.braces_type || null,
-        cap_type: formData.cap_type || null
+        braces_type: isOrtho ? (formData.braces_type || (formData.cap_type ? formData.cap_type : null)) : null,
+        cap_type: isRootCanal ? (formData.cap_type || null) : null
       };
 
       await treatmentApi.create(payload);

@@ -25,6 +25,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { subscriptionService } from '../../api/subscriptionService';
+import { useEntitlements } from '../../context/EntitlementContext';
 import normalizeApiError from '../../utils/errorUtils';
 import { loadRazorpay } from '../../services/razorpay';
 import razorpayNative from '../../services/razorpayNative';
@@ -880,6 +881,7 @@ const SubscriptionLoading = () => (
 );
 
 const SubscriptionDashboard = () => {
+  const { refetchEntitlements } = useEntitlements();
   const [plans, setPlans] = useState([]);
   const [current, setCurrent] = useState(null);
   const [history, setHistory] = useState([]);
@@ -945,13 +947,14 @@ const SubscriptionDashboard = () => {
         ...result,
         [plan.id]: previous[plan.id] || getSelectedDuration(plan),
       }), {}));
+      refetchEntitlements();
     } catch (error) {
       console.error('Failed to load subscriptions:', error);
       setLoadingError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [refetchEntitlements]);
 
   useEffect(() => {
     loadSubscriptions();

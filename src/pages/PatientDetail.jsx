@@ -531,6 +531,11 @@ const PatientDetail = () => {
             setSubmittingTreatment(false);
             return;
          }
+         const selectedTypeObj = treatmentTypes.find((tt) => String(tt.id) === String(treatmentFormData.type_of_treatment));
+         const selectedTypeName = (selectedTypeObj?.name || '').toLowerCase();
+         const isOrtho = selectedTypeName.includes('ortho') || selectedTypeName.includes('braces');
+         const isRootCanal = selectedTypeName.includes('root canal');
+
          const payload = {
             status: treatmentFormData.status,
             estimated_duration_months: treatmentFormData.estimated_duration_months ? parseInt(treatmentFormData.estimated_duration_months, 10) : null,
@@ -538,8 +543,8 @@ const PatientDetail = () => {
             initial_findings: treatmentFormData.initial_findings || null,
             treatment_plan: treatmentFormData.treatment_plan || null,
             treatment_notes: treatmentFormData.treatment_notes || null,
-            braces_type: treatmentFormData.braces_type || null,
-            cap_type: treatmentFormData.cap_type || null
+            braces_type: isOrtho ? (treatmentFormData.braces_type || (treatmentFormData.cap_type ? treatmentFormData.cap_type : null)) : null,
+            cap_type: isRootCanal ? (treatmentFormData.cap_type || null) : null
          };
          if (isEditingTreatment && editingTreatment) {
             await handleApiCall(() => treatmentApi.update(editingTreatment.id, payload), {
@@ -1999,8 +2004,8 @@ const PatientDetail = () => {
                         )}
                         {/* conditional options based on selected type */}
                         {/* conditional options based on selected type */}
-                        {treatmentTypes.find(type => String(type.id) === String(treatmentFormData.type_of_treatment))?.name?.toLowerCase().includes('ortho') ||
-                           treatmentTypes.find(type => String(type.id) === String(treatmentFormData.type_of_treatment))?.name?.toLowerCase().includes('braces') && (
+                        {(treatmentTypes.find(type => String(type.id) === String(treatmentFormData.type_of_treatment))?.name?.toLowerCase().includes('ortho') ||
+                           treatmentTypes.find(type => String(type.id) === String(treatmentFormData.type_of_treatment))?.name?.toLowerCase().includes('braces')) && (
                               <div className="mt-3">
                                  <label className="block text-sm font-semibold text-gray-700">Braces Type</label>
                                  <ChoiceSelect

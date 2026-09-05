@@ -472,6 +472,11 @@ useEffect(() => {
           setCreatedPatientId(patientId);
 
           // Create treatment
+          const selectedTypeObj = treatmentTypes.find((tt) => String(tt.id) === String(treatmentFormData.type_of_treatment));
+          const selectedTypeName = (selectedTypeObj?.name || '').toLowerCase();
+          const isOrtho = selectedTypeName.includes('ortho') || selectedTypeName.includes('braces');
+          const isRootCanal = selectedTypeName.includes('root canal');
+
           const treatmentPayload = {
             patient: patientId,
             type_of_treatment: treatmentFormData.type_of_treatment,
@@ -481,8 +486,8 @@ useEffect(() => {
             initial_findings: treatmentFormData.initial_findings,
             treatment_plan: treatmentFormData.treatment_plan,
             treatment_notes: treatmentFormData.treatment_notes,
-            braces_type: treatmentFormData.braces_type || null,
-            cap_type: treatmentFormData.cap_type || null
+            braces_type: isOrtho ? (treatmentFormData.braces_type || (treatmentFormData.cap_type ? treatmentFormData.cap_type : null)) : null,
+            cap_type: isRootCanal ? (treatmentFormData.cap_type || null) : null
           };
 
           const treatmentResponse = await treatmentApi.create(serializePayload(treatmentPayload));

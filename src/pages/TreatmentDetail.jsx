@@ -347,6 +347,10 @@ const TreatmentDetail = () => {
         return;
       }
 
+      const selectedTypeObj = treatmentTypes.find((tt) => String(tt.id) === String(treatmentFormData.type_of_treatment));
+      const treatmentTypeName = (selectedTypeObj?.name) || editingTreatment?.treatment_name || editingTreatment?.type_of_treatment_name || treatment?.type_of_treatment?.name || treatment?.treatment_name || '';
+      const isOrtho = /ortho|braces/i.test(treatmentTypeName);
+
       const payload = {
         type_of_treatment: treatmentFormData.type_of_treatment,
         status: treatmentFormData.status,
@@ -355,8 +359,8 @@ const TreatmentDetail = () => {
         initial_findings: treatmentFormData.initial_findings || null,
         treatment_plan: treatmentFormData.treatment_plan || null,
         treatment_notes: treatmentFormData.treatment_notes || null,
-        braces_type: treatmentFormData.braces_type || null,
-        cap_type: treatmentFormData.cap_type || null
+        braces_type: isOrtho ? (treatmentFormData.braces_type || (treatmentFormData.cap_type ? treatmentFormData.cap_type : null)) : null,
+        cap_type: !isOrtho ? (treatmentFormData.cap_type || null) : null
       };
 
       await treatmentApi.update(editingTreatment.id, payload);
@@ -604,8 +608,8 @@ const TreatmentDetail = () => {
       : patientDisplayName;
 
   const statusText = treatment?.status || 'Ongoing';
-  const statusIsOngoing = String(statusText).toLowerCase() === 'ongoing';
-  const bracesOrCapValue = treatment?.braces_type || treatment?.cap_type || null;
+  const isOrthodonticTreatment = /ortho|braces/i.test(treatment?.treatment_name || treatment?.type_of_treatment_name || treatment?.type_of_treatment?.name || '');
+  const bracesOrCapValue = isOrthodonticTreatment ? (treatment?.braces_type || treatment?.cap_type || null) : (treatment?.cap_type || treatment?.braces_type || null);
 
   const treatmentPlanLines = treatment?.treatment_plan ? treatment.treatment_plan.split('\n').map((line) => line.trim()).filter(Boolean) : [];
   const initialFindingsLines = treatment?.initial_findings ? treatment.initial_findings.split('\n').map((line) => line.trim()).filter(Boolean) : [];
@@ -886,7 +890,7 @@ transition-colors
 
                     <div className="flex justify-between items-center px-6 py-5">
                         <span className="text-white/70">
-                            Braces / Cap Type
+                            {isOrthodonticTreatment ? "Braces Type" : (treatment?.cap_type ? "Cap Type" : "Braces / Cap Type")}
                         </span>
 
                         <span className="font-semibold text-white">
@@ -1545,16 +1549,29 @@ hover:bg-blue-700
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700">Cap Type</label>
-                    <ChoiceSelect
-                      which="treatment/cap-type"
-                      value={treatmentFormData.cap_type}
-                      onChange={(e) => setTreatmentFormData({ ...treatmentFormData, cap_type: e.target.value })}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Select cap type"
-                    />
-                  </div>
+                  {/ortho|braces/i.test((treatmentTypes.find((tt) => String(tt.id) === String(treatmentFormData.type_of_treatment))?.name) || editingTreatment?.treatment_name || editingTreatment?.type_of_treatment_name || treatment?.type_of_treatment?.name || treatment?.treatment_name || '') ? (
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700">Braces Type</label>
+                      <ChoiceSelect
+                        which="treatment/braces-type"
+                        value={treatmentFormData.braces_type}
+                        onChange={(e) => setTreatmentFormData({ ...treatmentFormData, braces_type: e.target.value, cap_type: '' })}
+                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Select braces type"
+                      />
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700">Cap Type</label>
+                      <ChoiceSelect
+                        which="treatment/cap-type"
+                        value={treatmentFormData.cap_type}
+                        onChange={(e) => setTreatmentFormData({ ...treatmentFormData, cap_type: e.target.value, braces_type: '' })}
+                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Select cap type"
+                      />
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-semibold text-gray-700">Status</label>
                     <ChoiceSelect
