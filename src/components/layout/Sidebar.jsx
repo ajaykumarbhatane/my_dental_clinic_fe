@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Stethoscope,
-  Settings, Film, Phone, X, CreditCard, Lock
+  Settings, Film, Phone, X, CreditCard, Lock, Shield
 } from 'lucide-react';
 import { useRef } from 'react';
 import logo from '../../assets/mydentalclinicpro_logo.png';
@@ -34,6 +34,7 @@ const Sidebar = ({ isOpen, onClose, isExpanded, setIsExpanded, sidebarOpen, setS
     { path: '/app/subscriptions', icon: CreditCard, label: 'Billing and Subscriptions' },
     { path: '/app/customer-care', icon: Phone, label: 'Support' },
     { path: '/app/settings', icon: Settings, label: 'Settings' },
+    { path: '/app/privacy-policy', icon: Shield, label: 'Privacy Policy' },
   ];
 
   return (

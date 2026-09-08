@@ -19,6 +19,7 @@ import TreatmentDetail from './pages/TreatmentDetail';
 import TreatmentVideos from './pages/TreatmentVideos';
 import ClinicSettings from './pages/ClinicSettings';
 import CustomerCare from './pages/CustomerCare';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 
 const Subscriptions = lazy(() => import('./pages/Subscriptions'));
 
@@ -165,6 +166,10 @@ const AppRoutes = () => {
           path="/login"
           element={isAuth ? <Navigate to={appBase} replace /> : <Login />}
         />
+        <Route
+          path="/privacy-policy"
+          element={<PrivacyPolicy />}
+        />
 
         <Route
           path="/app/*"
@@ -180,6 +185,7 @@ const AppRoutes = () => {
                   <Route path="treatment-videos" element={<FeatureRoute feature="TREATMENT_VIDEOS" featureName="Treatment Videos"><TreatmentVideos /></FeatureRoute>} />
                   <Route path="customer-care" element={<CustomerCare />} />
                   <Route path="clinic-settings" element={<Navigate to="/app/settings" replace />} />
+                  <Route path="privacy-policy" element={<PrivacyPolicy />} />
                   <Route
                     path="subscriptions"
                     element={(

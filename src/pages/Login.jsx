@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Stethoscope, Mail, Lock, LogIn, AlertCircle, Wifi, Eye, EyeOff } from 'lucide-react';
 import logo from '../assets/mydentalclinicpro_logo.png';
@@ -212,6 +212,12 @@ const Login = () => {
             </button>
 
           </form>
+          <div className="mt-6 text-center text-xs text-gray-500 border-t border-gray-100 pt-4">
+            By signing in, you agree to our platform policies. <br />
+            <Link to="/privacy-policy" className="text-blue-600 hover:text-blue-700 font-semibold underline mt-1 inline-block">
+              Privacy Policy & Data Safety
+            </Link>
+          </div>
         </div>
       </div>
     </div>

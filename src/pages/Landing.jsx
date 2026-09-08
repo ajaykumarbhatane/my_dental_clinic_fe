@@ -1291,7 +1291,8 @@ const benefits = [
           <div>
             <h4 className="text-white font-semibold mb-3">Company</h4>
             <ul className="space-y-2 text-sm">
-              <li><a href="#">Contact</a></li>
+              <li><Link to="/app/customer-care">Contact & Support</Link></li>
+              <li><Link to="/privacy-policy" className="text-cyan-400 hover:underline">Privacy Policy</Link></li>
             </ul>
           </div>
 
@@ -1311,10 +1312,9 @@ const benefits = [
 
         </div>
 
-        <div className="border-t border-slate-700 text-center text-xs py-6 text-slate-500">
-          © 2026 MyDentalClinicPro. All rights reserved.
-          <br></br>
-          Built by Ajaykumar Bhatane and Clinical Advisor Dr. Swati Lahane/Bhatane.
+        <div className="border-t border-slate-700 text-center text-xs py-6 text-slate-500 space-y-2">
+          <p>© 2026 MyDentalClinicPro. All rights reserved. • <Link to="/privacy-policy" className="text-slate-400 hover:text-cyan-400 underline">Privacy Policy</Link></p>
+          <p>Built by Ajaykumar Bhatane and Clinical Advisor Dr. Swati Lahane/Bhatane.</p>
         </div>
       </footer>
     </div>

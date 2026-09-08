@@ -1,4 +1,5 @@
-import { Phone, Mail, MessageCircle, HelpCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Phone, Mail, MessageCircle, Shield } from 'lucide-react';
 
 const CustomerCare = () => {
   return (
@@ -59,12 +60,13 @@ const CustomerCare = () => {
             btn: 'Send Email →',
           },
           {
-            icon: <HelpCircle />,
-            title: 'Help Center',
-            desc: 'Browse FAQs & guides.',
+            icon: <Shield />,
+            title: 'Privacy Policy',
+            desc: 'View data safety policies.',
             color: 'from-purple-500 to-indigo-500',
-            link: '/help-center',
-            btn: 'Explore →',
+            link: '/privacy-policy',
+            btn: 'Read Policy →',
+            isInternal: true,
           },
         ].map((item, i) => (
           <div
@@ -78,14 +80,23 @@ const CustomerCare = () => {
             <h2 className="text-lg font-semibold">{item.title}</h2>
             <p className="text-sm text-gray-600 mt-2">{item.desc}</p>
 
-            <a
-              href={item.link}
-              target="_blank"
-              rel="noreferrer"
-              className={`inline-block mt-4 px-4 py-2 rounded-lg bg-gradient-to-r ${item.color} text-white text-sm font-semibold shadow hover:scale-105 transition`}
-            >
-              {item.btn}
-            </a>
+            {item.isInternal ? (
+              <Link
+                to={item.link}
+                className={`inline-block mt-4 px-4 py-2 rounded-lg bg-gradient-to-r ${item.color} text-white text-sm font-semibold shadow hover:scale-105 transition`}
+              >
+                {item.btn}
+              </Link>
+            ) : (
+              <a
+                href={item.link}
+                target="_blank"
+                rel="noreferrer"
+                className={`inline-block mt-4 px-4 py-2 rounded-lg bg-gradient-to-r ${item.color} text-white text-sm font-semibold shadow hover:scale-105 transition`}
+              >
+                {item.btn}
+              </a>
+            )}
           </div>
         ))}
       </div>
