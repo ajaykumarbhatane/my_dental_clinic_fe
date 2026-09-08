@@ -34,7 +34,7 @@ const Sidebar = ({ isOpen, onClose, isExpanded, setIsExpanded, sidebarOpen, setS
     { path: '/app/subscriptions', icon: CreditCard, label: 'Billing and Subscriptions' },
     { path: '/app/customer-care', icon: Phone, label: 'Support' },
     { path: '/app/settings', icon: Settings, label: 'Settings' },
-    { path: '/app/privacy-policy', icon: Shield, label: 'Privacy Policy' },
+    { path: '/privacy-policy', icon: Shield, label: 'Privacy Policy' },
   ];
 
   return (
