@@ -54,7 +54,7 @@ const CustomerCare = () => {
           {
             icon: <Mail />,
             title: 'Email Support',
-            desc: 'Send queries anytime.',
+            desc: 'Send queries anytime. support@mydentalproclinicpro.com',
             color: 'from-blue-500 to-sky-500',
             link: 'mailto:support@mydentalproclinicpro.com',
             btn: 'Send Email →',
