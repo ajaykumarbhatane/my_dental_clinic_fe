@@ -130,22 +130,35 @@ const Dashboard = () => {
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
   // ==========================================
-  // TAB 2: TODAY'S OVERVIEW STATES
+  // TAB 2: TODAY'S OVERVIEW STATES & PAGINATION
   // ==========================================
+  const TODAY_PER_PAGE = 5;
   const [todayActivities, setTodayActivities] = useState([]);
   const [allRecentActivities, setAllRecentActivities] = useState([]);
   const [todayLoading, setTodayLoading] = useState(false);
   const [todayError, setTodayError] = useState(null);
   const [todayFilter, setTodayFilter] = useState('all');
   const [showRecentIfEmpty, setShowRecentIfEmpty] = useState(true);
+  const [todayCurrentPage, setTodayCurrentPage] = useState(1);
 
   // ==========================================
-  // TAB 3: UPCOMING VISITS STATES (DATE ONLY)
+  // TAB 3: UPCOMING VISITS STATES & PAGINATION
   // ==========================================
+  const UPCOMING_PER_PAGE = 5;
   const [upcomingRange, setUpcomingRange] = useState('next_5_days');
   const [upcomingVisitsList, setUpcomingVisitsList] = useState([]);
   const [upcomingLoading, setUpcomingLoading] = useState(false);
   const [upcomingError, setUpcomingError] = useState(null);
+  const [upcomingCurrentPage, setUpcomingCurrentPage] = useState(1);
+
+  // Reset pagination on filter or data changes
+  useEffect(() => {
+    setTodayCurrentPage(1);
+  }, [todayFilter, todayActivities, allRecentActivities]);
+
+  useEffect(() => {
+    setUpcomingCurrentPage(1);
+  }, [upcomingRange, upcomingVisitsList]);
 
   // Date range picker for upcoming custom range
   const [showUpcomingCustomPicker, setShowUpcomingCustomPicker] = useState(false);
@@ -837,77 +850,82 @@ const Dashboard = () => {
     : allRecentActivities;
 
   const groupedPatientList = groupActivitiesByPatient(activeActivitiesSource, todayFilter);
+  const todayTotalPages = Math.ceil(groupedPatientList.length / TODAY_PER_PAGE);
+  const paginatedPatientList = groupedPatientList.slice((todayCurrentPage - 1) * TODAY_PER_PAGE, todayCurrentPage * TODAY_PER_PAGE);
+
+  const upcomingTotalPages = Math.ceil(groupedUpcomingVisits.length / UPCOMING_PER_PAGE);
+  const paginatedUpcomingVisits = groupedUpcomingVisits.slice((upcomingCurrentPage - 1) * UPCOMING_PER_PAGE, upcomingCurrentPage * UPCOMING_PER_PAGE);
 
   return (
     <div className="space-y-8">
       
-      {/* DASHBOARD HEADER & TAB SELECTOR */}
-      <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-slate-200/80 space-y-4">
+      {/* DASHBOARD HEADER & TAB SELECTOR (STICKY WITH DYNAMIC BG COLORS) */}
+      <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md rounded-2xl p-4 sm:p-5 shadow-md border border-slate-200/80 space-y-4 transition-all">
         
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        {/* <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0F172A] tracking-tight">
               Clinic Dashboard
             </h1>
-            <p className="text-xs sm:text-sm text-[#475569] mt-0.5">
+            <p className="text-xs sm:text-sm text-[#475569] mt-0.5 font-medium">
               {activeDashboardTab === 'today' && "Everything that happened in your clinic today."}
               {activeDashboardTab === 'revenue' && "Financial analytics, collection trends, and treatment distribution."}
               {activeDashboardTab === 'upcoming' && "Scheduled patient visits grouped by date."}
             </p>
           </div>
 
-          <div className="text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 self-start sm:self-auto flex items-center gap-1.5">
-            <Clock size={14} className="text-[#2563EB]" />
+          <div className="text-xs font-bold text-slate-700 bg-slate-100/90 px-3.5 py-2 rounded-xl border border-slate-200/90 self-start sm:self-auto flex items-center gap-2 shadow-xs">
+            <Clock size={15} className="text-[#2563EB]" />
             <span>Today: {formatDate(todayString)}</span>
           </div>
-        </div>
+        </div> */}
 
-        {/* THREE SEGMENTED DASHBOARD TABS */}
+        {/* THREE SEGMENTED DASHBOARD TABS WITH DISTINCT BG COLORS */}
         <div className="pt-2 border-t border-slate-100">
-          <div className="grid grid-cols-3 gap-2 bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/70" role="tablist">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 bg-slate-100/90 p-2 rounded-2xl border border-slate-200/80" role="tablist">
             
-            {/* TAB 1: TODAY'S OVERVIEW (DEFAULT) */}
+            {/* TAB 1: TODAY'S OVERVIEW (BLUE THEME) */}
             <button
               role="tab"
               aria-selected={activeDashboardTab === 'today'}
               onClick={() => setActiveDashboardTab('today')}
-              className={`py-3 px-3 sm:px-5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 ${
+              className={`py-3 px-3 sm:px-5 rounded-xl text-xs sm:text-sm font-extrabold transition-all duration-200 flex items-center justify-center gap-2 border ${
                 activeDashboardTab === 'today'
-                  ? 'bg-white text-[#2563EB] shadow-md ring-1 ring-black/5'
-                  : 'text-[#475569] hover:text-slate-900 hover:bg-white/50'
+                  ? 'bg-[#2563EB] text-white border-[#2563EB] shadow-md shadow-blue-500/30 scale-[1.01]'
+                  : 'bg-blue-50/80 text-blue-700 hover:bg-blue-100/90 border-blue-200/60'
               }`}
             >
-              <Sparkles size={16} className={activeDashboardTab === 'today' ? 'text-[#2563EB]' : 'text-slate-400'} />
+              <Sparkles size={16} className={activeDashboardTab === 'today' ? 'text-white' : 'text-[#2563EB]'} />
               <span className="truncate">Today's Overview</span>
             </button>
 
-            {/* TAB 2: CLINIC REVENUE */}
+            {/* TAB 2: CLINIC REVENUE (EMERALD/GREEN THEME) */}
             <button
               role="tab"
               aria-selected={activeDashboardTab === 'revenue'}
               onClick={() => setActiveDashboardTab('revenue')}
-              className={`py-3 px-3 sm:px-5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 ${
+              className={`py-3 px-3 sm:px-5 rounded-xl text-xs sm:text-sm font-extrabold transition-all duration-200 flex items-center justify-center gap-2 border ${
                 activeDashboardTab === 'revenue'
-                  ? 'bg-white text-[#2563EB] shadow-md ring-1 ring-black/5'
-                  : 'text-[#475569] hover:text-slate-900 hover:bg-white/50'
+                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-500/30 scale-[1.01]'
+                  : 'bg-emerald-50/80 text-emerald-700 hover:bg-emerald-100/90 border-emerald-200/60'
               }`}
             >
-              <DollarSign size={16} className={activeDashboardTab === 'revenue' ? 'text-[#2563EB]' : 'text-slate-400'} />
+              <DollarSign size={16} className={activeDashboardTab === 'revenue' ? 'text-white' : 'text-emerald-600'} />
               <span className="truncate">Clinic Revenue</span>
             </button>
 
-            {/* TAB 3: UPCOMING VISITS */}
+            {/* TAB 3: UPCOMING VISITS (PURPLE/INDIGO THEME) */}
             <button
               role="tab"
               aria-selected={activeDashboardTab === 'upcoming'}
               onClick={() => setActiveDashboardTab('upcoming')}
-              className={`py-3 px-3 sm:px-5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 ${
+              className={`py-3 px-3 sm:px-5 rounded-xl text-xs sm:text-sm font-extrabold transition-all duration-200 flex items-center justify-center gap-2 border ${
                 activeDashboardTab === 'upcoming'
-                  ? 'bg-white text-[#2563EB] shadow-md ring-1 ring-black/5'
-                  : 'text-[#475569] hover:text-slate-900 hover:bg-white/50'
+                  ? 'bg-purple-600 text-white border-purple-600 shadow-md shadow-purple-500/30 scale-[1.01]'
+                  : 'bg-purple-50/80 text-purple-700 hover:bg-purple-100/90 border-purple-200/60'
               }`}
             >
-              <Calendar size={16} className={activeDashboardTab === 'upcoming' ? 'text-[#2563EB]' : 'text-slate-400'} />
+              <Calendar size={16} className={activeDashboardTab === 'upcoming' ? 'text-white' : 'text-purple-600'} />
               <span className="truncate">Upcoming Visits</span>
             </button>
 
@@ -997,7 +1015,7 @@ const Dashboard = () => {
             </div>
           ) : (
             <div className="space-y-5">
-              {groupedPatientList.map((group) => {
+              {paginatedPatientList.map((group) => {
                 const patientUrl = group.patientId ? `/app/patients/${group.patientId}` : '/app/patients';
                 const isRecentGroup = todayActivities.length === 0 && showRecentIfEmpty;
 
@@ -1092,6 +1110,21 @@ const Dashboard = () => {
                   </div>
                 );
               })}
+
+              {/* Today's Overview Pagination */}
+              {todayTotalPages > 1 && (
+                <div className="pt-4 border-t border-slate-200/80">
+                  <Pagination
+                    currentPage={todayCurrentPage}
+                    totalPages={todayTotalPages}
+                    onPageChange={(page) => {
+                      setTodayCurrentPage(page);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    itemCountText={`${((todayCurrentPage - 1) * TODAY_PER_PAGE) + 1} - ${Math.min(todayCurrentPage * TODAY_PER_PAGE, groupedPatientList.length)} of ${groupedPatientList.length} patient records`}
+                  />
+                </div>
+              )}
             </div>
           )}
 
@@ -1277,7 +1310,7 @@ const Dashboard = () => {
             </div>
           ) : (
             <div className="space-y-8">
-              {groupedUpcomingVisits.map((groupItem) => (
+              {paginatedUpcomingVisits.map((groupItem) => (
                 <div key={groupItem.dateStr} className="space-y-3">
                   
                   {/* DATE GROUP HEADER (DATE ONLY, NO TIME) */}
@@ -1357,6 +1390,21 @@ const Dashboard = () => {
 
                 </div>
               ))}
+
+              {/* Upcoming Visits Pagination */}
+              {upcomingTotalPages > 1 && (
+                <div className="pt-4 border-t border-slate-200/80">
+                  <Pagination
+                    currentPage={upcomingCurrentPage}
+                    totalPages={upcomingTotalPages}
+                    onPageChange={(page) => {
+                      setUpcomingCurrentPage(page);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    itemCountText={`${((upcomingCurrentPage - 1) * UPCOMING_PER_PAGE) + 1} - ${Math.min(upcomingCurrentPage * UPCOMING_PER_PAGE, groupedUpcomingVisits.length)} of ${groupedUpcomingVisits.length} visit date groups`}
+                  />
+                </div>
+              )}
             </div>
           )}
 
