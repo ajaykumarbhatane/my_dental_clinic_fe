@@ -5,8 +5,6 @@ import "aos/dist/aos.css";
 import {
   FileText,
   Calendar,
-  Smartphone,
-  MessageCircle,
   Shield,
   Clock,
   TrendingUp,
@@ -15,26 +13,28 @@ import {
   Check,
   CheckCircle2,
   ChevronRight,
+  ChevronDown,
   Sparkles,
   DollarSign,
   Users,
   Activity,
-  Award,
-  Zap,
   Menu,
   X,
-  Bell,
   Stethoscope,
   CreditCard,
   BarChart3,
   ArrowRight,
   Lock,
-  Star,
   ShieldCheck,
-  Bot,
   UserPlus,
   Pill,
   Edit,
+  Building2,
+  Award,
+  Zap,
+  MessageCircle,
+  Bell,
+  Bot,
 } from "lucide-react";
 import { clinicApi } from "../api/clinicApi";
 import ChoiceSelect from "../components/ChoiceSelect";
@@ -52,8 +52,7 @@ const Landing = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeShowcaseTab, setActiveShowcaseTab] = useState("dashboard");
   const [activeAITab, setActiveAITab] = useState("create_patient");
-  const [newsletterEmail, setNewsletterEmail] = useState("");
-  const [newsletterStatus, setNewsletterStatus] = useState("");
+  const [openFaqIndex, setOpenFaqIndex] = useState(0);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -73,7 +72,7 @@ const Landing = () => {
     first_name: '',
     last_name: '',
     email: '',
-    gender: '',
+    gender: 'Male',
     mobile: '',
     secondary_phone_number: '',
     date_of_birth: '',
@@ -184,7 +183,6 @@ const Landing = () => {
     setShowConfirmPassword(false);
   };
 
-  // Instant Modal Open Handlers (Zero delay, state updated synchronously)
   const openSignupModal = () => {
     resetSignupForm();
     setShowSignupModal(true);
@@ -283,70 +281,7 @@ const Landing = () => {
     }
   };
 
-  const handleNewsletterSubmit = (e) => {
-    e.preventDefault();
-    if (!newsletterEmail || !emailRegex.test(newsletterEmail)) {
-      setNewsletterStatus("Please enter a valid email.");
-      return;
-    }
-    setNewsletterStatus("Thank you for subscribing!");
-    setNewsletterEmail("");
-    setTimeout(() => setNewsletterStatus(""), 4000);
-  };
-
-  // Feature Inventory (Based on actual BE + FE analysis)
-  const featuresList = [
-    {
-      icon: Users,
-      title: "Patient Management",
-      desc: "Digital patient records, medical history, dental charts, attachments, and chief complaints.",
-      iconBg: "bg-blue-600/10 text-blue-600",
-    },
-    {
-      icon: Calendar,
-      title: "Appointment Management",
-      desc: "Manage clinic schedules, time slots, doctor assignments, and visit tracking.",
-      iconBg: "bg-cyan-500/10 text-cyan-600",
-    },
-    {
-      icon: Stethoscope,
-      title: "Treatment Management",
-      desc: "Track treatment plans, procedures, tooth selection, clinical notes, and educational videos.",
-      iconBg: "bg-indigo-600/10 text-indigo-600",
-    },
-    {
-      icon: Pill,
-      title: "Prescription Management",
-      desc: "Digital prescriptions, medicine database, dosage, duration, instructions, and PDF export.",
-      iconBg: "bg-purple-600/10 text-purple-600",
-    },
-    {
-      icon: CreditCard,
-      title: "Billing & Payments",
-      desc: "Manage charges, payments collected, multiple payment modes, and outstanding patient balances.",
-      iconBg: "bg-emerald-600/10 text-emerald-600",
-    },
-    {
-      icon: BarChart3,
-      title: "Financial Analytics",
-      desc: "Monitor clinic performance through real-time revenue dashboards, visit trends, and payment tracking.",
-      iconBg: "bg-amber-600/10 text-amber-600",
-    },
-    {
-      icon: MessageCircle,
-      title: "Patient Communication",
-      desc: "Timely reminders for upcoming appointments, follow-up checkups, and pending payments.",
-      iconBg: "bg-violet-600/10 text-violet-600",
-    },
-    {
-      icon: Lock,
-      title: "Security & Role Access",
-      desc: "Secure JWT authentication with isolated clinic scoping for Doctors and Staff.",
-      iconBg: "bg-slate-900/10 text-slate-900",
-    },
-  ];
-
-  // 4 Verified AI Capabilities Data
+  // AI Workflows Showcase Data
   const aiFlows = {
     create_patient: {
       id: "01",
@@ -406,33 +341,80 @@ const Landing = () => {
     },
   };
 
-  // Benefits
-  const benefitsList = [
+  // Features list based on real application functionality
+  const featuresList = [
     {
-      title: "Save Time",
-      desc: "Reduce repetitive administrative work and digitize paper charts in minutes.",
-      icon: Clock,
-    },
-    {
-      title: "Better Patient Management",
-      desc: "Keep patient records organized, searchable, and accessible anywhere.",
       icon: Users,
+      title: "Patient Records",
+      desc: "Keep essential patient information organized and easy to access.",
+      iconBg: "bg-blue-600/10 text-blue-600",
     },
     {
-      title: "Smarter Clinic Operations",
-      desc: "Manage appointments, treatments, and billing effortlessly in one place.",
-      icon: Activity,
+      icon: Calendar,
+      title: "Visit Management",
+      desc: "Record and review patient visits and treatment history in one place.",
+      iconBg: "bg-indigo-600/10 text-indigo-600",
     },
     {
-      title: "AI-Assisted Workflows",
-      desc: "Complete common clinic actions faster with intelligent natural language actions.",
-      icon: Sparkles,
+      icon: CreditCard,
+      title: "Payment & Amount Tracking",
+      desc: "Keep track of amounts associated with patient visits and treatments.",
+      iconBg: "bg-emerald-600/10 text-emerald-600",
     },
     {
-      title: "Revenue Visibility",
-      desc: "Understand clinic financial performance and daily collections clearly.",
-      icon: TrendingUp,
+      icon: Clock,
+      title: "Patient History",
+      desc: "Quickly review previous visits and records when you need them.",
+      iconBg: "bg-amber-600/10 text-amber-600",
     },
+    {
+      icon: Zap,
+      title: "Simple Workflow",
+      desc: "Spend less time managing records and more time focusing on your patients.",
+      iconBg: "bg-purple-600/10 text-purple-600",
+    },
+    {
+      icon: ShieldCheck,
+      title: "Secure & Practical",
+      desc: "Role-based access, clinic data isolation, and streamlined record security.",
+      iconBg: "bg-slate-900/10 text-slate-900",
+    },
+  ];
+
+  // FAQ Accordion Data
+  const faqList = [
+    {
+      q: "What is dental clinic management software?",
+      a: "Dental clinic management software is a dedicated digital application that allows dentists to organize patient demographics, maintain clinical visit logs, record treatment histories, and monitor payment balances in one central system."
+    },
+    {
+      q: "Is My Dental Clinic Pro suitable for solo dentists?",
+      a: "Yes, My Dental Clinic Pro is specifically designed for individual and solo dentists running independent practices. It eliminates complex multi-hospital configurations and focuses purely on everyday practice needs."
+    },
+    {
+      q: "Can I manage dental patient records?",
+      a: "Yes. You can easily create, update, and search patient profiles including personal info, contact details, medical conditions, and clinical notes."
+    },
+    {
+      q: "Can I record patient visits and treatment history?",
+      a: "Absolutely. Every patient visit can be documented with specific treatment notes, procedures performed, prescriptions, and date stamps for clear longitudinal care records."
+    },
+    {
+      q: "Can I track patient payments and amounts?",
+      a: "Yes. You can record fee amounts charged per visit or procedure, log collected payments, and track pending patient balances effortlessly."
+    },
+    {
+      q: "Is My Dental Clinic Pro a dental practice management app?",
+      a: "Yes, it is a practical dental practice management app designed to streamline patient records, treatment logs, and practice financials without unnecessary overhead."
+    },
+    {
+      q: "Who is My Dental Clinic Pro designed for?",
+      a: "It is tailored for solo dental practitioners, private clinic owners, and small dental teams seeking a reliable, clutter-free record management solution."
+    },
+    {
+      q: "How does My Dental Clinic Pro help organize a dental practice?",
+      a: "By replacing paper files and scattered spreadsheets with structured digital patient records, instant visit history lookup, and clear financial summaries."
+    }
   ];
 
   return (
@@ -455,9 +437,9 @@ const Landing = () => {
       }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           
-          {/* Logo with Dental Red Accent */}
+          {/* Logo */}
           <Link to="/" className="flex items-center gap-3 group">
-            <img src={logo} alt="MyDentalClinicPro Logo" className="h-9 w-9 object-contain group-hover:scale-105 transition-transform" />
+            <img src={logo} alt="My Dental Clinic Pro Logo" className="h-9 w-9 object-contain group-hover:scale-105 transition-transform" />
             <span className="text-xl sm:text-2xl font-extrabold tracking-tight">
               <span className="text-[#2563EB]">My</span>
               <span className="text-[#DC2626] relative px-0.5">Dental</span>
@@ -469,12 +451,13 @@ const Landing = () => {
           <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-[#475569]">
             <a href="#features" className="hover:text-[#2563EB] transition-colors">Features</a>
             <a href="#ai" className="hover:text-[#7C3AED] transition-colors flex items-center gap-1.5">
-              <span>AI</span>
+              <span>AI Workflow</span>
               <span className="text-[10px] uppercase tracking-widest px-1.5 py-0.5 rounded bg-purple-100 text-[#7C3AED] font-bold">New</span>
             </a>
             <a href="#revenue" className="hover:text-[#2563EB] transition-colors">Revenue</a>
-            <a href="#patient-engagement" className="hover:text-[#2563EB] transition-colors">Patient Engagement</a>
-            <a href="#pricing" className="hover:text-[#2563EB] transition-colors">Pricing</a>
+            <a href="#patient-engagement" className="hover:text-[#2563EB] transition-colors">Reminders</a>
+            <a href="#why-us" className="hover:text-[#2563EB] transition-colors">Why Choose Us</a>
+            <a href="#faq" className="hover:text-[#2563EB] transition-colors">FAQ</a>
           </nav>
 
           {/* Desktop Actions */}
@@ -485,6 +468,13 @@ const Landing = () => {
             >
               Login
             </Link>
+
+            <button
+              onClick={openBookDemoModal}
+              className="px-4 py-2 text-sm font-semibold text-[#2563EB] bg-blue-50 hover:bg-blue-100 rounded-full transition-colors"
+            >
+              Book Demo
+            </button>
 
             <button
               onClick={openSignupModal}
@@ -498,8 +488,8 @@ const Landing = () => {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-lg text-slate-700 hover:bg-slate-100 transition-colors"
-            aria-label="Toggle Menu"
+            className="md:hidden p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+            aria-label="Toggle Navigation Menu"
           >
             {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
@@ -507,60 +497,66 @@ const Landing = () => {
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
-          <div className="md:hidden bg-white border-b border-slate-200 px-4 pt-3 pb-6 space-y-4 shadow-xl animate-in">
-            <nav className="flex flex-col space-y-3 font-medium text-slate-700">
-              <a
-                href="#features"
-                onClick={() => setMobileMenuOpen(false)}
-                className="px-3 py-2 rounded-lg hover:bg-slate-100"
-              >
-                Features
-              </a>
-              <a
-                href="#ai"
-                onClick={() => setMobileMenuOpen(false)}
-                className="px-3 py-2 rounded-lg hover:bg-purple-50 text-[#7C3AED] flex items-center justify-between"
-              >
-                <span>AI Assistant</span>
-                <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 bg-purple-200 text-purple-800 rounded">AI</span>
-              </a>
-              <a
-                href="#revenue"
-                onClick={() => setMobileMenuOpen(false)}
-                className="px-3 py-2 rounded-lg hover:bg-slate-100"
-              >
-                Revenue
-              </a>
-              <a
-                href="#patient-engagement"
-                onClick={() => setMobileMenuOpen(false)}
-                className="px-3 py-2 rounded-lg hover:bg-slate-100"
-              >
-                Patient Engagement
-              </a>
-              <a
-                href="#pricing"
-                onClick={() => setMobileMenuOpen(false)}
-                className="px-3 py-2 rounded-lg hover:bg-slate-100"
-              >
-                Pricing
-              </a>
-            </nav>
+          <div className="md:hidden bg-white border-b border-slate-200 px-4 pt-2 pb-6 space-y-3">
+            <a
+              href="#features"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block py-2 text-sm font-semibold text-slate-700 hover:text-[#2563EB]"
+            >
+              Features
+            </a>
+            <a
+              href="#ai"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block py-2 text-sm font-semibold text-purple-700 hover:text-[#7C3AED]"
+            >
+              AI Workflow
+            </a>
+            <a
+              href="#revenue"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block py-2 text-sm font-semibold text-slate-700 hover:text-[#2563EB]"
+            >
+              Revenue Analytics
+            </a>
+            <a
+              href="#patient-engagement"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block py-2 text-sm font-semibold text-slate-700 hover:text-[#2563EB]"
+            >
+              Patient Reminders
+            </a>
+            <a
+              href="#why-us"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block py-2 text-sm font-semibold text-slate-700 hover:text-[#2563EB]"
+            >
+              Why Choose Us
+            </a>
+            <a
+              href="#faq"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block py-2 text-sm font-semibold text-slate-700 hover:text-[#2563EB]"
+            >
+              FAQ
+            </a>
 
-            <div className="pt-4 border-t border-slate-100 flex flex-col gap-2">
+            <div className="pt-4 border-t border-slate-100 flex flex-col gap-3">
               <Link
                 to="/login"
-                onClick={() => setMobileMenuOpen(false)}
-                className="w-full py-2.5 text-center font-semibold text-slate-700 border border-slate-300 rounded-xl hover:bg-slate-50"
+                className="w-full text-center py-2.5 text-sm font-semibold text-slate-700 border border-slate-300 rounded-xl"
               >
                 Login
               </Link>
               <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  openSignupModal();
-                }}
-                className="w-full py-2.5 text-center font-semibold text-white bg-[#2563EB] rounded-xl shadow-md"
+                onClick={() => { setMobileMenuOpen(false); openBookDemoModal(); }}
+                className="w-full text-center py-2.5 text-sm font-semibold text-[#2563EB] bg-blue-50 rounded-xl"
+              >
+                Book Demo
+              </button>
+              <button
+                onClick={() => { setMobileMenuOpen(false); openSignupModal(); }}
+                className="w-full text-center py-2.5 text-sm font-semibold text-white bg-[#2563EB] rounded-xl shadow-md"
               >
                 Get Started
               </button>
@@ -570,101 +566,82 @@ const Landing = () => {
       </header>
 
       {/* HERO SECTION */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-blue-50/70 via-slate-50 to-white pt-12 pb-20 lg:pt-20 lg:pb-28">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="grid lg:grid-cols-12 gap-12 lg:gap-8 items-center">
-
-            {/* Left Content */}
+      <section className="relative pt-12 pb-16 md:pt-20 md:pb-24 overflow-hidden bg-gradient-to-b from-blue-50/60 via-slate-50 to-[#F8FAFC]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+            
+            {/* Left Column: Messaging & CTAs */}
             <div className="lg:col-span-6 space-y-6 text-center lg:text-left" data-aos="fade-right">
-
-              {/* Trust Badge */}
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-100/80 border border-blue-200/60 text-xs font-semibold text-blue-900 shadow-sm">
-                <span className="w-2 h-2 rounded-full bg-[#DC2626] animate-pulse" />
-                <span>Built for modern dental clinics</span>
-                <span className="text-blue-300">•</span>
-                <span className="text-blue-700 font-medium">Dental SaaS</span>
+              
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-100/80 border border-blue-200 text-xs font-semibold text-[#2563EB]">
+                <Stethoscope size={14} className="text-[#2563EB]" />
+                <span>SIMPLE • SMART • PROFESSIONAL • DENTIST-FOCUSED</span>
               </div>
 
-              {/* Headline */}
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-[#0F172A] tracking-tight leading-[1.15]">
-                Run Your Dental Clinic <span className="gradient-text-blue-cyan">Smarter</span>
+              {/* H1 Heading */}
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#0F172A] tracking-tight leading-[1.15]">
+                Smart Dental Clinic Management Software for Dentists
               </h1>
 
               {/* Supporting Text */}
-              <p className="text-base sm:text-lg text-[#475569] max-w-xl mx-auto lg:mx-0 leading-relaxed">
-                Manage patients, appointments, treatments, prescriptions, billing and revenue — with AI-powered tools that help you get more done in less time.
+              <p className="text-base sm:text-lg text-[#475569] leading-relaxed max-w-2xl mx-auto lg:mx-0 font-normal">
+                Manage patient records, clinic visits, treatment history, and payments in one simple dental practice management app.
               </p>
 
-              {/* CTAs with Instant Modal Triggers */}
-              <div className="pt-2 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-2">
                 <button
                   onClick={openSignupModal}
-                  className="w-full sm:w-auto px-7 py-3.5 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold rounded-full shadow-lg shadow-blue-600/25 hover:shadow-xl transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2 group"
+                  className="w-full sm:w-auto px-8 py-3.5 text-base font-bold text-white bg-[#2563EB] hover:bg-[#1D4ED8] rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-xl transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
                 >
                   <span>Get Started</span>
-                  <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight size={18} />
                 </button>
 
                 <button
                   onClick={openBookDemoModal}
-                  className="w-full sm:w-auto px-7 py-3.5 bg-white hover:bg-slate-50 text-[#0F172A] font-semibold border border-slate-300 rounded-full shadow-sm hover:shadow transition-all flex items-center justify-center gap-2"
+                  className="w-full sm:w-auto px-7 py-3.5 text-base font-semibold text-[#334155] bg-white border border-slate-300 hover:border-slate-400 hover:bg-slate-50 rounded-xl transition-all shadow-sm text-center"
                 >
-                  <Calendar size={18} className="text-[#2563EB]" />
-                  <span>Request a Demo</span>
+                  Book Demo
                 </button>
               </div>
 
-              {/* HERO MICRO FEATURES */}
-              <div className="pt-6 border-t border-slate-200/60">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs sm:text-sm font-semibold text-[#475569]">
-                  <div className="flex items-center justify-center lg:justify-start gap-1.5">
-                    <CheckCircle2 size={16} className="text-emerald-500 flex-shrink-0" />
-                    <span>Patient Management</span>
-                  </div>
-                  <div className="flex items-center justify-center lg:justify-start gap-1.5">
-                    <CheckCircle2 size={16} className="text-emerald-500 flex-shrink-0" />
-                    <span>Smart Appointments</span>
-                  </div>
-                  <div className="flex items-center justify-center lg:justify-start gap-1.5">
-                    <CheckCircle2 size={16} className="text-[#7C3AED] flex-shrink-0" />
-                    <span>AI-Powered Actions</span>
-                  </div>
-                  <div className="flex items-center justify-center lg:justify-start gap-1.5">
-                    <CheckCircle2 size={16} className="text-emerald-500 flex-shrink-0" />
-                    <span>Revenue Analytics</span>
-                  </div>
-                </div>
+              {/* Trust Line */}
+              <div className="pt-2 flex items-center justify-center lg:justify-start gap-2 text-xs font-medium text-slate-500">
+                <CheckCircle2 size={16} className="text-emerald-600 flex-shrink-0" />
+                <span>Built for simple, organized dental practice management.</span>
               </div>
-
             </div>
 
-            {/* Right Showcase Visual */}
-            <div className="lg:col-span-6" data-aos="fade-left" data-aos-delay="150">
+            {/* Right Column: App Visual & Screenshot Toggle */}
+            <div className="lg:col-span-6" data-aos="fade-left">
               <div className="relative mx-auto max-w-lg lg:max-w-none">
                 
-                {/* Visual Frame */}
-                <div className="relative rounded-2xl bg-white p-2.5 sm:p-3 shadow-2xl border border-slate-200/80 glow-blue">
+                {/* Visual Container */}
+                <div className="bg-slate-900/5 rounded-2xl p-2 sm:p-3 border border-slate-200/80 shadow-2xl backdrop-blur">
                   
-                  {/* Browser Window Bar */}
-                  <div className="bg-[#0F172A] rounded-xl px-4 py-3 flex items-center justify-between">
+                  {/* Screenshot Tab Switches */}
+                  <div className="flex items-center justify-between bg-slate-900 text-white rounded-t-xl px-4 py-3 border-b border-slate-800">
                     <div className="flex items-center gap-2">
-                      <span className="w-3 h-3 rounded-full bg-red-500 inline-block" />
-                      <span className="w-3 h-3 rounded-full bg-amber-500 inline-block" />
-                      <span className="w-3 h-3 rounded-full bg-emerald-500 inline-block" />
+                      <div className="w-3 h-3 rounded-full bg-red-500/80" />
+                      <div className="w-3 h-3 rounded-full bg-amber-500/80" />
+                      <div className="w-3 h-3 rounded-full bg-emerald-500/80" />
+                      <span className="ml-2 text-xs font-medium text-slate-400">My Dental Clinic Pro Workspace</span>
                     </div>
-                    <div className="flex items-center gap-2">
+
+                    <div className="flex bg-slate-800 p-0.5 rounded-lg text-xs font-semibold">
                       <button
                         onClick={() => setActiveShowcaseTab("dashboard")}
-                        className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors ${
-                          activeShowcaseTab === "dashboard" ? "bg-[#2563EB] text-white" : "text-slate-400 hover:text-white"
+                        className={`px-3 py-1 rounded-md transition-all ${
+                          activeShowcaseTab === "dashboard" ? "bg-[#2563EB] text-white shadow-sm" : "text-slate-400 hover:text-white"
                         }`}
                       >
                         Dashboard
                       </button>
                       <button
                         onClick={() => setActiveShowcaseTab("treatments")}
-                        className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors ${
-                          activeShowcaseTab === "treatments" ? "bg-[#2563EB] text-white" : "text-slate-400 hover:text-white"
+                        className={`px-3 py-1 rounded-md transition-all ${
+                          activeShowcaseTab === "treatments" ? "bg-[#2563EB] text-white shadow-sm" : "text-slate-400 hover:text-white"
                         }`}
                       >
                         Treatments
@@ -673,36 +650,25 @@ const Landing = () => {
                   </div>
 
                   {/* Screenshot Container */}
-                  <div className="relative mt-2 overflow-hidden rounded-xl bg-slate-900 aspect-[16/10]">
-                    <img
-                      src={activeShowcaseTab === "dashboard" ? dashboardimg : treatmentsimg}
-                      alt="MyDentalClinicPro SaaS Product Preview"
-                      className="w-full h-full object-cover object-top rounded-xl transition-all duration-500"
-                    />
-
-                    
-
-                    {/* Floating Overlay Badge 2 */}
-                    <div className="absolute bottom-4 right-4 bg-slate-900/90 backdrop-blur-md border border-purple-500/40 rounded-xl p-3 shadow-xl flex items-center gap-3 text-white hidden sm:flex">
-                      <div className="p-2 rounded-lg bg-purple-500/20 text-purple-400">
-                        <Sparkles size={18} />
-                      </div>
-                      <div>
-                        <div className="text-[11px] text-purple-300 font-semibold tracking-wider">AI Assistant</div>
-                        <div className="text-xs font-bold text-white">4 Workflows Ready</div>
-                      </div>
-                    </div>
+                  <div className="relative bg-white rounded-b-xl overflow-hidden aspect-[16/10]">
+                    {activeShowcaseTab === "dashboard" ? (
+                      <img
+                        src={dashboardimg}
+                        alt="my dental clinic pro patient records dashboard"
+                        className="w-full h-full object-cover object-top"
+                      />
+                    ) : (
+                      <img
+                        src={treatmentsimg}
+                        alt="dental clinic management software patient visit screen"
+                        className="w-full h-full object-cover object-top"
+                      />
+                    )}
                   </div>
-
                 </div>
 
-                <div className="mt-4 text-center">
-                  <span className="text-xs font-medium text-[#475569] inline-flex items-center gap-1.5">
-                    <ShieldCheck size={14} className="text-[#2563EB]" />
-                    <span>Real Application Interface • Verified Enterprise Security</span>
-                  </span>
-                </div>
-
+                {/* Subtle Decorative Backdrop Blur */}
+                <div className="absolute -z-10 -bottom-6 -right-6 w-64 h-64 bg-blue-400/20 rounded-full blur-3xl" />
               </div>
             </div>
 
@@ -710,33 +676,33 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* STATS SECTION */}
-      <section className="bg-white py-16 border-y border-slate-200/80">
+      {/* QUICK VALUE PILLARS BAR */}
+      <section className="bg-white border-y border-slate-200/80 py-8 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 divide-y sm:divide-y-0 sm:divide-x divide-slate-200">
-
-            <div className="text-center pt-4 sm:pt-0" data-aos="fade-up">
-              <div className="text-3xl lg:text-4xl font-extrabold text-[#2563EB] tracking-tight">Digital</div>
-              <div className="mt-2 text-sm font-bold text-[#0F172A]">Patient Records</div>
-              <div className="text-xs text-[#475569] mt-1">Medical history, charts & files</div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 divide-x-0 md:divide-x divide-slate-100">
+            
+            <div className="text-center px-4 space-y-1">
+              <span className="text-xl sm:text-2xl font-extrabold text-[#2563EB] block">Digital</span>
+              <h3 className="text-xs sm:text-sm font-bold text-slate-800">Patient Records</h3>
+              <p className="text-[11px] sm:text-xs text-slate-500">Medical history, charts & files</p>
             </div>
 
-            <div className="text-center pt-4 sm:pt-0" data-aos="fade-up" data-aos-delay="100">
-              <div className="text-3xl lg:text-4xl font-extrabold text-[#2563EB] tracking-tight">Smart</div>
-              <div className="mt-2 text-sm font-bold text-[#0F172A]">Appointments</div>
-              <div className="text-xs text-[#475569] mt-1">Schedule & availability slots</div>
+            <div className="text-center px-4 space-y-1">
+              <span className="text-xl sm:text-2xl font-extrabold text-[#2563EB] block">Smart</span>
+              <h3 className="text-xs sm:text-sm font-bold text-slate-800">Appointments</h3>
+              <p className="text-[11px] sm:text-xs text-slate-500">Schedule & visit history</p>
             </div>
 
-            <div className="text-center pt-4 sm:pt-0" data-aos="fade-up" data-aos-delay="200">
-              <div className="text-3xl lg:text-4xl font-extrabold text-[#7C3AED] tracking-tight">AI-Powered</div>
-              <div className="mt-2 text-sm font-bold text-[#0F172A]">Clinic Actions</div>
-              <div className="text-xs text-[#475569] mt-1">Create & update via instructions</div>
+            <div className="text-center px-4 space-y-1">
+              <span className="text-xl sm:text-2xl font-extrabold text-[#7C3AED] block">AI-Powered</span>
+              <h3 className="text-xs sm:text-sm font-bold text-slate-800">Clinic Actions</h3>
+              <p className="text-[11px] sm:text-xs text-slate-500">Create & update via instructions</p>
             </div>
 
-            <div className="text-center pt-4 sm:pt-0" data-aos="fade-up" data-aos-delay="300">
-              <div className="text-3xl lg:text-4xl font-extrabold text-[#06B6D4] tracking-tight">Clear</div>
-              <div className="mt-2 text-sm font-bold text-[#0F172A]">Revenue Visibility</div>
-              <div className="text-xs text-[#475569] mt-1">Daily & monthly collections</div>
+            <div className="text-center px-4 space-y-1">
+              <span className="text-xl sm:text-2xl font-extrabold text-[#0D9488] block">Clear</span>
+              <h3 className="text-xs sm:text-sm font-bold text-slate-800">Revenue Visibility</h3>
+              <p className="text-[11px] sm:text-xs text-slate-500">Daily & monthly collections</p>
             </div>
 
           </div>
@@ -744,39 +710,39 @@ const Landing = () => {
       </section>
 
       {/* FEATURE SECTION */}
-      <section id="features" className="py-24 bg-[#F8FAFC]">
+      <section id="features" className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
+          
           <div className="text-center max-w-3xl mx-auto mb-16" data-aos="fade-up">
-            <span className="text-xs font-bold uppercase tracking-widest text-[#2563EB] bg-blue-100 px-3 py-1 rounded-full">
-              Full Feature Inventory
+            <span className="text-xs font-bold tracking-widest text-[#2563EB] uppercase bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
+              Core Capabilities
             </span>
-            <h2 className="mt-4 text-3xl sm:text-4xl font-extrabold text-[#0F172A] tracking-tight">
-              Everything Your Dental Clinic Needs
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-[#0F172A] mt-3 tracking-tight">
+              Everything You Need to Keep Your Dental Practice Organized
             </h2>
-            <p className="mt-4 text-base sm:text-lg text-[#475569]">
-              Built with purpose to streamline patient care, clinical treatments, billing, and practice performance.
+            <p className="text-base sm:text-lg text-slate-600 mt-4 leading-relaxed">
+              Focus on patient care with clean, intuitive features built for daily dental practice operations.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {featuresList.map((item, idx) => {
-              const IconComp = item.icon;
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {featuresList.map((feat, idx) => {
+              const IconComp = feat.icon;
               return (
                 <div
                   key={idx}
                   data-aos="fade-up"
-                  data-aos-delay={idx * 60}
-                  className="bg-white rounded-2xl p-7 border border-slate-200/80 shadow-sm hover:shadow-xl transition-all duration-300 group hover:-translate-y-1"
+                  data-aos-delay={idx * 100}
+                  className="bg-[#F8FAFC] rounded-2xl p-7 border border-slate-200/70 hover:border-blue-300 hover:shadow-lg transition-all group duration-300"
                 >
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${item.iconBg} mb-5 group-hover:scale-110 transition-transform`}>
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-5 ${feat.iconBg} group-hover:scale-110 transition-transform`}>
                     <IconComp size={24} />
                   </div>
-                  <h3 className="text-lg font-bold text-[#0F172A] group-hover:text-[#2563EB] transition-colors">
-                    {item.title}
+                  <h3 className="text-xl font-bold text-[#0F172A] mb-2">
+                    {feat.title}
                   </h3>
-                  <p className="mt-2.5 text-xs sm:text-sm text-[#475569] leading-relaxed">
-                    {item.desc}
+                  <p className="text-sm text-slate-600 leading-relaxed">
+                    {feat.desc}
                   </p>
                 </div>
               );
@@ -786,296 +752,506 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* AI SECTION — MAJOR DIFFERENTIATOR */}
-      <section id="ai" className="py-24 bg-[#0F172A] text-white relative overflow-hidden">
-        {/* Subtle Glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-purple-600/10 rounded-full blur-[150px] pointer-events-none" />
-
+      {/* AI COMMAND WORKFLOW SHOWCASE SECTION */}
+      <section id="ai" className="py-20 bg-[#0B0F19] text-white relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-
-          <div className="text-center max-w-3xl mx-auto mb-16" data-aos="fade-up">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-950/80 border border-purple-600/40 text-xs font-bold text-purple-300">
+          
+          <div className="text-center max-w-3xl mx-auto mb-14" data-aos="fade-up">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs font-semibold uppercase tracking-widest">
               <Sparkles size={14} className="text-purple-400" />
               <span>Real Conversational AI</span>
-            </div>
-            <h2 className="mt-4 text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
+            </span>
+
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white mt-4 tracking-tight">
               AI That Helps You Run Your Clinic
             </h2>
-            <p className="mt-4 text-base sm:text-lg text-slate-300">
+            <p className="text-base sm:text-lg text-slate-400 mt-3">
               Use simple AI-powered commands to create and update clinic information faster.
             </p>
           </div>
 
-          {/* Interactive AI Showcase Container */}
-          <div className="max-w-5xl mx-auto bg-slate-900/90 backdrop-blur-xl border border-purple-500/30 rounded-3xl p-6 sm:p-10 shadow-2xl glow-purple" data-aos="zoom-in">
+          {/* Interactive AI Tabs */}
+          <div className="bg-slate-900/80 rounded-2xl border border-slate-800 p-4 sm:p-8 max-w-5xl mx-auto shadow-2xl backdrop-blur" data-aos="zoom-in">
             
-            {/* 4 Real AI Capability Tabs */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8 pb-6 border-b border-slate-800">
+            {/* Tab Switches */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-8 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
               {Object.keys(aiFlows).map((key) => {
                 const flow = aiFlows[key];
-                const IconC = flow.icon;
+                const Icon = flow.icon;
                 const isActive = activeAITab === key;
                 return (
                   <button
                     key={key}
                     onClick={() => setActiveAITab(key)}
-                    className={`p-3.5 rounded-xl border text-left transition-all flex flex-col gap-2 ${
+                    className={`flex items-center gap-2.5 px-4 py-3 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
                       isActive
-                        ? "bg-purple-900/40 border-purple-500 text-white shadow-lg shadow-purple-900/30"
-                        : "bg-slate-950/60 border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800/60"
+                        ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30"
+                        : "text-slate-400 hover:text-white hover:bg-slate-900"
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-mono uppercase font-bold text-purple-400">{flow.id}</span>
-                      <IconC size={18} className={isActive ? "text-purple-400" : "text-slate-500"} />
-                    </div>
-                    <span className="text-xs font-bold">{flow.name}</span>
+                    <Icon size={16} />
+                    <span>{flow.name}</span>
                   </button>
                 );
               })}
             </div>
 
-            {/* Active AI Workflow Demo */}
-            {(() => {
-              const currentFlow = aiFlows[activeAITab];
-              return (
-                <div className="grid md:grid-cols-12 gap-8 items-center">
-                  
-                  {/* Flow Summary */}
-                  <div className="md:col-span-5 space-y-4">
-                    <div className="inline-flex items-center gap-2 text-xs font-bold text-purple-400 uppercase tracking-widest">
-                      <Bot size={16} />
-                      <span>Capability #{currentFlow.id}</span>
-                    </div>
-                    <h3 className="text-2xl font-bold text-white">{currentFlow.name}</h3>
-                    <p className="text-sm text-slate-300 leading-relaxed">{currentFlow.description}</p>
-                    
-                    <div className="p-3.5 rounded-xl bg-purple-950/50 border border-purple-500/20 text-xs text-purple-200 flex items-center gap-2">
-                      <ShieldCheck size={16} className="text-purple-400 flex-shrink-0" />
-                      <span>Requires Doctor Confirmation before database save</span>
-                    </div>
+            {/* AI Tab Content */}
+            {aiFlows[activeAITab] && (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                
+                <div className="lg:col-span-5 space-y-4">
+                  <div className="text-xs font-bold text-purple-400 tracking-wider uppercase">
+                    CAPABILITY #{aiFlows[activeAITab].id}
+                  </div>
+                  <h3 className="text-2xl font-bold text-white">
+                    {aiFlows[activeAITab].name}
+                  </h3>
+                  <p className="text-slate-400 text-sm leading-relaxed">
+                    {aiFlows[activeAITab].description}
+                  </p>
 
-                    <button
-                      onClick={openBookDemoModal}
-                      className="mt-2 px-6 py-3 bg-[#7C3AED] hover:bg-[#4338CA] text-white font-semibold rounded-full shadow-lg shadow-purple-600/30 transition-all text-sm inline-flex items-center gap-2"
-                    >
-                      <span>Try AI Workflow</span>
-                      <ArrowRight size={16} />
-                    </button>
+                  <div className="inline-flex items-center gap-2 text-xs text-purple-300 bg-purple-950/60 px-3 py-1.5 rounded-lg border border-purple-800/50">
+                    <ShieldCheck size={14} className="text-purple-400" />
+                    <span>Requires Doctor Confirmation before saving</span>
                   </div>
 
-                  {/* Conversational Command & Confirmation Mockup */}
-                  <div className="md:col-span-7 bg-slate-950 rounded-2xl p-5 border border-slate-800 space-y-4 font-sans">
-                    
-                    {/* User Command Bubble */}
-                    <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-full bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center text-xs font-bold flex-shrink-0">
-                        Dr
-                      </div>
-                      <div className="bg-blue-950/60 border border-blue-500/30 rounded-2xl rounded-tl-none p-3.5 text-xs text-blue-100 max-w-sm">
-                        <div className="font-mono text-[10px] text-blue-400 mb-1">Doctor Command</div>
-                        "{currentFlow.userInput}"
-                      </div>
+                  <div className="pt-2">
+                    <button
+                      onClick={openSignupModal}
+                      className="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-bold text-xs shadow-md transition-all flex items-center gap-2"
+                    >
+                      <span>Try AI Workflow</span>
+                      <ArrowRight size={14} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* AI Interactive Chat Visual */}
+                <div className="lg:col-span-7 bg-slate-950 rounded-xl p-5 border border-slate-800 space-y-4">
+                  
+                  {/* Doctor Input Bubble */}
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-600/30 text-blue-400 flex items-center justify-center font-bold text-xs">
+                      Dr
                     </div>
-
-                    {/* AI Response & Action Preparation Bubble */}
-                    <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-full bg-purple-600/20 text-purple-400 border border-purple-500/30 flex items-center justify-center text-xs font-bold flex-shrink-0">
-                        AI
-                      </div>
-                      <div className="bg-slate-900 border border-purple-500/30 rounded-2xl rounded-tl-none p-4 text-xs text-slate-200 w-full space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="font-mono text-[10px] text-purple-400 font-bold">Action Prepared</span>
-                          <span className="px-2 py-0.5 bg-amber-500/20 text-amber-300 rounded text-[9px] font-bold">Awaiting Confirmation</span>
-                        </div>
-                        <p className="text-slate-300 font-medium">{currentFlow.aiResponse}</p>
-
-                        {/* Extracted Details Table */}
-                        <div className="bg-slate-950/80 rounded-xl p-3 border border-slate-800 space-y-1.5">
-                          {currentFlow.actionDetails.map((det, i) => (
-                            <div key={i} className="flex justify-between text-[11px]">
-                              <span className="text-slate-400">{det.label}:</span>
-                              <span className="text-white font-semibold">{det.val}</span>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Confirmation Bar */}
-                        <div className="pt-2 flex items-center gap-2">
-                          <button className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold shadow transition-colors flex items-center gap-1.5">
-                            <Check size={14} />
-                            <span>Confirm & Save</span>
-                          </button>
-                          <button className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium">
-                            Edit Details
-                          </button>
-                        </div>
-                      </div>
+                    <div className="bg-slate-900 p-3.5 rounded-2xl rounded-tl-none border border-slate-800 text-xs text-slate-200">
+                      <p className="font-mono text-blue-300">{`"${aiFlows[activeAITab].userInput}"`}</p>
                     </div>
+                  </div>
 
+                  {/* AI Response Box */}
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-purple-600/30 text-purple-400 flex items-center justify-center font-bold text-xs">
+                      <Bot size={16} />
+                    </div>
+                    <div className="flex-1 bg-purple-950/40 p-4 rounded-2xl rounded-tl-none border border-purple-900/50 text-xs space-y-3">
+                      
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-purple-300 text-[11px] uppercase tracking-wider">Action Prepared</span>
+                        <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30">Awaiting confirmation</span>
+                      </div>
+
+                      <p className="text-slate-300">{aiFlows[activeAITab].aiResponse}</p>
+
+                      <div className="bg-slate-900/90 p-3 rounded-lg border border-slate-800 space-y-1.5 text-[11px]">
+                        {aiFlows[activeAITab].actionDetails.map((det, i) => (
+                          <div key={i} className="flex justify-between border-b border-slate-800/60 pb-1 last:border-0 last:pb-0">
+                            <span className="text-slate-400">{det.label}:</span>
+                            <span className="font-semibold text-white">{det.val}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="flex gap-2 pt-1">
+                        <button className="px-3 py-1.5 bg-emerald-600 text-white font-bold rounded text-[11px] flex items-center gap-1 hover:bg-emerald-500">
+                          <Check size={12} /> Confirm & Save
+                        </button>
+                        <button className="px-3 py-1.5 bg-slate-800 text-slate-300 font-medium rounded text-[11px] hover:bg-slate-700">
+                          Edit Details
+                        </button>
+                      </div>
+
+                    </div>
                   </div>
 
                 </div>
-              );
-            })()}
+
+              </div>
+            )}
 
           </div>
 
         </div>
+        
+        {/* Glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl -z-0 pointer-events-none" />
       </section>
 
-      {/* REVENUE / CLINIC PERFORMANCE SECTION */}
-      <section id="revenue" className="py-24 bg-white border-b border-slate-200/80">
+      {/* REVENUE ANALYTICS SHOWCASE SECTION */}
+      <section id="revenue" className="py-20 bg-white border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
-          <div className="text-center max-w-3xl mx-auto mb-16" data-aos="fade-up">
-            <span className="text-xs font-bold uppercase tracking-widest text-[#06B6D4] bg-cyan-100 px-3 py-1 rounded-full">
+          
+          <div className="text-center max-w-3xl mx-auto mb-14" data-aos="fade-up">
+            <span className="text-xs font-bold tracking-widest text-[#0D9488] uppercase bg-teal-50 px-3 py-1 rounded-full border border-teal-100">
               Financial Intelligence
             </span>
-            <h2 className="mt-4 text-3xl sm:text-4xl font-extrabold text-[#0F172A] tracking-tight">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-[#0F172A] mt-3 tracking-tight">
               See Your Clinic Revenue Clearly
             </h2>
-            <p className="mt-4 text-base sm:text-lg text-[#475569]">
+            <p className="text-base sm:text-lg text-slate-600 mt-3">
               Get real-time visibility into your clinic's daily collections, monthly performance, and outstanding balances.
             </p>
           </div>
 
-          <div className="bg-[#F8FAFC] border border-slate-200 rounded-3xl p-6 sm:p-10 shadow-xl" data-aos="fade-up">
-            <div className="grid lg:grid-cols-3 gap-6 mb-8">
-              <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
-                <div className="text-xs font-bold uppercase tracking-wider text-[#475569]">Today's Revenue</div>
-                <div className="mt-2 text-3xl font-extrabold text-[#0F172A]">Tracked Live</div>
-                <div className="mt-2 text-xs font-semibold text-emerald-600 flex items-center gap-1">
-                  <TrendingUp size={14} />
-                  <span>Real-time collection monitoring</span>
-                </div>
-              </div>
-
-              <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
-                <div className="text-xs font-bold uppercase tracking-wider text-[#475569]">Monthly Revenue & Trends</div>
-                <div className="mt-2 text-3xl font-extrabold text-[#2563EB]">Categorized</div>
-                <div className="mt-2 text-xs font-semibold text-[#475569]">Breakdown by dental procedures</div>
-              </div>
-
-              <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
-                <div className="text-xs font-bold uppercase tracking-wider text-[#475569]">Outstanding Balances</div>
-                <div className="mt-2 text-3xl font-extrabold text-amber-600">Pending Dues</div>
-                <div className="mt-2 text-xs font-semibold text-[#475569]">Clear unpaid patient tracking</div>
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12" data-aos="fade-up" data-aos-delay="100">
+            <div className="bg-[#F8FAFC] p-6 rounded-2xl border border-slate-200/80 shadow-sm text-center">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">TODAY'S REVENUE</span>
+              <h3 className="text-2xl font-extrabold text-[#0F172A]">Tracked Live</h3>
+              <p className="text-xs text-emerald-600 font-medium mt-1">Real-time collection monitoring</p>
             </div>
 
-            {/* Dashboard Visual Frame */}
-            <div className="relative rounded-2xl overflow-hidden border border-slate-200 shadow-md bg-white">
+            <div className="bg-[#F8FAFC] p-6 rounded-2xl border border-slate-200/80 shadow-sm text-center">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">MONTHLY REVENUE & TRENDS</span>
+              <h3 className="text-2xl font-extrabold text-[#2563EB]">Categorized</h3>
+              <p className="text-xs text-slate-500 font-medium mt-1">Breakdown by dental procedures</p>
+            </div>
+
+            <div className="bg-[#F8FAFC] p-6 rounded-2xl border border-slate-200/80 shadow-sm text-center">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">OUTSTANDING BALANCES</span>
+              <h3 className="text-2xl font-extrabold text-amber-600">Pending Dues</h3>
+              <p className="text-xs text-slate-500 font-medium mt-1">Clear unpaid patient tracking</p>
+            </div>
+          </div>
+
+          {/* Screenshot Preview */}
+          <div className="bg-slate-900/5 p-3 rounded-2xl border border-slate-200 shadow-2xl max-w-5xl mx-auto" data-aos="zoom-in">
+            <div className="bg-white rounded-xl overflow-hidden shadow-inner">
               <img
                 src={dashboardimg}
-                alt="MyDentalClinicPro Revenue Analytics Dashboard"
+                alt="my dental clinic pro patient records dashboard"
                 className="w-full h-auto object-cover"
               />
             </div>
-
           </div>
 
         </div>
       </section>
 
-      {/* PATIENT ENGAGEMENT / NOTIFICATION SECTION */}
-      <section id="patient-engagement" className="py-24 bg-[#F8FAFC]">
+      {/* PATIENT REMINDERS & ENGAGEMENT SECTION */}
+      <section id="patient-engagement" className="py-20 bg-[#F8FAFC]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
-          <div className="grid lg:grid-cols-12 gap-12 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             
             {/* Left Content */}
             <div className="lg:col-span-6 space-y-6" data-aos="fade-right">
-              <span className="text-xs font-bold uppercase tracking-widest text-[#06B6D4] bg-cyan-100 px-3 py-1 rounded-full">
+              <span className="text-xs font-bold tracking-widest text-[#2563EB] uppercase bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
                 Automated Reminders
               </span>
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-[#0F172A] tracking-tight">
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-[#0F172A] tracking-tight leading-tight">
                 Keep Patients Connected
               </h2>
-              <p className="text-base sm:text-lg text-[#475569] leading-relaxed">
+              <p className="text-slate-600 text-base sm:text-lg leading-relaxed">
                 Never miss a patient follow-up with automated reminders and clinic notifications.
               </p>
 
               <div className="space-y-4 pt-2">
-                <div className="flex items-start gap-4 p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
-                  <div className="p-3 rounded-xl bg-blue-50 text-[#2563EB]">
+                <div className="flex items-start gap-4 bg-white p-4.5 rounded-xl border border-slate-200/80 shadow-sm">
+                  <div className="p-2.5 bg-blue-50 text-[#2563EB] rounded-xl mt-0.5">
                     <Bell size={20} />
                   </div>
                   <div>
-                    <h3 className="font-bold text-[#0F172A]">Appointment Reminders</h3>
-                    <p className="text-xs sm:text-sm text-[#475569] mt-0.5">Timely notifications so patients arrive on time for scheduled visits.</p>
+                    <h3 className="font-bold text-slate-900 text-base">Appointment Reminders</h3>
+                    <p className="text-xs sm:text-sm text-slate-600 mt-0.5">Timely notifications so patients arrive on time for scheduled visits.</p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-4 p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
-                  <div className="p-3 rounded-xl bg-cyan-50 text-[#06B6D4]">
+                <div className="flex items-start gap-4 bg-white p-4.5 rounded-xl border border-slate-200/80 shadow-sm">
+                  <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl mt-0.5">
                     <Calendar size={20} />
                   </div>
                   <div>
-                    <h3 className="font-bold text-[#0F172A]">Care Follow-Up Reminders</h3>
-                    <p className="text-xs sm:text-sm text-[#475569] mt-0.5">Notify patients when post-procedure checkups or root canals are due.</p>
+                    <h3 className="font-bold text-slate-900 text-base">Care Follow-Up Reminders</h3>
+                    <p className="text-xs sm:text-sm text-slate-600 mt-0.5">Notify patients when post-procedure checkups or root canal follow-ups are due.</p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-4 p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
-                  <div className="p-3 rounded-xl bg-emerald-50 text-emerald-600">
+                <div className="flex items-start gap-4 bg-white p-4.5 rounded-xl border border-slate-200/80 shadow-sm">
+                  <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl mt-0.5">
                     <CreditCard size={20} />
                   </div>
                   <div>
-                    <h3 className="font-bold text-[#0F172A]">Payment Reminders</h3>
-                    <p className="text-xs sm:text-sm text-[#475569] mt-0.5">Automated updates regarding outstanding clinic treatment balances.</p>
+                    <h3 className="font-bold text-slate-900 text-base">Payment Reminders</h3>
+                    <p className="text-xs sm:text-sm text-slate-600 mt-0.5">Automated updates regarding outstanding clinic treatment balances.</p>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Right Phone Mockup */}
+            {/* Right Side: Phone Mock Preview */}
             <div className="lg:col-span-6 flex justify-center" data-aos="fade-left">
-              <div className="w-full max-w-sm bg-[#0F172A] p-4 rounded-[40px] shadow-2xl border-4 border-slate-800 relative">
-                <div className="w-32 h-4 bg-slate-800 mx-auto rounded-full mb-4" />
+              <div className="w-full max-w-sm bg-slate-900 p-4 rounded-[40px] shadow-2xl border-4 border-slate-800 relative">
+                
+                {/* Phone Notch */}
+                <div className="w-32 h-4 bg-slate-800 rounded-b-xl mx-auto mb-4" />
 
-                <div className="bg-slate-950 rounded-[28px] p-4 text-white space-y-3 min-h-[480px]">
-                  <div className="text-center text-xs font-semibold text-slate-400 py-2">
-                    Clinic Notification Feed
+                <div className="bg-slate-950 rounded-[28px] p-4 text-white space-y-4 font-sans text-xs">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <span className="font-bold text-slate-300">Clinic Notification Feed</span>
+                    <Bell size={14} className="text-blue-400" />
                   </div>
 
-                  <div className="bg-slate-900/90 border border-blue-500/30 rounded-2xl p-4 shadow-lg space-y-1.5">
-                    <div className="flex items-center justify-between text-xs text-blue-400 font-semibold">
-                      <span className="flex items-center gap-1"><Bell size={12} /> Appointment</span>
-                      <span className="text-[10px] text-slate-400">Just Now</span>
+                  {/* Reminder 1 */}
+                  <div className="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800 space-y-1">
+                    <div className="flex justify-between items-center text-[10px] text-blue-400 font-bold uppercase">
+                      <span>Appointment</span>
+                      <span className="text-slate-500">Just Now</span>
                     </div>
-                    <div className="text-xs font-bold text-white">Tomorrow's Visit</div>
-                    <div className="text-xs text-slate-300">
-                      "Your appointment with Dr. Swati Lahane is tomorrow at 10:30 AM."
-                    </div>
+                    <div className="font-bold text-white text-xs">Tomorrow's Visit</div>
+                    <div className="text-slate-400 text-[11px]">"Your appointment with Dr. Swati Lahane is tomorrow at 10:30 AM."</div>
                   </div>
 
-                  <div className="bg-slate-900/90 border border-purple-500/30 rounded-2xl p-4 shadow-lg space-y-1.5">
-                    <div className="flex items-center justify-between text-xs text-purple-400 font-semibold">
-                      <span className="flex items-center gap-1"><Calendar size={12} /> Care Follow-Up</span>
-                      <span className="text-[10px] text-slate-400">2h ago</span>
+                  {/* Reminder 2 */}
+                  <div className="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800 space-y-1">
+                    <div className="flex justify-between items-center text-[10px] text-purple-400 font-bold uppercase">
+                      <span>Care Follow-Up</span>
+                      <span className="text-slate-500">2h ago</span>
                     </div>
-                    <div className="text-xs font-bold text-white">Dental Follow-up</div>
-                    <div className="text-xs text-slate-300">
-                      "Your dental follow-up checkup is due this week."
-                    </div>
+                    <div className="font-bold text-white text-xs">Dental Follow-up</div>
+                    <div className="text-slate-400 text-[11px]">"Your dental follow-up checkup is due this week."</div>
                   </div>
 
-                  <div className="bg-slate-900/90 border border-emerald-500/30 rounded-2xl p-4 shadow-lg space-y-1.5">
-                    <div className="flex items-center justify-between text-xs text-emerald-400 font-semibold">
-                      <span className="flex items-center gap-1"><CreditCard size={12} /> Billing</span>
-                      <span className="text-[10px] text-slate-400">Yesterday</span>
+                  {/* Reminder 3 */}
+                  <div className="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800 space-y-1">
+                    <div className="flex justify-between items-center text-[10px] text-emerald-400 font-bold uppercase">
+                      <span>Billing</span>
+                      <span className="text-slate-500">Yesterday</span>
                     </div>
-                    <div className="text-xs font-bold text-white">Payment Due</div>
-                    <div className="text-xs text-slate-300">
-                      "Your outstanding clinic payment balance is due."
-                    </div>
+                    <div className="font-bold text-white text-xs">Payment Due</div>
+                    <div className="text-slate-400 text-[11px]">"Your outstanding clinic payment balance is due."</div>
                   </div>
 
                 </div>
 
-                <div className="w-28 h-1 bg-slate-700 mx-auto rounded-full mt-3" />
+                {/* Phone Bar */}
+                <div className="w-24 h-1 bg-slate-700 rounded-full mx-auto mt-4" />
               </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* WHY MY DENTAL CLINIC PRO SECTION */}
+      <section id="why-us" className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            
+            <div className="lg:col-span-6 space-y-6" data-aos="fade-right">
+              <span className="text-xs font-bold tracking-widest text-[#2563EB] uppercase bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
+                Designed for Simplicity
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-[#0F172A] tracking-tight leading-tight">
+                Simple Dental Practice Management, Without the Complexity
+              </h2>
+              <p className="text-slate-600 text-base sm:text-lg leading-relaxed">
+                Many practice management platforms are cluttered with enterprise hospital features that solo dentists simply do not need. My Dental Clinic Pro is built specifically to provide a focused, practical workflow for everyday clinical recordkeeping.
+              </p>
+
+              <div className="space-y-4 pt-2">
+                <div className="flex items-start gap-3.5 bg-[#F8FAFC] p-4 rounded-xl border border-slate-200/80 shadow-sm">
+                  <div className="p-2 bg-blue-50 text-[#2563EB] rounded-lg mt-0.5">
+                    <Users size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-base">Organized Patient Information</h3>
+                    <p className="text-xs sm:text-sm text-slate-600 mt-0.5">Store contact info, medical background, and patient charts in structured digital records.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3.5 bg-[#F8FAFC] p-4 rounded-xl border border-slate-200/80 shadow-sm">
+                  <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg mt-0.5">
+                    <Stethoscope size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-base">Detailed Visit & Treatment History</h3>
+                    <p className="text-xs sm:text-sm text-slate-600 mt-0.5">Log clinical notes, procedures performed, and past visit history at a glance.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3.5 bg-[#F8FAFC] p-4 rounded-xl border border-slate-200/80 shadow-sm">
+                  <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg mt-0.5">
+                    <CreditCard size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-base">Clear Payment & Amount Records</h3>
+                    <p className="text-xs sm:text-sm text-slate-600 mt-0.5">Track total visit charges, payments received, and pending balances seamlessly.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="lg:col-span-6" data-aos="fade-left">
+              <div className="bg-[#F8FAFC] rounded-2xl p-8 border border-slate-200 shadow-xl space-y-6">
+                <h3 className="text-xl font-bold text-[#0F172A] pb-4 border-b border-slate-200 flex items-center gap-2">
+                  <Building2 className="text-[#2563EB]" size={22} />
+                  <span>Focused Dental Software for Everyday Practice</span>
+                </h3>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between text-sm py-2.5 border-b border-slate-200/80">
+                    <span className="text-slate-600 font-medium">Targeted Audience</span>
+                    <span className="font-semibold text-[#0F172A]">Solo Dentists & all Clinics</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm py-2.5 border-b border-slate-200/80">
+                    <span className="text-slate-600 font-medium">Record Access Speed</span>
+                    <span className="font-semibold text-[#0F172A]">Instant Search & Lookup</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm py-2.5 border-b border-slate-200/80">
+                    <span className="text-slate-600 font-medium">Setup Time</span>
+                    <span className="font-semibold text-[#0F172A]">Immediate Cloud Access</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm py-2.5 border-b border-slate-200/80">
+                    <span className="text-slate-600 font-medium">Learning Curve</span>
+                    <span className="font-semibold text-[#0F172A]">Simple & Intuitive</span>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    onClick={openSignupModal}
+                    className="w-full py-3 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-xl font-bold text-sm shadow-md transition-all"
+                  >
+                    Start Managing Your Clinic Today
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* DENTIST / SOLO PRACTICE SECTION */}
+      <section id="solo-dentist" className="py-20 bg-[#F8FAFC] border-t border-slate-200/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="max-w-4xl mx-auto bg-gradient-to-r from-blue-900 to-slate-900 text-white rounded-3xl p-8 sm:p-12 shadow-2xl relative overflow-hidden" data-aos="zoom-in">
+            <div className="relative z-10 space-y-6">
+              
+              <span className="text-xs font-bold tracking-widest text-blue-300 uppercase bg-blue-500/20 px-3.5 py-1 rounded-full border border-blue-400/30 inline-block">
+                Solo Dentist Solution
+              </span>
+
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight">
+                Dental Clinic Management Software for Solo Dentists
+              </h2>
+
+              <p className="text-blue-100 text-base sm:text-lg leading-relaxed">
+                Running a dental practice shouldn't require complicated software. My Dental Clinic Pro provides a focused way for dentists to organize patient records, visits, treatment history, and payment information.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
+                <div className="flex items-center gap-3 bg-white/10 backdrop-blur p-3.5 rounded-xl border border-white/10">
+                  <CheckCircle2 className="text-emerald-400 flex-shrink-0" size={20} />
+                  <span className="text-sm font-semibold text-white">Single-dentist workflow optimization</span>
+                </div>
+                <div className="flex items-center gap-3 bg-white/10 backdrop-blur p-3.5 rounded-xl border border-white/10">
+                  <CheckCircle2 className="text-emerald-400 flex-shrink-0" size={20} />
+                  <span className="text-sm font-semibold text-white">Fast patient visit & procedure entry</span>
+                </div>
+                <div className="flex items-center gap-3 bg-white/10 backdrop-blur p-3.5 rounded-xl border border-white/10">
+                  <CheckCircle2 className="text-emerald-400 flex-shrink-0" size={20} />
+                  <span className="text-sm font-semibold text-white">Complete treatment history tracking</span>
+                </div>
+                <div className="flex items-center gap-3 bg-white/10 backdrop-blur p-3.5 rounded-xl border border-white/10">
+                  <CheckCircle2 className="text-emerald-400 flex-shrink-0" size={20} />
+                  <span className="text-sm font-semibold text-white">Clear financial & payment summaries</span>
+                </div>
+              </div>
+
+              <div className="pt-4">
+                <button
+                  onClick={openSignupModal}
+                  className="px-8 py-3.5 bg-white text-[#2563EB] hover:bg-blue-50 rounded-xl font-extrabold text-sm shadow-lg transition-all"
+                >
+                  Get Started Free
+                </button>
+              </div>
+
+            </div>
+
+            {/* Background Accent Graphics */}
+            <div className="absolute top-0 right-0 -mr-16 -mt-16 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl" />
+          </div>
+
+        </div>
+      </section>
+
+      {/* HOW IT WORKS */}
+      <section id="how-it-works" className="py-20 bg-white border-t border-slate-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="text-center max-w-3xl mx-auto mb-16" data-aos="fade-up">
+            <span className="text-xs font-bold tracking-widest text-[#2563EB] uppercase bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
+              Simple 3-Step Process
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-[#0F172A] mt-3 tracking-tight">
+              How My Dental Clinic Pro Works
+            </h2>
+            <p className="text-base sm:text-lg text-slate-600 mt-3">
+              Streamline your daily clinic workflow in three straightforward steps.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            
+            {/* Step 1 */}
+            <div className="bg-[#F8FAFC] rounded-2xl p-8 border border-slate-200/80 shadow-sm relative group hover:shadow-md transition-all" data-aos="fade-up" data-aos-delay="100">
+              <span className="text-4xl font-black text-blue-100 group-hover:text-blue-200 transition-colors block mb-4">
+                01
+              </span>
+              <div className="w-10 h-10 rounded-lg bg-blue-50 text-[#2563EB] flex items-center justify-center mb-4">
+                <UserPlus size={22} />
+              </div>
+              <h3 className="text-xl font-bold text-[#0F172A] mb-2">
+                Add Patient
+              </h3>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                Create and maintain patient information, medical details, and contact information.
+              </p>
+            </div>
+
+            {/* Step 2 */}
+            <div className="bg-[#F8FAFC] rounded-2xl p-8 border border-slate-200/80 shadow-sm relative group hover:shadow-md transition-all" data-aos="fade-up" data-aos-delay="200">
+              <span className="text-4xl font-black text-blue-100 group-hover:text-blue-200 transition-colors block mb-4">
+                02
+              </span>
+              <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center mb-4">
+                <Stethoscope size={22} />
+              </div>
+              <h3 className="text-xl font-bold text-[#0F172A] mb-2">
+                Record Visits
+              </h3>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                Keep track of patient visits, clinical notes, procedures performed, and treatment details.
+              </p>
+            </div>
+
+            {/* Step 3 */}
+            <div className="bg-[#F8FAFC] rounded-2xl p-8 border border-slate-200/80 shadow-sm relative group hover:shadow-md transition-all" data-aos="fade-up" data-aos-delay="300">
+              <span className="text-4xl font-black text-blue-100 group-hover:text-blue-200 transition-colors block mb-4">
+                03
+              </span>
+              <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center mb-4">
+                <CreditCard size={22} />
+              </div>
+              <h3 className="text-xl font-bold text-[#0F172A] mb-2">
+                Track Amounts
+              </h3>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                Maintain payment and amount records associated with visits to keep clinical finances organized.
+              </p>
             </div>
 
           </div>
@@ -1083,29 +1259,95 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* WHY CLINICS CHOOSE US */}
-      <section className="py-24 bg-white border-b border-slate-200/80">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
-          <div className="text-center max-w-3xl mx-auto mb-16" data-aos="fade-up">
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-[#0F172A] tracking-tight">
-              Why Dental Clinics Choose <span className="text-[#2563EB]">MyDentalClinicPro</span>
+      {/* SEO CONTENT SECTION */}
+      <section className="py-20 bg-[#F8FAFC] border-t border-slate-200/80">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8" data-aos="fade-up">
+          
+          <div className="bg-white rounded-3xl p-8 sm:p-12 border border-slate-200/80 shadow-sm space-y-6 text-[#334155] leading-relaxed">
+            <span className="text-xs font-bold tracking-widest text-[#2563EB] uppercase bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
+              Clinical Practice Insights
+            </span>
+            
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-[#0F172A] tracking-tight">
+              What Is Dental Clinic Management Software?
             </h2>
+
+            <p className="text-base sm:text-lg text-slate-700">
+              Dental clinic management software is a dedicated digital application designed to assist dentists in organizing patient profiles, logging clinical treatments, managing appointment visits, and tracking financial balances. For modern dental practitioners, maintaining paper-based charts or complex spreadsheets consumes valuable time that could otherwise be dedicated to patient care.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
+              <div className="bg-[#F8FAFC] p-5 rounded-2xl border border-slate-200/70">
+                <h3 className="text-base font-bold text-[#0F172A] mb-2 flex items-center gap-2">
+                  <Users size={18} className="text-[#2563EB]" />
+                  <span>Organized Patient Records</span>
+                </h3>
+                <p className="text-sm text-slate-600">
+                  Store demographic details, contact info, and medical histories securely. Having quick access to complete patient profiles enables dentists to deliver personalized care efficiently during every consultation.
+                </p>
+              </div>
+
+              <div className="bg-[#F8FAFC] p-5 rounded-2xl border border-slate-200/70">
+                <h3 className="text-base font-bold text-[#0F172A] mb-2 flex items-center gap-2">
+                  <Clock size={18} className="text-indigo-600" />
+                  <span>Visit & Treatment History</span>
+                </h3>
+                <p className="text-sm text-slate-600">
+                  Accurate treatment recording ensures that past procedures, tooth charts, clinical observations, and follow-up schedules are documented sequentially for accurate future references.
+                </p>
+              </div>
+            </div>
+
+            <p className="text-base text-slate-700">
+              Furthermore, tracking amounts and payments associated with every visit helps dentists maintain healthy cash flow without needing full-scale accounting suites. My Dental Clinic Pro offers a focused, dentist-first approach designed specifically to keep patient records, treatment histories, and payment logs straightforward and accessible.
+            </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-6">
-            {benefitsList.map((b, i) => {
-              const BIcon = b.icon;
+        </div>
+      </section>
+
+      {/* FAQ SECTION */}
+      <section id="faq" className="py-20 bg-white border-t border-slate-100">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="text-center max-w-3xl mx-auto mb-14" data-aos="fade-up">
+            <span className="text-xs font-bold tracking-widest text-[#2563EB] uppercase bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
+              Common Questions
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-[#0F172A] mt-3 tracking-tight">
+              Frequently Asked Questions
+            </h2>
+            <p className="text-base sm:text-lg text-slate-600 mt-3">
+              Find quick answers to common questions about My Dental Clinic Pro.
+            </p>
+          </div>
+
+          <div className="space-y-4" data-aos="fade-up" data-aos-delay="100">
+            {faqList.map((faq, idx) => {
+              const isOpen = openFaqIndex === idx;
               return (
                 <div
-                  key={i}
-                  data-aos="zoom-in"
-                  data-aos-delay={i * 80}
-                  className="bg-[#F8FAFC] rounded-2xl p-6 border border-slate-200/80 hover:shadow-lg transition-all"
+                  key={idx}
+                  className="bg-[#F8FAFC] rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden transition-all"
                 >
-                  <BIcon size={24} className="text-[#2563EB] mb-3" />
-                  <h3 className="text-base font-bold text-[#0F172A]">{b.title}</h3>
-                  <p className="mt-2 text-xs text-[#475569] leading-relaxed">{b.desc}</p>
+                  <button
+                    onClick={() => setOpenFaqIndex(isOpen ? -1 : idx)}
+                    className="w-full px-6 py-4 text-left flex items-center justify-between gap-4 font-bold text-slate-900 hover:text-[#2563EB] transition-colors"
+                  >
+                    <span className="text-base sm:text-lg">{faq.q}</span>
+                    <ChevronDown
+                      size={20}
+                      className={`text-slate-400 transition-transform duration-200 flex-shrink-0 ${
+                        isOpen ? "rotate-180 text-[#2563EB]" : ""
+                      }`}
+                    />
+                  </button>
+
+                  {isOpen && (
+                    <div className="px-6 pb-5 pt-1 text-sm sm:text-base text-slate-600 border-t border-slate-200/80 leading-relaxed bg-white/60">
+                      {faq.a}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -1114,262 +1356,84 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* SECURITY / TRUST SECTION */}
-      <section className="py-20 bg-[#0F172A] text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
-          <div className="text-center max-w-3xl mx-auto mb-12" data-aos="fade-up">
-            <ShieldCheck size={40} className="mx-auto text-[#06B6D4] mb-4" />
-            <h2 className="text-3xl font-extrabold text-white tracking-tight">
-              Your Clinic. Your Data. Your Control.
-            </h2>
-            <p className="mt-3 text-slate-400">
-              Built with enterprise security standards, role-based clinic scoping, and encrypted transmission.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-6 text-center max-w-4xl mx-auto">
-            <div className="bg-slate-800/60 p-6 rounded-2xl border border-slate-700/60">
-              <Lock size={24} className="mx-auto text-blue-400 mb-2" />
-              <div className="font-bold text-white">Role-Based Access</div>
-              <div className="text-xs text-slate-400 mt-1">Separate Doctor and Staff access controls.</div>
-            </div>
-
-            <div className="bg-slate-800/60 p-6 rounded-2xl border border-slate-700/60">
-              <Shield size={24} className="mx-auto text-cyan-400 mb-2" />
-              <div className="font-bold text-white">Protected Records</div>
-              <div className="text-xs text-slate-400 mt-1">Encrypted clinic-isolated database storage.</div>
-            </div>
-
-            <div className="bg-slate-800/60 p-6 rounded-2xl border border-slate-700/60">
-              <Zap size={24} className="mx-auto text-purple-400 mb-2" />
-              <div className="font-bold text-white">Continuous Uptime</div>
-              <div className="text-xs text-slate-400 mt-1">Instant web and mobile synchronization 24/7.</div>
-            </div>
-          </div>
-
-        </div>
-      </section>
-
-      {/* TESTIMONIAL */}
-      <section className="py-20 bg-slate-50 text-center">
-        <div className="max-w-3xl mx-auto px-6" data-aos="fade-up">
-          <div className="flex justify-center gap-1 text-amber-400 mb-4">
-            <Star size={20} fill="currentColor" />
-            <Star size={20} fill="currentColor" />
-            <Star size={20} fill="currentColor" />
-            <Star size={20} fill="currentColor" />
-            <Star size={20} fill="currentColor" />
-          </div>
-          <p className="text-xl sm:text-2xl italic text-[#0F172A] font-medium leading-relaxed">
-            “Managing my clinic has become 10x easier. Everything is digital now.”
+      {/* FINAL CALL TO ACTION BAR */}
+      <section className="py-16 bg-[#F8FAFC] border-t border-slate-200/80">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6" data-aos="zoom-in">
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-[#0F172A] tracking-tight">
+            Ready to Simplify Your Dental Practice Management?
+          </h2>
+          <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto">
+            Join dentists using My Dental Clinic Pro to keep patient records, visits, and payment information organized.
           </p>
-          <div className="mt-6">
-            <div className="font-bold text-[#0F172A] text-lg">Dr. Swati Lahane</div>
-            <div className="text-xs text-[#2563EB] font-semibold uppercase tracking-wider mt-0.5">Clinical Advisor & Dentist</div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
+            <button
+              onClick={openSignupModal}
+              className="w-full sm:w-auto px-8 py-3.5 text-base font-bold text-white bg-[#2563EB] hover:bg-[#1D4ED8] rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
+            >
+              <span>Get Started Now</span>
+              <ChevronRight size={18} />
+            </button>
+
+            <button
+              onClick={openBookDemoModal}
+              className="w-full sm:w-auto px-7 py-3.5 text-base font-semibold text-[#2563EB] bg-blue-50 hover:bg-blue-100 rounded-xl transition-all"
+            >
+              Book a Demo
+            </button>
           </div>
-        </div>
-      </section>
-
-      {/* PRICING ANCHOR SECTION */}
-      <section id="pricing" className="py-20 bg-white border-t border-slate-200/80">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
-          <div className="text-center max-w-3xl mx-auto mb-16" data-aos="fade-up">
-            <span className="text-xs font-bold uppercase tracking-widest text-[#2563EB] bg-blue-100 px-3 py-1 rounded-full">
-              SaaS Pricing Plans
-            </span>
-            <h2 className="mt-4 text-3xl sm:text-4xl font-extrabold text-[#0F172A] tracking-tight">
-              Flexible Plans for Modern Dental Clinics
-            </h2>
-            <p className="mt-4 text-base text-[#475569]">
-              Choose the tier that matches your clinic's scale and AI requirements.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            
-            {/* Standard Plan */}
-            <div className="bg-[#F8FAFC] rounded-3xl p-8 border border-slate-200 flex flex-col justify-between" data-aos="fade-right">
-              <div>
-                <div className="text-lg font-bold text-[#0F172A]">Standard Practice Tier</div>
-                <p className="text-xs text-[#475569] mt-1">Ideal for individual dental practitioners & growing clinics.</p>
-
-                <ul className="mt-6 space-y-3 text-sm text-[#0F172A]">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 size={16} className="text-emerald-600" />
-                    <span>Digital Patient & Medical History</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 size={16} className="text-emerald-600" />
-                    <span>Smart Appointment Scheduling</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 size={16} className="text-emerald-600" />
-                    <span>Billing & Financial Analytics</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 size={16} className="text-emerald-600" />
-                    <span>Mobile Access Portal</span>
-                  </li>
-                </ul>
-              </div>
-
-              <button
-                onClick={openSignupModal}
-                className="mt-8 w-full py-3 bg-[#0F172A] hover:bg-slate-800 text-white font-semibold rounded-xl transition-all"
-              >
-                Get Started
-              </button>
-            </div>
-
-            {/* Pro AI Plan */}
-            <div className="bg-gradient-to-b from-blue-900 to-indigo-950 text-white rounded-3xl p-8 border border-blue-700/50 flex flex-col justify-between relative shadow-xl glow-blue" data-aos="fade-left">
-              <div className="absolute top-4 right-4 bg-[#7C3AED] text-white text-[10px] uppercase tracking-widest font-extrabold px-3 py-1 rounded-full">
-                AI Included
-              </div>
-
-              <div>
-                <div className="text-lg font-bold text-white">Pro AI Practice Tier</div>
-                <p className="text-xs text-blue-200 mt-1">Includes 4 conversational AI workflows & prescription assistance.</p>
-
-                <ul className="mt-6 space-y-3 text-sm text-blue-100">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 size={16} className="text-[#06B6D4]" />
-                    <span>Everything in Standard Tier</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 size={16} className="text-purple-300" />
-                    <span>AI Create Patient & Prescription</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 size={16} className="text-purple-300" />
-                    <span>AI Update Patient & Treatment</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 size={16} className="text-[#06B6D4]" />
-                    <span>Automated Reminders & Priority Support</span>
-                  </li>
-                </ul>
-              </div>
-
-              <button
-                onClick={openBookDemoModal}
-                className="mt-8 w-full py-3 bg-[#06B6D4] hover:bg-cyan-300 text-slate-950 font-bold rounded-xl transition-all shadow-md"
-              >
-                Request a Demo
-              </button>
-            </div>
-
-          </div>
-
-        </div>
-      </section>
-
-      {/* FINAL CTA */}
-      <section className="py-20 bg-[#F8FAFC]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          
-          <div className="bg-gradient-to-r from-blue-700 via-blue-800 to-indigo-900 text-white rounded-3xl p-10 sm:p-16 text-center shadow-2xl relative overflow-hidden">
-            <div className="max-w-3xl mx-auto space-y-6 relative z-10">
-              <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight">
-                Ready to Run Your Clinic Smarter?
-              </h2>
-              <p className="text-base sm:text-xl text-blue-100 leading-relaxed">
-                Bring patient management, appointments, treatments, AI-powered workflows and clinic performance into one modern platform.
-              </p>
-
-              <div className="pt-4 flex flex-col sm:flex-row justify-center gap-4">
-                <button
-                  onClick={openSignupModal}
-                  className="px-8 py-4 bg-[#06B6D4] hover:bg-cyan-300 text-slate-950 font-bold rounded-full shadow-lg transition-all transform hover:scale-105"
-                >
-                  Get Started
-                </button>
-
-                <button
-                  onClick={openBookDemoModal}
-                  className="px-8 py-4 bg-white/10 hover:bg-white/20 border border-white/30 text-white font-semibold rounded-full transition-all"
-                >
-                  Request a Demo
-                </button>
-              </div>
-            </div>
-          </div>
-
         </div>
       </section>
 
       {/* FOOTER */}
-      <footer className="bg-[#0F172A] text-slate-400 border-t border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-10">
-
-            {/* Brand Column */}
-            <div className="md:col-span-4 space-y-4">
-              <div className="flex items-center gap-3">
-                <img src={logo} alt="MyDentalClinicPro Logo" className="h-8 w-8 object-contain" />
+      <footer className="bg-slate-900 text-slate-400 py-12 border-t border-slate-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 pb-12 border-b border-slate-800">
+            
+            {/* Column 1: Brand */}
+            <div className="md:col-span-5 space-y-4">
+              <Link to="/" className="flex items-center gap-3">
+                <img src={logo} alt="My Dental Clinic Pro Logo" className="h-8 w-8 object-contain" />
                 <span className="text-xl font-extrabold text-white tracking-tight">
-                  <span className="text-[#2563EB]">My</span>
-                  <span className="text-[#DC2626]">Dental</span>
+                  <span className="text-blue-500">My</span>
+                  <span className="text-red-500 px-0.5">Dental</span>
                   <span className="text-white">ClinicPro</span>
                 </span>
-              </div>
-              <p className="text-sm text-slate-400 leading-relaxed">
-                Modern dental clinic management for appointments, patient care, AI-powered workflows and clinic performance.
+              </Link>
+
+              <p className="text-sm text-slate-400 leading-relaxed max-w-sm">
+                Simple dental clinic management software for dentists. Organize patient records, visit logs, treatment history, and payment tracking in one place.
               </p>
             </div>
 
-            {/* Product Links */}
-            <div className="md:col-span-2 space-y-3">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-white">Product</h3>
+            {/* Column 2: Navigation Links */}
+            <div className="md:col-span-3 space-y-3">
+              <h4 className="text-xs font-bold text-white uppercase tracking-wider">Navigation</h4>
               <ul className="space-y-2 text-sm">
-                <li><a href="#features" className="hover:text-[#06B6D4] transition-colors">Features</a></li>
-                <li><a href="#ai" className="hover:text-[#7C3AED] transition-colors">AI</a></li>
-                <li><a href="#revenue" className="hover:text-[#06B6D4] transition-colors">Revenue</a></li>
-                <li><a href="#pricing" className="hover:text-[#06B6D4] transition-colors">Pricing</a></li>
+                <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
+                <li><a href="#ai" className="hover:text-white transition-colors">AI Workflow</a></li>
+                <li><a href="#revenue" className="hover:text-white transition-colors">Revenue Analytics</a></li>
+                <li><a href="#patient-engagement" className="hover:text-white transition-colors">Patient Reminders</a></li>
+                <li><a href="#why-us" className="hover:text-white transition-colors">Why Choose Us</a></li>
+                <li><a href="#faq" className="hover:text-white transition-colors">FAQ</a></li>
               </ul>
             </div>
 
-            {/* Company Links */}
-            <div className="md:col-span-2 space-y-3">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-white">Company</h3>
-              <ul className="space-y-2 text-sm">
-                <li><Link to="/app/customer-care" className="hover:text-[#06B6D4] transition-colors">Contact & Support</Link></li>
-                <li><Link to="/privacy-policy" className="hover:text-[#06B6D4] transition-colors">Privacy Policy</Link></li>
-              </ul>
-            </div>
-
-            {/* Stay Updated */}
+            {/* Column 3: Legal & Access */}
             <div className="md:col-span-4 space-y-3">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-white">Stay Updated</h3>
-              <p className="text-xs text-slate-400">Subscribe for clinic management tips and SaaS product updates.</p>
-              
-              <form onSubmit={handleNewsletterSubmit} className="flex gap-2">
-                <input
-                  type="email"
-                  placeholder="Enter email"
-                  value={newsletterEmail}
-                  onChange={(e) => setNewsletterEmail(e.target.value)}
-                  className="px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-sm text-white focus:outline-none focus:border-blue-500 w-full"
-                />
-                <button
-                  type="submit"
-                  className="px-4 py-2.5 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold rounded-xl text-sm transition-colors flex-shrink-0"
-                >
-                  Subscribe
-                </button>
-              </form>
-              {newsletterStatus && (
-                <div className="text-xs text-emerald-400 font-medium">{newsletterStatus}</div>
-              )}
+              <h4 className="text-xs font-bold text-white uppercase tracking-wider">Access & Legal</h4>
+              <ul className="space-y-2 text-sm">
+                <li><Link to="/login" className="hover:text-white transition-colors">Clinic Doctor / Staff Login</Link></li>
+                <li><Link to="/privacy-policy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
+                <li><span className="text-slate-500 cursor-default">Terms of Service</span></li>
+              </ul>
             </div>
 
           </div>
 
-          <div className="mt-12 pt-8 border-t border-slate-900 text-center text-xs text-slate-500 space-y-2">
-            <p>© 2026 MyDentalClinicPro. All rights reserved. • <Link to="/privacy-policy" className="text-slate-400 hover:text-[#06B6D4] underline">Privacy Policy</Link></p>
-            <p>Built by Ajaykumar Bhatane and Clinical Advisor Dr. Swati Lahane/Bhatane.</p>
+          <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+            <p>© {new Date().getFullYear()} My Dental Clinic Pro. All rights reserved.</p>
+            <p>Built for simple, organized dental practice management.</p>
           </div>
         </div>
       </footer>
@@ -1385,32 +1449,30 @@ const Landing = () => {
         <MessageCircle size={26} />
       </a>
 
-      {/* SIGNUP REQUEST MODAL (INSTANT OPEN, SUB-MILLISECOND VISIBILITY) */}
+      {/* SIGNUP MODAL (INSTANT OPEN, SUB-MILLISECOND VISIBILITY) */}
       {showSignupModal && (
-        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 modal-backdrop-instant">
-          <div className="w-full max-w-5xl max-h-[94dvh] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col modal-content-instant">
-            
-            {/* Header */}
-            <div className="flex-shrink-0 bg-slate-50 border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 modal-backdrop-instant">
+          <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] relative modal-content-instant">
+            {/* Modal Header */}
+            <div className="flex-shrink-0 bg-slate-900 text-white px-6 py-4 flex items-center justify-between border-b border-slate-800">
               <div>
-                <h3 className="text-xl font-bold text-slate-900">Request Clinic Signup</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Fill Doctor Info and Clinic registration details</p>
+                <h3 className="text-xl font-bold">Register Your Clinic</h3>
+                <p className="text-xs text-slate-400 mt-0.5">Fill in your doctor and clinic details to get started.</p>
               </div>
               <button
-                type="button"
                 onClick={closeSignupModal}
-                className="text-slate-400 hover:text-slate-700 p-2 rounded-lg transition-colors text-lg"
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
               >
-                ✕
+                <X size={20} />
               </button>
             </div>
 
-            {/* Form */}
-            <form onSubmit={handleSignupSubmit} className="flex min-h-0 flex-1 flex-col">
-              <div className="flex-1 min-h-0 overflow-y-auto px-6 py-6 space-y-6">
+            {/* Modal Body */}
+            <form onSubmit={handleSignupSubmit} className="flex-grow overflow-y-auto">
+              <div className="p-6 space-y-6">
                 
                 {signupError && (
-                  <div className="p-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl">
+                  <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl font-medium">
                     {signupError}
                   </div>
                 )}
@@ -1448,55 +1510,51 @@ const Landing = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                     <div>
-                      <label className="label">Email *</label>
+                      <label className="label">Email Address *</label>
                       <input
                         type="email"
                         value={signupForm.email}
                         onChange={(e) => handleSignupInput("email", e.target.value)}
                         className={`input2 w-full ${signupErrors.email ? "border-red-500" : ""}`}
-                        placeholder="Enter doctor email"
+                        placeholder="doctor@clinic.com"
                         required
                       />
                       {signupErrors.email && <p className="mt-1 text-xs text-red-600">{signupErrors.email}</p>}
                     </div>
 
                     <div>
-                      <label className="label">Gender *</label>
-                      <ChoiceSelect
-                        which="user/gender"
-                        value={signupForm.gender}
-                        onChange={(e) => handleSignupInput("gender", e.target.value)}
-                        className="input2 w-full"
-                        required
-                        placeholder="Select Gender"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                    <div>
-                      <label className="label">Primary Phone *</label>
+                      <label className="label">Mobile Number *</label>
                       <input
                         type="tel"
                         inputMode="numeric"
                         value={signupForm.mobile}
                         onChange={(e) => handleSignupInput("mobile", e.target.value)}
                         className={`input2 w-full ${signupErrors.mobile ? "border-red-500" : ""}`}
-                        placeholder="+91 XXXXX XXXXX"
+                        placeholder="10 digit mobile number"
                         required
                       />
                       {signupErrors.mobile && <p className="mt-1 text-xs text-red-600">{signupErrors.mobile}</p>}
                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div>
+                      <label className="label">Gender *</label>
+                      <ChoiceSelect
+                        options={['Male', 'Female', 'Other']}
+                        value={signupForm.gender}
+                        onChange={(val) => handleSignupInput("gender", val)}
+                        className="w-full"
+                      />
+                    </div>
 
                     <div>
-                      <label className="label">Secondary Phone</label>
+                      <label className="label">Registration Number</label>
                       <input
-                        type="tel"
-                        inputMode="numeric"
-                        value={signupForm.secondary_phone_number}
-                        onChange={(e) => handleSignupInput("secondary_phone_number", e.target.value)}
+                        value={signupForm.registration_number}
+                        onChange={(e) => handleSignupInput("registration_number", e.target.value)}
                         className="input2 w-full"
-                        placeholder="Optional"
+                        placeholder="Dental council reg. no."
                       />
                     </div>
                   </div>
