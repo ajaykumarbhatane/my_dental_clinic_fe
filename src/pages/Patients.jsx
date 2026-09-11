@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, Plus, Eye, Edit, Trash2, Phone, User, Stethoscope, X } from 'lucide-react';
+import { Search, Plus, Eye, Edit, Trash2, Phone, User, Stethoscope, Calendar, X } from 'lucide-react';
 import PrescriptionAIReviewModal from '../components/PrescriptionAIReviewModal';
 import { patientApi } from '../api/patientApi';
 import { clinicApi } from '../api/clinicApi';
@@ -1024,7 +1024,7 @@ useEffect(() => {
 
                     <div className="mt-4 space-y-3 text-sm text-slate-600">
                       <div className="flex items-center gap-3 rounded-2xl bg-slate-50 p-3">
-                        <Stethoscope className="h-4 w-4 text-blue-600" />
+                        <Stethoscope className="h-4 w-4 text-blue-600 shrink-0" />
                         <span className="truncate">{treatmentInfo}</span>
                       </div>
 
@@ -1033,9 +1033,14 @@ useEffect(() => {
                         onClick={(e) => e.stopPropagation()}
                         className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 transition hover:bg-slate-100"
                       >
-                        <Phone className="h-4 w-4 text-green-600" />
+                        <Phone className="h-4 w-4 text-green-600 shrink-0" />
                         <span>{patient.mobile || 'N/A'}</span>
                       </a>
+
+                      <div className="flex items-center gap-3 rounded-2xl bg-slate-50 p-3">
+                        <Calendar className="h-4 w-4 text-purple-600 shrink-0" />
+                        <span>Created At: {formatDate(patient.created_at)}</span>
+                      </div>
                     </div>
                   </div>
                 );
@@ -1052,9 +1057,8 @@ useEffect(() => {
                 <tr className="text-sm text-slate-700">
                   <th className="px-5 py-3 text-left font-semibold">Patient</th>
                   <th className="px-5 py-3 text-left font-semibold">Mobile</th>
-                  {/* <th className="px-5 py-3 text-left font-semibold">Doctor</th> */}
                   <th className="px-5 py-3 text-left font-semibold">Treatments</th>
-                  {/* <th className="px-5 py-3 text-left font-semibold">Date</th> */}
+                  <th className="px-5 py-3 text-left font-semibold">Created At</th>
                   <th className="px-5 py-3 text-left font-semibold">Actions</th>
                 </tr>
               </thead>
@@ -1063,13 +1067,13 @@ useEffect(() => {
               <tbody className="divide-y">
                 {loading ? (
                   <tr>
-                    <td colSpan="6" className="text-center py-6 text-gray-500">
+                    <td colSpan="5" className="text-center py-6 text-gray-500">
                       Loading patients...
                     </td>
                   </tr>
                 ) : patients.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="text-center py-6 text-gray-400">
+                    <td colSpan="5" className="text-center py-6 text-gray-400">
                       No patients found
                     </td>
                   </tr>
@@ -1129,8 +1133,8 @@ useEffect(() => {
                         {patient.treatment_summary || (patient.treatment_count > 0 ? `${patient.treatment_count} treatments` : 'No treatments')}
                       </td>
 
-                      {/* Date */}
-                      {/* <td className="px-5 py-3 text-gray-600">
+                      {/* Created At */}
+                      <td className="px-5 py-3 text-gray-600 whitespace-nowrap">
                         {formatDate(patient.created_at)}
                       </td>
 

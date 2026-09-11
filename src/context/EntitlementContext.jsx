@@ -90,14 +90,12 @@ export const EntitlementProvider = ({ children }) => {
         return true;
       }
 
-      // Core features (Patients, Treatments, Dashboard) are always accessible
+      // Core features (Patients, Treatments) are accessible when no active subscription
       const CORE_FEATURES = new Set([
         'PATIENTS',
         'PATIENT_MANAGEMENT',
         'TREATMENTS',
         'TREATMENT_MANAGEMENT',
-        'DASHBOARD',
-        'DASHBOARD_ACCESS',
       ]);
       if (CORE_FEATURES.has(target.toUpperCase())) {
         return true;

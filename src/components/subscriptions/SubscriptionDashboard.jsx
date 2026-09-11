@@ -376,9 +376,12 @@ const ActiveSubscriptionCard = ({ subscription, onChoosePlan, onChangePlan, onRe
   const remainingDays = Number(subscription.remaining_days || 0);
   const daysUsed = Number(subscription.days_used || Math.max(totalDays - remainingDays, 0));
   const progress = totalDays ? Math.min(Math.max((daysUsed / totalDays) * 100, 0), 100) : 0;
-  const rawPlanName = subscription.plan?.name || subscription.current_plan?.name || 'Basic';
-  const planName = rawPlanName === 'Advance' ? 'Advanced' : rawPlanName;
-  const planDescription = subscription.plan?.description || subscription.current_plan?.description || `${planName} subscription plan`;
+  const isTrial = subscription.subscription_type === 'trial' || Number(subscription.amount) === 0;
+  const rawPlanName = subscription.plan?.name || subscription.current_plan?.name || 'Pro';
+  const planName = isTrial ? 'Pro Trial' : (rawPlanName === 'Advance' ? 'Advanced' : rawPlanName);
+  const planDescription = isTrial
+    ? "You're currently enjoying Pro for FREE"
+    : (subscription.plan?.description || subscription.current_plan?.description || `${planName} subscription plan`);
   const statusLabel = (subscription.status || 'active').toUpperCase();
 
   return (
@@ -386,11 +389,19 @@ const ActiveSubscriptionCard = ({ subscription, onChoosePlan, onChangePlan, onRe
       <div className="relative z-10">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <span className="inline-flex items-center gap-2 rounded-full bg-white/12 px-3 py-1 text-[11px] font-semibold tracking-[0.18em] text-white/90 ring-1 ring-white/20 uppercase">
-            <Crown size={13} aria-hidden="true" className="text-amber-300" /> Current Plan
+            {isTrial ? <Sparkles size={13} aria-hidden="true" className="text-cyan-300" /> : <Crown size={13} aria-hidden="true" className="text-amber-300" />}
+            {isTrial ? '✨ Pro Trial' : 'Current Plan'}
           </span>
-          <span className="rounded-full bg-emerald-400/20 px-3.5 py-1 text-[11px] font-bold tracking-wider text-emerald-300 ring-1 ring-emerald-400/30">
-            {statusLabel}
-          </span>
+          <div className="flex items-center gap-2">
+            {isTrial && (
+              <span className="rounded-full bg-cyan-400/20 px-3 py-1 text-[11px] font-bold tracking-wider text-cyan-300 ring-1 ring-cyan-400/30 uppercase">
+                Free Trial
+              </span>
+            )}
+            <span className="rounded-full bg-emerald-400/20 px-3.5 py-1 text-[11px] font-bold tracking-wider text-emerald-300 ring-1 ring-emerald-400/30">
+              {statusLabel}
+            </span>
+          </div>
         </div>
 
         <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
@@ -400,7 +411,7 @@ const ActiveSubscriptionCard = ({ subscription, onChoosePlan, onChangePlan, onRe
           </div>
           <div className="sm:text-right">
             <span className="text-3xl font-bold tracking-tight text-white">{formatCurrency(subscription.amount)}</span>
-            <span className="text-sm font-medium text-blue-200"> / {subscription.duration_days || totalDays || 90} days</span>
+            <span className="text-sm font-medium text-blue-200"> / {subscription.duration_days || totalDays || 30} days</span>
           </div>
         </div>
 
@@ -629,14 +640,23 @@ const SubscriptionHistory = ({ history, showAllHistory = false, onToggleShowAll 
         {visibleHistory.map((item, index) => {
           const itemId = item.id || index;
           const expanded = expandedId === itemId;
+          const isTrialItem = item.subscription_type === 'trial' || Number(item.amount) === 0;
           const rawName = item.plan?.name || 'Subscription';
-          const planName = rawName === 'Advance' ? 'Advanced' : rawName;
+          const displayPlanName = rawName === 'Advance' ? 'Advanced' : rawName;
+          const planName = isTrialItem ? `${displayPlanName} (Trial)` : displayPlanName;
           const badge = getStatusBadge(item.status);
 
           return (
             <article key={itemId} className="flex flex-col rounded-[22px] border border-slate-200 bg-white p-5 shadow-sm transition duration-300 hover:border-blue-300 hover:shadow-md">
               <div className="flex items-center justify-between gap-2">
-                <h3 className="text-base font-bold text-slate-950">{planName}</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-bold text-slate-950">{planName}</h3>
+                  {isTrialItem && (
+                    <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-600 border border-blue-200 uppercase">
+                      Trial
+                    </span>
+                  )}
+                </div>
                 <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${badge.className}`}>
                   ● {badge.label}
                 </span>

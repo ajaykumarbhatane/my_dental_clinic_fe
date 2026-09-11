@@ -31,6 +31,7 @@ import { visitsApi } from '../api/visitsApi';
 import { prescriptionApi } from '../api/prescriptionApi';
 import { useNotification } from '../context/NotificationContext';
 import { formatDate, toISODate, parseDateString } from '../utils/dateUtils';
+import LockedFeatureCard from '../components/common/LockedFeatureCard';
 
 // chart.js imports
 import {
@@ -98,6 +99,7 @@ const Dashboard = () => {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isSubscriptionLocked, setIsSubscriptionLocked] = useState(false);
 
   const [visitChartData, setVisitChartData] = useState([]);
   const [treatmentChartData, setTreatmentChartData] = useState(null);
@@ -389,7 +391,11 @@ const Dashboard = () => {
       });
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
-      setError('Failed to load dashboard data');
+      if (err?.response?.status === 403) {
+        setIsSubscriptionLocked(true);
+      } else {
+        setError('Failed to load dashboard data');
+      }
     } finally {
       setLoading(false);
     }
@@ -855,6 +861,18 @@ const Dashboard = () => {
 
   const upcomingTotalPages = Math.ceil(groupedUpcomingVisits.length / UPCOMING_PER_PAGE);
   const paginatedUpcomingVisits = groupedUpcomingVisits.slice((upcomingCurrentPage - 1) * UPCOMING_PER_PAGE, upcomingCurrentPage * UPCOMING_PER_PAGE);
+
+  if (isSubscriptionLocked) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center p-4">
+        <LockedFeatureCard
+          featureName="Dashboard"
+          description="Your clinic does not have an active subscription plan. Upgrade your plan to access clinic analytics, overview widgets, and revenue details."
+          compact={false}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
