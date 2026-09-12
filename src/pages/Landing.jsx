@@ -72,13 +72,13 @@ const Landing = () => {
     first_name: '',
     last_name: '',
     email: '',
-    gender: 'Male',
+    gender: '',
     mobile: '',
     secondary_phone_number: '',
     date_of_birth: '',
     password: '',
     confirm_password: '',
-    role: 'Doctor',
+    role: 'doctor',
     clinic_name: '',
     contact_number: '',
     qualification: '',
@@ -164,13 +164,13 @@ const Landing = () => {
       first_name: '',
       last_name: '',
       email: '',
-      gender: 'Male',
+      gender: '',
       mobile: '',
       secondary_phone_number: '',
       date_of_birth: '',
       password: '',
       confirm_password: '',
-      role: 'Doctor',
+      role: 'doctor',
       clinic_name: '',
       contact_number: '',
       qualification: '',
@@ -198,6 +198,12 @@ const Landing = () => {
     setSignupError('');
     setSignupSubmitting(true);
 
+    if (!signupForm.gender) {
+      setSignupError('Please select a gender.');
+      setSignupSubmitting(false);
+      return;
+    }
+
     if (signupForm.password !== signupForm.confirm_password) {
       setSignupError('Password and confirm password do not match.');
       setSignupSubmitting(false);
@@ -205,7 +211,12 @@ const Landing = () => {
     }
 
     try {
-      await clinicApi.signupRequest(signupForm);
+      const payload = {
+        ...signupForm,
+        gender: signupForm.gender.toLowerCase(),
+        role: (signupForm.role || 'doctor').toLowerCase(),
+      };
+      await clinicApi.signupRequest(payload);
       const message = 'Signup request submitted successfully. Please wait for admin approval.';
       setGlobalMessage(message);
       setGlobalMessageType('success');
@@ -1541,10 +1552,13 @@ const Landing = () => {
                     <div>
                       <label className="label">Gender *</label>
                       <ChoiceSelect
-                        options={['Male', 'Female', 'Other']}
+                        which="user/gender"
+                        options={['male', 'female', 'other']}
                         value={signupForm.gender}
-                        onChange={(val) => handleSignupInput("gender", val)}
+                        onChange={(e) => handleSignupInput("gender", e.target.value)}
                         className="w-full"
+                        required
+                        placeholder="Select Gender"
                       />
                     </div>
 
