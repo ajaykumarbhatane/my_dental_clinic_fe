@@ -18,12 +18,19 @@ import LockedFeatureCard from '../common/LockedFeatureCard';
 const DashboardLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const { subscription, isModalOpen, closeModal } = useSubscriptionExpiry();
+  const { subscription, isModalOpen, closeModal, checkSubscriptionExpiry } = useSubscriptionExpiry();
   const assistant = useAssistantContext();
   const [assistantOpen, setAssistantOpen] = useState(false);
   const location = useLocation();
   const { hasFeature, loading: entitlementsLoading } = useEntitlements();
   const hasAIAssistant = hasFeature('AI_ASSISTANT');
+
+  // Trigger subscription expiry check whenever user navigates to /app (Dashboard)
+  useEffect(() => {
+    if (location.pathname === '/app') {
+      checkSubscriptionExpiry();
+    }
+  }, [location.pathname, checkSubscriptionExpiry]);
 
   // Close assistant drawer when location changes
   useEffect(() => {
@@ -447,6 +454,7 @@ const DashboardLayout = ({ children }) => {
         setSidebarOpen={setSidebarOpen}
         isExpanded={isExpanded}
         setIsExpanded={setIsExpanded}
+        onDashboardClick={checkSubscriptionExpiry}
       />
       <div className={`relative flex flex-1 flex-col overflow-y-auto overflow-x-hidden transition-all duration-300 pt-14 md:pt-16 ${isExpanded ? 'md:pl-64' : 'md:pl-20'}`}>
         <Header onMenuClick={handleMenuClick} handleMenuClick={handleMenuClick} />

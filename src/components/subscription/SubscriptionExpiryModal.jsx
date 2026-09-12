@@ -1,21 +1,12 @@
-/**
- * SubscriptionExpiryModal
- *
- * Professional modal component for displaying subscription expiry warnings
- * Shows different states: reminder (5-3 days), urgent (2-1 days), expired
- * Fully responsive for desktop and mobile
- * Accessible with proper ARIA attributes
- */
-
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle, AlertTriangle, XCircle, X } from 'lucide-react';
 import { getSubscriptionExpiryState } from '../../utils/subscriptionUtils';
+import { formatDate } from '../../utils/dateUtils';
 
 const SubscriptionExpiryModal = ({ isOpen, subscription, onClose }) => {
   const navigate = useNavigate();
   const modalRef = useRef(null);
-  const focusTrapRef = useRef(null);
 
   const expiryState = getSubscriptionExpiryState(subscription);
 
@@ -33,7 +24,7 @@ const SubscriptionExpiryModal = ({ isOpen, subscription, onClose }) => {
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose]);
 
-  // Handle focus trap
+  // Focus trap
   useEffect(() => {
     if (!isOpen || !modalRef.current) return;
 
@@ -47,20 +38,17 @@ const SubscriptionExpiryModal = ({ isOpen, subscription, onClose }) => {
     const firstElement = focusableElements[0];
     const lastElement = focusableElements[focusableElements.length - 1];
 
-    // Set initial focus to first interactive element
     firstElement.focus();
 
     const handleTabKey = (e) => {
       if (e.key !== 'Tab') return;
 
       if (e.shiftKey) {
-        // Shift + Tab
         if (document.activeElement === firstElement) {
           e.preventDefault();
           lastElement.focus();
         }
       } else {
-        // Tab
         if (document.activeElement === lastElement) {
           e.preventDefault();
           firstElement.focus();
@@ -74,12 +62,10 @@ const SubscriptionExpiryModal = ({ isOpen, subscription, onClose }) => {
 
   const handleRenewClick = () => {
     onClose();
-    // Navigate to subscriptions and request the subscriptions page open the renew modal
     navigate('/app/subscriptions', { state: { openRenewModal: true } });
   };
 
   const handleBackdropClick = (e) => {
-    // Only close if clicking directly on backdrop, not on modal
     if (e.target === e.currentTarget) {
       onClose();
     }
@@ -89,45 +75,22 @@ const SubscriptionExpiryModal = ({ isOpen, subscription, onClose }) => {
     return null;
   }
 
-  // Select icon based on urgency
-  let IconComponent = AlertCircle;
+  let IconComponent = AlertTriangle;
   if (expiryState.type === 'expired') {
     IconComponent = XCircle;
-  } else if (expiryState.urgencyLevel === 'urgent') {
-    IconComponent = AlertTriangle;
   }
 
-  // Format expiry date for display
-  const formatExpiryDate = (dateString) => {
-    if (!dateString) return '';
-    try {
-      const date = new Date(dateString);
-      return new Intl.DateTimeFormat('en-IN', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-      }).format(date);
-    } catch {
-      return dateString;
-    }
-  };
+  const formattedExpiryDate = formatDate(expiryState.expiryDate);
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4 sm:px-6"
-      style={{ backgroundColor: 'rgba(0, 0, 0, 0.45)' }}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
       onClick={handleBackdropClick}
       role="presentation"
     >
-      {/* Modal */}
       <div
         ref={modalRef}
-        className={`
-          relative w-full max-w-md rounded-2xl bg-white shadow-2xl
-          transform transition-all duration-250
-          animate-fade-in
-          ${expiryState.bgColor}
-        `}
+        className="relative w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-2xl transition-all border border-slate-100"
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
@@ -136,78 +99,63 @@ const SubscriptionExpiryModal = ({ isOpen, subscription, onClose }) => {
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          className="absolute right-5 top-5 p-1 text-slate-400 hover:text-slate-600 rounded-lg transition-colors"
           aria-label="Close"
         >
-          <X size={20} aria-hidden="true" />
+          <X size={18} />
         </button>
 
-        {/* Content */}
-        <div className="px-6 py-8 sm:px-8 sm:py-10">
-          {/* Icon */}
-          <div className="mb-6 flex justify-center">
-            <div className={`rounded-full ${expiryState.iconBgColor} p-4`}>
-              <IconComponent size={32} className={expiryState.iconColor} aria-hidden="true" />
-            </div>
+        <div className="flex flex-col items-center text-center">
+          {/* Icon Badge */}
+          <div className="w-14 h-14 rounded-full bg-orange-100/80 text-orange-600 flex items-center justify-center mb-5 border border-orange-200/50">
+            <IconComponent size={28} />
           </div>
 
           {/* Title */}
           <h2
             id="modal-title"
-            className="mb-3 text-center text-xl font-semibold text-slate-900 sm:text-2xl"
+            className="text-xl sm:text-2xl font-bold text-slate-900 mb-1"
           >
             {expiryState.title}
           </h2>
 
-          {/* Plan Name and Expiry */}
-          <div className="mb-6 flex flex-col items-center gap-2 text-center">
-            <p className="text-sm font-medium text-slate-600">
+          {/* Plan Name & Expiry Date */}
+          <div className="space-y-1 my-2">
+            <p className="text-sm font-semibold text-slate-600">
               {expiryState.planName}
             </p>
             {expiryState.expiryDate && (
-              <p className="text-xs text-slate-500">
-                Expires: {formatExpiryDate(expiryState.expiryDate)}
+              <p className="text-xs text-slate-500 font-medium">
+                Expires: {formattedExpiryDate}
               </p>
             )}
             {expiryState.daysRemaining >= 0 && expiryState.type !== 'expired' && (
-              <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-white/50 px-3 py-1">
-                <span className={`text-sm font-semibold ${expiryState.iconColor}`}>
-                  {expiryState.daysRemaining} day{expiryState.daysRemaining !== 1 ? 's' : ''} remaining
-                </span>
-              </div>
+              <p className="text-sm font-bold text-orange-600 pt-1">
+                {expiryState.daysRemaining} day{expiryState.daysRemaining !== 1 ? 's' : ''} remaining
+              </p>
             )}
           </div>
 
           {/* Message */}
           <p
             id="modal-description"
-            className="mb-7 text-center text-sm leading-6 text-slate-700"
+            className="text-xs sm:text-sm text-slate-600 my-4 leading-relaxed max-w-xs"
           >
             {expiryState.message}
           </p>
 
-          {/* Buttons */}
-          <div className="flex flex-col gap-3">
-            {/* Primary CTA */}
+          {/* Action Buttons */}
+          <div className="w-full space-y-3 pt-2">
             <button
               onClick={handleRenewClick}
-              className={`
-                w-full rounded-xl px-6 py-3 text-base font-semibold text-white
-                transition-all duration-200
-                hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2
-                ${expiryState.buttonClass}
-              `}
-              style={{
-                focusRingColor: expiryState.type === 'expired' ? 'rgb(220, 38, 38)' : 'rgb(234, 88, 12)',
-              }}
+              className="w-full py-3 px-4 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold text-sm shadow-md shadow-orange-500/20 transition-all"
             >
               {expiryState.cta}
             </button>
 
-            {/* Secondary action */}
             <button
               onClick={onClose}
-              className="w-full rounded-xl border-2 border-slate-200 px-6 py-3 text-base font-semibold text-slate-700 transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              className="w-full py-3 px-4 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl font-semibold text-sm transition-all"
             >
               Close
             </button>

@@ -7,7 +7,7 @@ import { useRef } from 'react';
 import logo from '../../assets/mydentalclinicpro_logo.png';
 import { useEntitlements } from '../../context/EntitlementContext';
 
-const Sidebar = ({ isOpen, onClose, isExpanded, setIsExpanded, sidebarOpen, setSidebarOpen }) => {
+const Sidebar = ({ isOpen, onClose, isExpanded, setIsExpanded, sidebarOpen, setSidebarOpen, onDashboardClick }) => {
   const location = useLocation();
   const { hasFeature } = useEntitlements();
   const touchStartX = useRef(null);
@@ -177,7 +177,12 @@ const Sidebar = ({ isOpen, onClose, isExpanded, setIsExpanded, sidebarOpen, setS
                 <li key={item.path} className="relative group">
                   <Link
                     to={item.path}
-                    onClick={activeClose}
+                    onClick={() => {
+                      activeClose();
+                      if (item.path === '/app' && onDashboardClick) {
+                        onDashboardClick();
+                      }
+                    }}
                     title={isLocked ? `${item.label} (Locked)` : item.label}
                     aria-label={item.label}
                     className={`

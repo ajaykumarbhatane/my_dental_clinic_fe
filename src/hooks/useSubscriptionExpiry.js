@@ -1,54 +1,37 @@
-/**
- * useSubscriptionExpiry hook
- *
- * Manages subscription expiry modal state and data fetching
- * Used by DashboardLayout to display expiry warnings
- */
-
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { subscriptionService } from '../api/subscriptionService';
 import normalizeApiError from '../utils/errorUtils';
 import { shouldShowSubscriptionWarning } from '../utils/subscriptionUtils';
 
 /**
  * Hook for managing subscription expiry modal
- * @returns {Object} {subscription, loading, error, isModalOpen, closeModal, showOnce}
+ * Whenever called/triggered on Dashboard navigation or click, checks if remaining_days <= 5
  */
 export const useSubscriptionExpiry = () => {
   const [subscription, setSubscription] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [hasShownModal, setHasShownModal] = useState(false);
 
-  // Fetch current subscription on mount
-  useEffect(() => {
-    const fetchSubscription = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await subscriptionService.getCurrentSubscription();
-        const data = response.data;
-        setSubscription(data);
+  const checkSubscriptionExpiry = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await subscriptionService.getCurrentSubscription();
+      const data = response?.data;
+      setSubscription(data);
 
-        // Determine if modal should be shown (only once per session)
-        if (!hasShownModal && shouldShowSubscriptionWarning(data)) {
-          setIsModalOpen(true);
-          setHasShownModal(true);
-        }
-      } catch (err) {
-        // Log error but don't show false expiry warning
-        const normalizedError = normalizeApiError(err);
-        setError(normalizedError);
-        console.warn('Failed to fetch subscription:', normalizedError);
-        // Silently fail - user experience should not be interrupted
-      } finally {
-        setLoading(false);
+      if (shouldShowSubscriptionWarning(data)) {
+        setIsModalOpen(true);
       }
-    };
-
-    fetchSubscription();
-  }, [hasShownModal]);
+    } catch (err) {
+      const normalizedError = normalizeApiError(err);
+      setError(normalizedError);
+      console.warn('Failed to fetch subscription:', normalizedError);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   const closeModal = useCallback(() => {
     setIsModalOpen(false);
@@ -60,6 +43,7 @@ export const useSubscriptionExpiry = () => {
     error,
     isModalOpen,
     closeModal,
-    hasShownModal,
+    checkSubscriptionExpiry,
+    setIsModalOpen,
   };
 };
