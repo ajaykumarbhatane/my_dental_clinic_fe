@@ -14,61 +14,64 @@ const PatientVisitsTrend = ({
   error,
 }) => {
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-lg transition-shadow">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+    <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-xs transition-all h-full flex flex-col justify-between">
+      <div className="flex items-center justify-between gap-2 mb-3 pb-2 border-b border-slate-100">
         <div>
-          <h3 className="text-lg font-bold text-gray-900">Patient Visits Graph</h3>
-          {/* <p className="text-sm text-gray-500">Filter by treatment and date range to compare visit trends.</p> */}
+          <h3 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">Patient Visits Volume</h3>
+          <p className="text-[11px] text-slate-500">Visit trends across selected range</p>
         </div>
+        <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200/60">
+          Visits
+        </span>
       </div>
 
       {error && (
-        <div className="mb-4 text-sm text-red-600">{error}</div>
+        <div className="mb-2 p-2 text-xs rounded-lg bg-rose-50 text-rose-700 border border-rose-200/60">{error}</div>
       )}
 
-      <div className="h-72">
+      <div className="h-44 sm:h-48 w-full">
         {loading ? (
-          <div className="h-full animate-pulse rounded-3xl bg-slate-100" />
+          <div className="h-full animate-pulse rounded-xl bg-slate-100 flex items-center justify-center text-xs text-slate-400">Loading visit trends...</div>
         ) : chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
-              <CartesianGrid stroke="#E5E7EB" strokeDasharray="3 3" vertical={false} />
+            <LineChart data={chartData} margin={{ top: 8, right: 12, left: -24, bottom: 0 }}>
+              <CartesianGrid stroke="#F1F5F9" strokeDasharray="3 3" vertical={false} />
               <XAxis
                 dataKey="label"
-                tick={{ fill: '#6B7280', fontSize: 12 }}
+                tick={{ fill: '#64748B', fontSize: 10 }}
                 tickLine={false}
                 axisLine={false}
-                minTickGap={12}
+                minTickGap={14}
               />
               <YAxis
-                tick={{ fill: '#6B7280', fontSize: 12 }}
+                tick={{ fill: '#64748B', fontSize: 10 }}
                 tickLine={false}
                 axisLine={false}
-                width={40}
+                width={36}
               />
               <RechartsTooltip
                 formatter={(value) => `${value} visit${value === 1 ? '' : 's'}`}
                 contentStyle={{
-                  borderRadius: '1rem',
-                  borderColor: '#E5E7EB',
+                  borderRadius: '0.75rem',
+                  borderColor: '#E2E8F0',
                   backgroundColor: '#fff',
+                  fontSize: '12px',
+                  boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
                 }}
               />
               <RechartsLine
                 type="monotone"
                 dataKey="visits"
                 stroke="#2563EB"
-                strokeWidth={3}
-                dot={{ r: 4, fill: '#2563EB', stroke: '#fff', strokeWidth: 2 }}
-                activeDot={{ r: 6 }}
+                strokeWidth={2.5}
+                dot={{ r: 3, fill: '#2563EB', stroke: '#fff', strokeWidth: 1.5 }}
+                activeDot={{ r: 5 }}
               />
             </LineChart>
           </ResponsiveContainer>
         ) : (
-          <div className="h-full flex flex-col items-center justify-center rounded-3xl border border-dashed border-gray-200 bg-slate-50 p-6 text-center">
-            <div className="text-3xl mb-3">📉</div>
-            <p className="text-sm font-semibold text-slate-900">No visit data available for selected period</p>
-            <p className="mt-2 text-sm text-slate-500">Try another date range or grouping to view visits trends.</p>
+          <div className="h-full flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/50 p-4 text-center">
+            <p className="text-xs font-semibold text-slate-700">No visit data recorded</p>
           </div>
         )}
       </div>

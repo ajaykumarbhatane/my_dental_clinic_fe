@@ -929,7 +929,7 @@ const Dashboard = () => {
               }`}
             >
               <DollarSign size={16} className={activeDashboardTab === 'revenue' ? 'text-white' : 'text-emerald-600'} />
-              <span className="truncate">Clinic Revenue</span>
+              <span className="truncate">Revenue and Analytics</span>
             </button>
 
             {/* TAB 3: UPCOMING VISITS (PURPLE/INDIGO THEME) */}
@@ -1150,99 +1150,176 @@ const Dashboard = () => {
       )}
 
       {/* ========================================================= */}
-      {/* SECTION 2: CLINIC REVENUE (TAB 2 PRESERVED) */}
+      {/* SECTION 2: CLINIC REVENUE (TAB 2 REDESIGNED) */}
       {/* ========================================================= */}
       {activeDashboardTab === 'revenue' && (
-        <div className="space-y-8 animate-in">
+        <div className="space-y-4 sm:space-y-5 animate-in">
           
-          <AnalyticsFilters
-            period={period}
-            group={group}
-            selectedTreatment={selectedTreatment}
-            treatmentOptions={treatmentOptions}
-            onPeriodChange={handlePeriodChange}
-            onGroupChange={setGroup}
-            onTreatmentChange={setSelectedTreatment}
-            onOpenDateRange={() => {
-              setDraftStartDate(startDate);
-              setDraftEndDate(endDate);
-              setShowDatePicker(true);
-            }}
-            customDateRangeLabel={`${formatDate(startDate)} - ${formatDate(endDate)}`}
-          />
+          {/* Header & Filter Row */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-white rounded-xl sm:rounded-2xl border border-slate-200/90 p-3.5 sm:p-4 shadow-xs">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Clinic Revenue</h2>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/60">
+                  Analytics
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm text-slate-500 mt-0.5">Track collections, financial performance, and treatment distribution.</p>
+            </div>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-            {stats.map((stat, index) => {
-              const Icon = stat.icon;
-              return (
-                <div key={index} className="group bg-white rounded-2xl shadow-sm hover:shadow-lg p-4 sm:p-6 transition-all duration-300 border border-slate-200 transform hover:-translate-y-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-xs sm:text-sm font-medium text-slate-600 group-hover:text-slate-700 transition-colors truncate">{stat.title}</p>
-                      <div className="mt-2 sm:mt-3">
-                        <p className="text-2xl sm:text-3xl font-bold text-slate-900">{stat.value}</p>
-                      </div>
-                    </div>
-                    <div className={`${stat.color} rounded-xl p-2 sm:p-3 shadow-md flex-shrink-0`}>
-                      <Icon className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
-                    </div>
-                  </div>
-                  <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-slate-100">
-                    <p className="text-xs text-slate-500">{getFilterLabel()}</p>
-                  </div>
-                </div>
-              );
-            })}
+            {/* Filter Bar */}
+            <div className="w-full lg:w-auto">
+              <AnalyticsFilters
+                period={period}
+                group={group}
+                selectedTreatment={selectedTreatment}
+                treatmentOptions={treatmentOptions}
+                onPeriodChange={handlePeriodChange}
+                onGroupChange={setGroup}
+                onTreatmentChange={setSelectedTreatment}
+                onOpenDateRange={() => {
+                  setDraftStartDate(startDate);
+                  setDraftEndDate(endDate);
+                  setShowDatePicker(true);
+                }}
+                customDateRangeLabel={`${formatDate(startDate)} - ${formatDate(endDate)}`}
+              />
+            </div>
           </div>
 
-          <PatientVisitsTrend chartData={visitChartData} loading={loading} error={dateError || error} />
-          <RevenueTrend data={revenueData} summary={revenueSummary} loading={revenueLoading} error={revenueError} />
+          {/* Primary Revenue KPIs & Main Trend Chart Card */}
+          <RevenueTrend
+            data={revenueData}
+            summary={revenueSummary}
+            loading={revenueLoading}
+            error={revenueError}
+          />
 
-          {/* Treatment Distribution */}
-          <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200 hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-slate-900">Treatment Distribution</h3>
-              <div className="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-semibold">Analytics</div>
-            </div>
-            <div className="h-64">
-              {treatmentChartData ? (
-                <Doughnut
-                  key={chartKey}
-                  data={treatmentChartData}
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                      legend: {
-                        position: 'right',
-                        labels: {
-                          generateLabels: function(chart) {
-                            const data = chart.data;
-                            if (data.labels.length && data.datasets.length) {
-                              return data.labels.map((label, i) => {
-                                const value = data.datasets[0].data[i];
-                                return {
-                                  text: `${label} (${value})`,
-                                  fillStyle: data.datasets[0].backgroundColor[i],
-                                  strokeStyle: data.datasets[0].backgroundColor[i],
-                                  index: i,
-                                };
-                              });
-                            }
-                            return [];
-                          }
-                        }
-                      }
-                    }
-                  }}
-                />
-              ) : (
-                <div className="h-full flex items-center justify-center text-slate-500 text-sm">
-                  Loading chart...
+          {/* 2-Column Responsive Breakdown Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
+            
+            {/* Left Column (7 Cols): Treatment Revenue Distribution & Breakdown */}
+            <div className="lg:col-span-7 bg-white rounded-xl sm:rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between gap-2 mb-3 pb-2.5 border-b border-slate-100">
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">Treatment Revenue Distribution</h3>
+                  <p className="text-xs text-slate-500">Revenue breakdown across procedure categories</p>
                 </div>
-              )}
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60">
+                  Procedures
+                </span>
+              </div>
+
+              {/* Treatment Breakdown Content */}
+              {(() => {
+                const labels = treatmentChartData?.labels || [];
+                const values = treatmentChartData?.datasets?.[0]?.data || [];
+                const colors = treatmentChartData?.datasets?.[0]?.backgroundColor || ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+                const totalValue = values.reduce((a, b) => a + b, 0);
+
+                if (loading) {
+                  return (
+                    <div className="h-48 animate-pulse rounded-xl bg-slate-100 flex items-center justify-center text-xs text-slate-400">
+                      Loading distribution...
+                    </div>
+                  );
+                }
+
+                if (labels.length === 0 || values.length === 0 || totalValue === 0) {
+                  return (
+                    <div className="h-48 flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/50 p-6 text-center">
+                      <span className="text-2xl mb-1">📊</span>
+                      <p className="text-xs font-semibold text-slate-800">No procedure breakdown for this period</p>
+                      <p className="mt-1 text-[11px] text-slate-500">Log procedures or change date range to see distribution.</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center min-h-[190px]">
+                    {/* Compact Donut Chart (5 Cols) */}
+                    <div className="sm:col-span-5 h-40 sm:h-44 relative flex items-center justify-center">
+                      <Doughnut
+                        key={chartKey}
+                        data={treatmentChartData}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                              callbacks: {
+                                label: (ctx) => ` ${ctx.label}: ${ctx.raw} procedures`,
+                              },
+                            },
+                          },
+                          cutout: '72%',
+                        }}
+                      />
+                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Total</span>
+                        <span className="text-base sm:text-lg font-bold text-slate-900">{totalValue}</span>
+                        <span className="text-[10px] text-slate-400 font-medium">Procedures</span>
+                      </div>
+                    </div>
+
+                    {/* Progress Bar Breakdown List (7 Cols) */}
+                    <div className="sm:col-span-7 space-y-2 max-h-48 overflow-y-auto pr-1">
+                      {labels.map((label, idx) => {
+                        const count = values[idx] || 0;
+                        const pct = totalValue > 0 ? Math.round((count / totalValue) * 100) : 0;
+                        const barColor = colors[idx % colors.length];
+
+                        return (
+                          <div key={label} className="p-2 rounded-xl border border-slate-100 bg-slate-50/70 hover:bg-slate-50 transition-all">
+                            <div className="flex items-center justify-between text-xs mb-1">
+                              <span className="font-semibold text-slate-800 flex items-center gap-1.5 truncate">
+                                <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: barColor }} />
+                                <span className="truncate">{label}</span>
+                              </span>
+                              <span className="font-bold text-slate-900 flex-shrink-0">
+                                {count} <span className="text-[10px] font-normal text-slate-500">({pct}%)</span>
+                              </span>
+                            </div>
+                            <div className="w-full bg-slate-200/80 rounded-full h-1.5 overflow-hidden">
+                              <div
+                                className="h-full rounded-full transition-all duration-500"
+                                style={{ width: `${pct}%`, backgroundColor: barColor }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
+
+            {/* Right Column (5 Cols): Clinical Stats & Visit Volume */}
+            <div className="lg:col-span-5 space-y-4 flex flex-col justify-between">
+              {/* 4 Summary Stats Cards Grid */}
+              <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+                {stats.map((stat, index) => {
+                  const Icon = stat.icon;
+                  return (
+                    <div key={index} className="bg-white rounded-xl border border-slate-200/90 p-3 shadow-2xs hover:border-slate-300 transition-all">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider truncate">{stat.title}</span>
+                        <div className={`${stat.color} rounded-lg p-1.5 shadow-2xs flex-shrink-0`}>
+                          <Icon className="w-3.5 h-3.5 text-white" />
+                        </div>
+                      </div>
+                      <p className="mt-1 text-lg sm:text-xl font-bold text-slate-900">{stat.value}</p>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Compact Patient Visits Volume Chart */}
+              <PatientVisitsTrend chartData={visitChartData} loading={loading} error={dateError || error} />
+            </div>
+
           </div>
 
         </div>
