@@ -1,7 +1,7 @@
 import {
   ResponsiveContainer,
-  LineChart,
-  Line as RechartsLine,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -34,7 +34,13 @@ const PatientVisitsTrend = ({
           <div className="h-full animate-pulse rounded-xl bg-slate-100 flex items-center justify-center text-xs text-slate-400">Loading visit trends...</div>
         ) : chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 8, right: 12, left: -24, bottom: 0 }}>
+            <AreaChart data={chartData} margin={{ top: 8, right: 12, left: -24, bottom: 0 }}>
+              <defs>
+                <linearGradient id="visitsGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#2563EB" stopOpacity={0.35} />
+                  <stop offset="95%" stopColor="#2563EB" stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
               <CartesianGrid stroke="#F1F5F9" strokeDasharray="3 3" vertical={false} />
               <XAxis
                 dataKey="label"
@@ -59,15 +65,17 @@ const PatientVisitsTrend = ({
                   boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
                 }}
               />
-              <RechartsLine
+              <Area
                 type="monotone"
                 dataKey="visits"
                 stroke="#2563EB"
                 strokeWidth={2.5}
+                fillOpacity={1}
+                fill="url(#visitsGradient)"
                 dot={{ r: 3, fill: '#2563EB', stroke: '#fff', strokeWidth: 1.5 }}
                 activeDot={{ r: 5 }}
               />
-            </LineChart>
+            </AreaChart>
           </ResponsiveContainer>
         ) : (
           <div className="h-full flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/50 p-4 text-center">
