@@ -76,6 +76,16 @@ const Dashboard = () => {
     return `${year}-${monthValue}-${dayValue}`;
   };
 
+  const formatActivityTime = (timestamp) => {
+    if (!timestamp) return 'Today';
+    const parsed = parseDateString(timestamp);
+    if (!parsed) return 'Today';
+    if (typeof timestamp === 'string' && (timestamp.includes('T') || timestamp.includes(':'))) {
+      return parsed.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    return formatDate(parsed);
+  };
+
   const today = new Date();
   const todayString = toDateInputValue(today);
   const initialMonthStartDate = toDateInputValue(new Date(today.getFullYear(), today.getMonth(), 1));
@@ -953,198 +963,346 @@ const Dashboard = () => {
       </div>
 
       {/* ========================================================= */}
-      {/* SECTION 1: TODAY'S OVERVIEW (TAB 1 DEFAULT) */}
+      {/* SECTION 1: TODAY'S OVERVIEW (TAB 1 REDESIGNED & HARDENED) */}
       {/* ========================================================= */}
       {activeDashboardTab === 'today' && (
-        <div className="space-y-6 animate-in">
+        <div className="space-y-4 sm:space-y-5 animate-in">
           
-          {/* Controls Bar */}
-          <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
-              <Sparkles size={18} className="text-[#2563EB]" />
-              <span>Today's Real Activity Feed</span>
-              {todayActivities.length === 0 && allRecentActivities.length > 0 && showRecentIfEmpty && (
-                <span className="text-xs font-semibold px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full border border-amber-200">
-                  Showing Recent Activities
-                </span>
-              )}
-            </div>
+          {/* Top 4 Today Operational KPI Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {(() => {
+              const listToCount = todayActivities.length > 0 ? todayActivities : allRecentActivities;
+              const isRecent = todayActivities.length === 0 && showRecentIfEmpty;
+              const labelSuffix = isRecent ? '(Recent)' : '(Today)';
 
-            {/* Category Filter & Refresh */}
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <Filter size={16} className="text-slate-400" />
-              <select
-                value={todayFilter}
-                onChange={(e) => setTodayFilter(e.target.value)}
-                className="form-select text-xs font-semibold py-2 px-3 rounded-xl border-slate-200 text-slate-700 bg-slate-50 focus:bg-white"
-              >
-                <option value="all">All Activity</option>
-                <option value="patient">Patients</option>
-                <option value="visit">Visits</option>
-                <option value="treatment">Treatments</option>
-                <option value="prescription">Prescriptions</option>
-              </select>
-              
-              <button
-                onClick={fetchTodayOverviewData}
-                className="p-2 text-slate-500 hover:text-blue-600 rounded-xl hover:bg-slate-100 transition-colors"
-                title="Refresh Activity"
-              >
-                <RefreshCw size={16} className={todayLoading ? "animate-spin" : ""} />
-              </button>
-            </div>
-          </div>
+              const todayStats = [
+                {
+                  title: "Today's New Patients",
+                  value: listToCount.filter(a => a.type === 'patient').length.toString(),
+                  subtext: `Registered ${labelSuffix}`,
+                  icon: UserPlus,
+                  color: 'bg-blue-500/10 text-blue-600 border border-blue-200/60',
+                },
+                {
+                  title: 'Visits Recorded',
+                  value: listToCount.filter(a => a.type === 'visit').length.toString(),
+                  subtext: `Scheduled & Logged ${labelSuffix}`,
+                  icon: Calendar,
+                  color: 'bg-emerald-500/10 text-emerald-600 border border-emerald-200/60',
+                },
+                {
+                  title: 'Treatments Added',
+                  value: listToCount.filter(a => a.type === 'treatment').length.toString(),
+                  subtext: `Procedures Logged ${labelSuffix}`,
+                  icon: Stethoscope,
+                  color: 'bg-indigo-500/10 text-indigo-600 border border-indigo-200/60',
+                },
+                {
+                  title: 'Prescriptions Issued',
+                  value: listToCount.filter(a => a.type === 'prescription').length.toString(),
+                  subtext: `Issued ${labelSuffix}`,
+                  icon: Pill,
+                  color: 'bg-sky-500/10 text-sky-600 border border-sky-200/60',
+                },
+              ];
 
-          {/* Activity Feed Body */}
-          {todayLoading ? (
-            <div className="bg-white rounded-2xl p-12 border border-slate-200 flex flex-col items-center justify-center text-center space-y-3">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#2563EB]" />
-              <p className="text-sm font-semibold text-slate-600">Gathering today's clinic activity...</p>
-            </div>
-          ) : todayError ? (
-            <div className="bg-red-50 border border-red-200 rounded-2xl p-6 flex items-center justify-between text-red-800">
-              <div className="flex items-center gap-3">
-                <AlertCircle size={20} className="text-red-600" />
-                <span className="text-sm font-medium">{todayError}</span>
-              </div>
-              <button
-                onClick={fetchTodayOverviewData}
-                className="px-4 py-2 bg-red-600 text-white rounded-xl text-xs font-bold hover:bg-red-700 transition"
-              >
-                Retry
-              </button>
-            </div>
-          ) : groupedPatientList.length === 0 ? (
-            <div className="bg-white rounded-2xl p-12 border border-slate-200 text-center space-y-4 shadow-xs">
-              <div className="text-4xl">✨</div>
-              <h3 className="text-lg font-bold text-slate-900">No Activity Recorded Today</h3>
-              <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                No patient activities matching your filter were recorded for today's date ({formatDate(todayString)}).
-              </p>
-
-              {allRecentActivities.length > 0 && !showRecentIfEmpty && (
-                <button
-                  onClick={() => setShowRecentIfEmpty(true)}
-                  className="px-4 py-2 bg-[#2563EB] text-white rounded-xl text-xs font-bold shadow hover:bg-blue-700 transition"
-                >
-                  View Recent Clinic Activities ({allRecentActivities.length})
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-5">
-              {paginatedPatientList.map((group) => {
-                const patientUrl = group.patientId ? `/app/patients/${group.patientId}` : '/app/patients';
-                const isRecentGroup = todayActivities.length === 0 && showRecentIfEmpty;
-
+              return todayStats.map((stat, idx) => {
+                const IconComp = stat.icon;
                 return (
                   <div
-                    key={group.patientId ? `group_${group.patientId}` : `group_${group.patientName}`}
-                    className="bg-white rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-md transition-all overflow-hidden"
+                    key={idx}
+                    className="bg-white border border-slate-200/90 rounded-xl sm:rounded-2xl p-3.5 sm:p-4 shadow-2xs hover:border-slate-300 transition-all flex flex-col justify-between"
                   >
-                    {/* PATIENT CARD HEADER */}
-                    <div className="bg-slate-50/80 p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-2xl bg-blue-100/80 text-[#2563EB] font-bold flex items-center justify-center text-sm shadow-xs flex-shrink-0">
-                          <Users size={18} />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="text-base font-bold text-slate-900">
-                              {group.patientName}
-                            </h3>
-                            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-[#2563EB] border border-blue-200">
-                              {group.activities.length} {group.activities.length === 1 ? 'activity' : 'activities'} {isRecentGroup ? 'recent' : 'today'}
-                            </span>
-                          </div>
-
-                          {(group.patientGender || group.patientAge || group.patientMobile) && (
-                            <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-2 flex-wrap">
-                              {group.patientGender && <span className="capitalize">{group.patientGender}</span>}
-                              {group.patientGender && group.patientAge && <span>•</span>}
-                              {group.patientAge && <span>{group.patientAge}</span>}
-                              {group.patientMobile && (group.patientGender || group.patientAge) && <span>•</span>}
-                              {group.patientMobile && <span>📞 {group.patientMobile}</span>}
-                            </p>
-                          )}
-                        </div>
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <span className="text-[10px] sm:text-[11px] font-semibold tracking-wider text-slate-500 uppercase truncate">
+                        {stat.title}
+                      </span>
+                      <div className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl ${stat.color} flex-shrink-0`}>
+                        <IconComp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       </div>
-
-                      {group.patientId && (
-                        <button
-                          onClick={() => navigate(patientUrl)}
-                          className="px-3.5 py-1.5 bg-white hover:bg-[#2563EB] text-slate-700 hover:text-white border border-slate-200 hover:border-blue-600 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs self-start sm:self-auto"
-                        >
-                          <span>View Patient</span>
-                          <ChevronRight size={14} />
-                        </button>
-                      )}
                     </div>
-
-                    {/* ACTIVITIES LIST INSIDE PATIENT CARD */}
-                    <div className="p-4 sm:p-5 space-y-2.5">
-                      {group.activities.map((act) => {
-                        const IconC = act.icon;
-                        return (
-                          <div
-                            key={act.id}
-                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 sm:p-3.5 rounded-xl bg-slate-50/50 hover:bg-slate-100/70 border border-slate-100 transition-all group/item"
-                          >
-                            <div className="flex items-start gap-3 min-w-0">
-                              <div className={`p-2 rounded-xl border ${act.color} flex-shrink-0 mt-0.5`}>
-                                <IconC size={16} />
-                              </div>
-                              
-                              <div className="min-w-0 space-y-0.5">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                                    {act.title}
-                                  </span>
-                                  {act.timestamp && (
-                                    <span className="text-[10px] font-semibold text-slate-400">
-                                      {new Date(act.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-xs sm:text-sm font-semibold text-slate-900 group-hover/item:text-[#2563EB] transition-colors truncate">
-                                  {act.subtitle}
-                                </p>
-                              </div>
-                            </div>
-
-                            {act.link && (
-                              <button
-                                onClick={() => navigate(act.link)}
-                                className="px-3 py-1.5 bg-white hover:bg-[#2563EB] text-slate-700 hover:text-white border border-slate-200 hover:border-blue-600 rounded-lg text-xs font-bold transition-all flex items-center gap-1 self-end sm:self-auto flex-shrink-0 shadow-xs"
-                              >
-                                <span>{act.buttonText}</span>
-                                <ChevronRight size={12} />
-                              </button>
-                            )}
-                          </div>
-                        );
-                      })}
+                    <div>
+                      <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">
+                        {stat.value}
+                      </p>
+                      <p className="text-[11px] text-slate-500 mt-1 font-medium truncate">
+                        {stat.subtext}
+                      </p>
                     </div>
                   </div>
                 );
-              })}
+              });
+            })()}
+          </div>
 
-              {/* Today's Overview Pagination */}
-              {todayTotalPages > 1 && (
-                <div className="pt-4 border-t border-slate-200/80">
-                  <Pagination
-                    currentPage={todayCurrentPage}
-                    totalPages={todayTotalPages}
-                    onPageChange={(page) => {
-                      setTodayCurrentPage(page);
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                    itemCountText={`${((todayCurrentPage - 1) * TODAY_PER_PAGE) + 1} - ${Math.min(todayCurrentPage * TODAY_PER_PAGE, groupedPatientList.length)} of ${groupedPatientList.length} patient records`}
-                  />
+          {/* 2-Column Responsive Layout Grid (8 Cols Left / 4 Cols Right) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
+            
+            {/* Left Column (8 Cols): Real-time Patient Activity Feed */}
+            <div className="lg:col-span-8 space-y-4">
+              
+              {/* Controls Bar Header */}
+              <div className="bg-white rounded-xl sm:rounded-2xl p-3.5 sm:p-4 border border-slate-200/90 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                  <Sparkles size={18} className="text-[#2563EB]" />
+                  <span>Today's Real Activity Feed</span>
+                  {todayActivities.length === 0 && allRecentActivities.length > 0 && showRecentIfEmpty && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-50 text-amber-800 rounded-full border border-amber-200/60">
+                      Showing Recent Activities
+                    </span>
+                  )}
+                </div>
+
+                {/* Category Filter & Refresh */}
+                <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+                  <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/80 rounded-xl px-2.5 py-1">
+                    <Filter size={14} className="text-slate-400" />
+                    <select
+                      value={todayFilter}
+                      onChange={(e) => setTodayFilter(e.target.value)}
+                      className="bg-transparent text-xs font-semibold text-slate-700 focus:outline-none cursor-pointer"
+                    >
+                      <option value="all">All Activity</option>
+                      <option value="patient">Patients</option>
+                      <option value="visit">Visits</option>
+                      <option value="treatment">Treatments</option>
+                      <option value="prescription">Prescriptions</option>
+                    </select>
+                  </div>
+                  
+                  <button
+                    onClick={fetchTodayOverviewData}
+                    className="p-2 text-slate-500 hover:text-blue-600 rounded-xl hover:bg-slate-100 transition-colors flex-shrink-0"
+                    title="Refresh Activity"
+                  >
+                    <RefreshCw size={16} className={todayLoading ? "animate-spin" : ""} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Activity Feed Body */}
+              {todayLoading ? (
+                <div className="bg-white rounded-xl sm:rounded-2xl p-12 border border-slate-200/90 flex flex-col items-center justify-center text-center space-y-3">
+                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#2563EB]" />
+                  <p className="text-sm font-semibold text-slate-600">Gathering today's clinic activity...</p>
+                </div>
+              ) : todayError ? (
+                <div className="bg-rose-50 border border-rose-200/90 rounded-xl sm:rounded-2xl p-5 flex items-center justify-between text-rose-800">
+                  <div className="flex items-center gap-3">
+                    <AlertCircle size={20} className="text-rose-600" />
+                    <span className="text-xs sm:text-sm font-medium">{todayError}</span>
+                  </div>
+                  <button
+                    onClick={fetchTodayOverviewData}
+                    className="px-3.5 py-1.5 bg-rose-600 text-white rounded-xl text-xs font-bold hover:bg-rose-700 transition"
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : groupedPatientList.length === 0 ? (
+                <div className="bg-white rounded-xl sm:rounded-2xl p-10 border border-slate-200/90 text-center space-y-3 shadow-xs">
+                  <div className="text-3xl">✨</div>
+                  <h3 className="text-base font-bold text-slate-900">No Activity Recorded Today</h3>
+                  <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                    No patient activities matching your filter were recorded for today's date ({formatDate(todayString)}).
+                  </p>
+
+                  {allRecentActivities.length > 0 && !showRecentIfEmpty && (
+                    <button
+                      onClick={() => setShowRecentIfEmpty(true)}
+                      className="px-4 py-2 bg-[#2563EB] text-white rounded-xl text-xs font-bold shadow-2xs hover:bg-blue-700 transition mt-2"
+                    >
+                      View Recent Clinic Activities ({allRecentActivities.length})
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {paginatedPatientList.map((group) => {
+                    const patientUrl = group.patientId ? `/app/patients/${group.patientId}` : '/app/patients';
+                    const isRecentGroup = todayActivities.length === 0 && showRecentIfEmpty;
+
+                    return (
+                      <div
+                        key={group.patientId ? `group_${group.patientId}` : `group_${group.patientName}`}
+                        className="bg-white rounded-xl sm:rounded-2xl border border-slate-200/90 shadow-2xs hover:border-slate-300 transition-all overflow-hidden"
+                      >
+                        {/* PATIENT CARD HEADER */}
+                        <div className="bg-slate-50/80 p-3.5 sm:p-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-blue-100/80 text-[#2563EB] font-bold flex items-center justify-center text-xs shadow-2xs flex-shrink-0">
+                              <Users size={16} />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="text-sm sm:text-base font-bold text-slate-900">
+                                  {group.patientName}
+                                </h3>
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-[#2563EB] border border-blue-200/60">
+                                  {group.activities.length} {group.activities.length === 1 ? 'activity' : 'activities'} {isRecentGroup ? 'recent' : 'today'}
+                                </span>
+                              </div>
+
+                              {(group.patientGender || group.patientAge || group.patientMobile) && (
+                                <p className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-2 flex-wrap">
+                                  {group.patientGender && <span className="capitalize">{group.patientGender}</span>}
+                                  {group.patientGender && group.patientAge && <span>•</span>}
+                                  {group.patientAge && <span>{group.patientAge}</span>}
+                                  {group.patientMobile && (group.patientGender || group.patientAge) && <span>•</span>}
+                                  {group.patientMobile && <span>📞 {group.patientMobile}</span>}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          {group.patientId && (
+                            <button
+                              onClick={() => navigate(patientUrl)}
+                              className="px-3 py-1.5 bg-white hover:bg-[#2563EB] text-slate-700 hover:text-white border border-slate-200 hover:border-blue-600 rounded-xl text-xs font-bold transition-all flex items-center gap-1 shadow-2xs self-start sm:self-auto"
+                            >
+                              <span>View Patient</span>
+                              <ChevronRight size={14} />
+                            </button>
+                          )}
+                        </div>
+
+                        {/* ACTIVITIES LIST INSIDE PATIENT CARD */}
+                        <div className="p-3.5 sm:p-4 space-y-2.5">
+                          {group.activities.map((act) => {
+                            const IconC = act.icon;
+                            return (
+                              <div
+                                key={act.id}
+                                className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-xl bg-slate-50/60 hover:bg-slate-100/80 border border-slate-100 transition-all group/item"
+                              >
+                                <div className="flex items-start gap-2.5 min-w-0">
+                                  <div className={`p-2 rounded-xl border ${act.color} flex-shrink-0 mt-0.5`}>
+                                    <IconC size={15} />
+                                  </div>
+                                  
+                                  <div className="min-w-0 space-y-0.5">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                                        {act.title}
+                                      </span>
+                                      {act.timestamp && (
+                                        <span className="text-[10px] font-semibold text-slate-400 bg-white px-1.5 py-0.5 rounded border border-slate-200/60">
+                                          {formatActivityTime(act.timestamp)}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-xs sm:text-sm font-semibold text-slate-900 group-hover/item:text-[#2563EB] transition-colors truncate">
+                                      {act.subtitle}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {act.link && (
+                                  <button
+                                    onClick={() => navigate(act.link)}
+                                    className="px-2.5 py-1 bg-white hover:bg-[#2563EB] text-slate-700 hover:text-white border border-slate-200 hover:border-blue-600 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 self-end sm:self-auto flex-shrink-0 shadow-2xs"
+                                  >
+                                    <span>{act.buttonText}</span>
+                                    <ChevronRight size={12} />
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Today's Overview Pagination */}
+                  {todayTotalPages > 1 && (
+                    <div className="pt-3 border-t border-slate-200/80">
+                      <Pagination
+                        currentPage={todayCurrentPage}
+                        totalPages={todayTotalPages}
+                        onPageChange={(page) => {
+                          setTodayCurrentPage(page);
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                        itemCountText={`${((todayCurrentPage - 1) * TODAY_PER_PAGE) + 1} - ${Math.min(todayCurrentPage * TODAY_PER_PAGE, groupedPatientList.length)} of ${groupedPatientList.length} patient records`}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
+
             </div>
-          )}
+
+            {/* Right Column (4 Cols): Today's Desk Operational Summary & Quick Actions */}
+            <div className="lg:col-span-4 space-y-4">
+              
+              {/* Doctor & Clinic Desk Status Card */}
+              <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200/90 p-4 shadow-xs">
+                <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-3 mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">Clinic Desk Active</h4>
+                  </div>
+                  <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200/60">
+                    {formatDate(todayString)}
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-500 font-medium">Doctor on Duty:</span>
+                    <span className="font-bold text-slate-900">Dr. Swati Lahane</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-500 font-medium">Total Activities Today:</span>
+                    <span className="font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
+                      {todayActivities.length} items
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Clinical Actions Widget */}
+              <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200/90 p-4 shadow-xs space-y-2.5">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Quick Clinical Actions</h4>
+                
+                <button
+                  onClick={() => navigate('/app/patients?add=true')}
+                  className="w-full flex items-center justify-between p-2.5 rounded-xl bg-blue-50/70 hover:bg-blue-600 hover:text-white text-blue-700 border border-blue-100 transition-all text-xs font-semibold group"
+                >
+                  <span className="flex items-center gap-2">
+                    <UserPlus size={15} />
+                    <span>Register New Patient</span>
+                  </span>
+                  <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+                </button>
+
+                <button
+                  onClick={() => navigate('/app/treatments')}
+                  className="w-full flex items-center justify-between p-2.5 rounded-xl bg-indigo-50/70 hover:bg-indigo-600 hover:text-white text-indigo-700 border border-indigo-100 transition-all text-xs font-semibold group"
+                >
+                  <span className="flex items-center gap-2">
+                    <Stethoscope size={15} />
+                    <span>View Treatments & Procedures</span>
+                  </span>
+                  <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+                </button>
+
+                <button
+                  onClick={() => navigate('/app/patients')}
+                  className="w-full flex items-center justify-between p-2.5 rounded-xl bg-slate-50 hover:bg-slate-800 hover:text-white text-slate-700 border border-slate-200/80 transition-all text-xs font-semibold group"
+                >
+                  <span className="flex items-center gap-2">
+                    <Users size={15} />
+                    <span>All Patient Records</span>
+                  </span>
+                  <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+                </button>
+              </div>
+
+            </div>
+
+          </div>
 
         </div>
       )}
