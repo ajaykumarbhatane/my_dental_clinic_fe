@@ -199,9 +199,9 @@ const DashboardLayout = ({ children }) => {
               }
             }}
             aria-label="Open AI Assistant"
-            className="fixed right-6 bottom-6 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-xl hover:bg-blue-700 active:scale-95 transition-all hover:scale-105"
+            className="fixed right-6 bottom-[calc(11rem+env(safe-area-inset-bottom,0px))] md:bottom-6 z-40 inline-flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-gradient-to-br from-indigo-600 via-blue-600 to-indigo-700 text-white shadow-[0_10px_25px_rgba(79,70,229,0.4)] hover:shadow-indigo-500/30 active:scale-95 transition-all duration-300 hover:scale-105"
           >
-            <Sparkles size={24} />
+            <Sparkles size={22} className="sm:w-6 sm:h-6" />
           </button>
         )}
 

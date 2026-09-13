@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, Plus, Eye, Edit, Trash2, Phone, User, Stethoscope, Calendar, X } from 'lucide-react';
+import { Search, Plus, Eye, Edit, Trash2, Phone, User, Stethoscope, Calendar, X, ArrowLeft, ArrowRight, Check, CheckCircle2, AlertCircle, MapPin, UserCheck, CreditCard, ClipboardList, Pill, FileText, Sparkles } from 'lucide-react';
 import PrescriptionAIReviewModal from '../components/PrescriptionAIReviewModal';
 import { patientApi } from '../api/patientApi';
 import { clinicApi } from '../api/clinicApi';
@@ -41,6 +42,7 @@ const Patients = () => {
 
   // Add Patient Modal State
   const [showAddModal, setShowAddModal] = useState(false);
+  const modalBodyRef = useRef(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [patientToDelete, setPatientToDelete] = useState(null);
   const [isDeletingPatient, setIsDeletingPatient] = useState(false);
@@ -193,6 +195,38 @@ useEffect(() => {
       setStepError('');
     }
   }, [showAddModal]);
+
+  // Lock body scroll when Add Patient modal is open
+  useEffect(() => {
+    if (showAddModal) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [showAddModal]);
+
+  useEffect(() => {
+    if (showAddModal) {
+      const timer = setTimeout(() => {
+        if (modalBodyRef.current) {
+          if (stepError) {
+            const invalidElem = modalBodyRef.current.querySelector('[aria-invalid="true"], :invalid, .border-red-500');
+            if (invalidElem) {
+              invalidElem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              try { invalidElem.focus({ preventScroll: true }); } catch (e) {}
+            } else {
+              modalBodyRef.current.scrollTop = 0;
+            }
+          } else {
+            modalBodyRef.current.scrollTop = 0;
+          }
+        }
+      }, 20);
+      return () => clearTimeout(timer);
+    }
+  }, [currentStep, showAddModal, stepError]);
 
   // Listen for assistant open add patient event and load prefill from sessionStorage
   useEffect(() => {
@@ -1186,9 +1220,9 @@ useEffect(() => {
   className="
     md:hidden
     fixed
-    bottom-28
+    bottom-[calc(7rem+env(safe-area-inset-bottom,0px))]
     right-6
-    z-50
+    z-40
 
     h-12
     w-12
@@ -1217,569 +1251,723 @@ useEffect(() => {
 
     active:scale-95
     hover:scale-110
-    hover:rotate-90
   "
   aria-label="Add Patient"
 >
-    <Plus className="w-8 h-8 stroke-[2.5]" />
-</button>
-
-      {/* Add Patient Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-gray-600/50 p-3 sm:p-20 overflow-y-auto">
-          <div
-  className="
-    relative
-    my-4
-    w-full
-    max-w-[95vw]
-    lg:max-w-5xl
-    xl:max-w-4xl
-    rounded-3xl
-    border
-    border-gray-200
-    bg-white
-    p-6
-    shadow-xl
-    max-h-[200vh]
-    overflow-y-auto
-  "
->
-            <div className="flex justify-between items-center mb-4">
-              <div>
-                <h3 className="text-lg font-medium text-gray-900">Step {currentStep}: {currentStep === 1 ? 'Patient Information' : currentStep === 2 ? 'Treatment Details' : currentStep === 3 ? 'Initial Visit' : 'Create Prescription'}</h3>
-                <p className="text-sm text-gray-500 mt-1">
-                  {currentStep === 1
-                    ? 'Fill in the patient information'
-                    : currentStep === 2
-                      ? 'Add treatment details'
-                      : currentStep === 3
-                        ? 'Schedule the initial visit'
-                        : 'Add medicines for the patient'}
-                </p>
+    <Plus className="w-6 h-6 stroke-[2.5]" />
+</button>      {/* Add Patient Modal */}
+      {showAddModal && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex flex-col sm:items-center sm:justify-center sm:p-4 overflow-hidden animate-in fade-in duration-200">
+          <div className="w-screen h-[100dvh] min-h-[100dvh] max-h-[100dvh] sm:w-full sm:h-auto sm:min-h-0 sm:max-h-[85dvh] sm:max-w-3xl lg:max-w-4xl bg-white sm:rounded-2xl sm:shadow-2xl flex flex-col overflow-hidden relative border-0 sm:border sm:border-slate-200">
+            
+            {/* STICKY HEADER */}
+            <header className="flex-shrink-0 bg-white border-b border-slate-100 px-4 sm:px-6 py-3.5 flex items-center justify-between z-20">
+              <div className="flex items-center gap-3">
+                {currentStep > 1 && (
+                  <button
+                    type="button"
+                    onClick={handlePrevious}
+                    className="w-10 h-10 flex items-center justify-center -ml-2 text-slate-600 hover:text-slate-900 rounded-full hover:bg-slate-100 transition-colors"
+                    aria-label="Go to previous step"
+                  >
+                    <ArrowLeft className="w-5 h-5 stroke-[2.2]" />
+                  </button>
+                )}
+                <div>
+                  <h2 className="text-lg sm:text-xl font-bold text-slate-900 leading-tight">
+                    Add Patient
+                  </h2>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Step {currentStep} of 4 · {
+                      currentStep === 1 ? 'Patient Information' :
+                      currentStep === 2 ? 'Treatment Details' :
+                      currentStep === 3 ? 'Initial Visit Schedule' :
+                      'Prescription & Medication'
+                    }
+                  </p>
+                </div>
               </div>
+
               <button
+                type="button"
                 onClick={() => { setShowAddModal(false); resetModal(); }}
-                className="text-gray-400 hover:text-gray-600"
+                className="w-10 h-10 flex items-center justify-center -mr-2 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100 transition-colors"
+                aria-label="Close modal"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5" />
               </button>
-            </div>
+            </header>
 
-            <div className="mb-6">
-              <div className="grid grid-cols-4 gap-3 items-center">
-                {[1, 2, 3, 4].map((step) => (
-                  <div key={step} className="flex flex-col items-center text-center gap-2">
-                    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold ${currentStep >= step ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}`}>
-                      {step}
-                    </div>
-                    <span className="text-xs text-gray-500">
-                      {step === 1 ? 'Patient' : step === 2 ? 'Treatment' : step === 3 ? 'Visit' : 'Rx'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-3 h-1 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-blue-600 rounded-full transition-all duration-300"
-                  style={{ width: `${((currentStep - 1) / 3) * 100}%` }}
-                />
-              </div>
-            </div>
+            {/* COMPACT PROGRESS STEPPER */}
+            <div className="flex-shrink-0 bg-slate-50/90 border-b border-slate-100 py-2.5 px-3 sm:px-6 z-10">
+              <div className="max-w-xs sm:max-w-md mx-auto">
+                <div className="flex items-center justify-between relative px-2">
+                  {/* Progress Line */}
+                  <div className="absolute top-3.5 left-5 right-5 h-[2px] bg-slate-200 -z-0" />
+                  <div
+                    className="absolute top-3.5 left-5 h-[2px] bg-blue-600 transition-all duration-300 -z-0"
+                    style={{
+                      width: `${((currentStep - 1) / 3) * 100}%`,
+                    }}
+                  />
 
-            {stepError && (
-              <div className="mb-4 rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
-                {stepError}
-              </div>
-            )}
+                  {[
+                    { id: 1, name: 'Patient' },
+                    { id: 2, name: 'Treatment' },
+                    { id: 3, name: 'Visit' },
+                    { id: 4, name: 'Rx' },
+                  ].map((stepItem) => {
+                    const isCompleted = currentStep > stepItem.id;
+                    const isActive = currentStep === stepItem.id;
 
-            <form onSubmit={handleAddPatient} className="space-y-4">
-              {currentStep === 1 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <div className="sm:col-span-2 lg:col-span-1">
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Doctor Selection *</label>
-                    <select
-                      name="user"
-                      value={formData.user}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Select Doctor</option>
-                      {doctors.map((doctor) => (
-                        <option key={doctor.id} value={doctor.id}>
-                          Dr. {doctor.first_name} {doctor.last_name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">First Name *</label>
-                    <input
-                      type="text"
-                      name="first_name"
-                      value={formData.first_name}
-                      onChange={handleInputChange}
-                      required
-                      aria-invalid={isNameInvalid(formData.first_name)}
-                      className={`w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${isNameInvalid(formData.first_name) ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
-                      placeholder="Enter patient first name"
-                    />
-                    {isNameInvalid(formData.first_name) && (
-                      <p className="mt-1 text-xs text-red-600">First name must contain only letters.</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Last Name *</label>
-                    <input
-                      type="text"
-                      name="last_name"
-                      value={formData.last_name}
-                      onChange={handleInputChange}
-                      required
-                      aria-invalid={isNameInvalid(formData.last_name)}
-                      className={`w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${isNameInvalid(formData.last_name) ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
-                      placeholder="Enter patient last name"
-                    />
-                    {isNameInvalid(formData.last_name) && (
-                      <p className="mt-1 text-xs text-red-600">Last name must contain only letters.</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Gender *</label>
-                    <ChoiceSelect
-                      which="user/gender"
-                      name="gender"
-                      value={formData.gender}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                      placeholder="Select Gender"
-                    />
-                  </div>
-
-                  <div className="sm:col-span-2 lg:col-span-1">
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Mobile</label>
-                    <input
-                      type="tel"
-                      inputMode="numeric"
-                      pattern="[0-9]{10}"
-                      maxLength={10}
-                      name="mobile"
-                      value={formData.mobile}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Enter patient mobile"
-                    />
-                  </div>
-
-                  <div className="md:col-span-2 lg:col-span-1">
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Date of Birth</label>
-                    <input
-                      type="date"
-                      name="date_of_birth"
-                      value={formData.date_of_birth}
-                      onChange={handleInputChange}
-                      max={getTodayISO()}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Address</label>
-                    <textarea
-                      name="address"
-                      value={formData.address}
-                      onChange={handleInputChange}
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Enter patient address"
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Medical History</label>
-                    <textarea
-                      name="medical_history"
-                      value={formData.medical_history}
-                      onChange={handleInputChange}
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Enter medical history"
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Dental History</label>
-                    <textarea
-                      name="dental_history"
-                      value={formData.dental_history}
-                      onChange={handleInputChange}
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Enter dental history"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {currentStep === 2 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Treatment Type *</label>
-                    <select
-                      name="type_of_treatment"
-                      value={treatmentFormData.type_of_treatment}
-                      onChange={handleTreatmentChange}
-                      required
-                      className="mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">Select Treatment Type</option>
-                      {treatmentTypes.map((type) => (
-                        <option key={type.id} value={type.id}>
-                          {type.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Status *</label>
-                    <ChoiceSelect
-                      which="treatment/status"
-                      name="status"
-                      value={treatmentFormData.status}
-                      onChange={handleTreatmentChange}
-                      className="mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      required
-                      placeholder="Select Status"
-                    />
-                  </div>
-
-                  {(selectedTreatmentTypeName.toLowerCase().includes('ortho') || selectedTreatmentTypeName.toLowerCase().includes('braces')) && (
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1">Braces Type</label>
-                      <ChoiceSelect
-                        which="treatment/braces-type"
-                        name="braces_type"
-                        value={treatmentFormData.braces_type}
-                        onChange={handleTreatmentChange}
-                        className="mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Select Type"
-                      />
-                    </div>
-                  )}
-
-                  {selectedTreatmentTypeName.toLowerCase().includes('root canal') && (
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1">Cap Type</label>
-                      <ChoiceSelect
-                        which="treatment/cap-type"
-                        name="cap_type"
-                        value={treatmentFormData.cap_type}
-                        onChange={handleTreatmentChange}
-                        className="mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Select Type"
-                      />
-                    </div>
-                  )}
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">
-                      {selectedTreatmentTypeName.toLowerCase().includes('root canal')
-                        ? 'Estimated Visits'
-                        : 'Estimated Duration (Months)'}
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="30"
-                      name="estimated_duration_months"
-                      value={treatmentFormData.estimated_duration_months}
-                      onChange={handleTreatmentChange}
-                      className="mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      placeholder={selectedTreatmentTypeName.toLowerCase().includes('root canal') ? 'e.g., 5' : 'e.g., 3'}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Planned Amount (₹)</label>
-                    <input
-                      type="number"
-                      name="planned_amount"
-                      value={treatmentFormData.planned_amount}
-                      onChange={handleTreatmentChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="e.g., 5000"
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Initial Findings</label>
-                    <textarea
-                      name="initial_findings"
-                      value={treatmentFormData.initial_findings}
-                      onChange={handleTreatmentChange}
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Describe initial findings..."
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Treatment Plan</label>
-                    <textarea
-                      name="treatment_plan"
-                      value={treatmentFormData.treatment_plan}
-                      onChange={handleTreatmentChange}
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Describe treatment plan..."
-                    />
-                  </div>
-                </div>
-              )}
-
-              {currentStep === 3 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Next Visit Date *</label>
-                    <input
-                      type="date"
-                      name="next_visit_date"
-                      value={visitFormData.next_visit_date}
-                      onChange={handleVisitChange}
-                      min={getTodayISO()}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Treatment Notes</label>
-                    <textarea
-                      name="treatment_notes"
-                      value={visitFormData.treatment_notes}
-                      onChange={handleVisitChange}
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Add treatment notes..."
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Patient Complaints</label>
-                    <textarea
-                      name="patient_complaints"
-                      value={visitFormData.patient_complaints}
-                      onChange={handleVisitChange}
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Document patient complaints..."
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Payment Amount (₹)</label>
-                    <input
-                      type="number"
-                      name="patient_payment_amount"
-                      value={visitFormData.patient_payment_amount}
-                      onChange={handleVisitChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="e.g., 1000"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Payment Type</label>
-                    <ChoiceSelect
-                      which="treatment/payment-type"
-                      name="patient_payment_type"
-                      value={visitFormData.patient_payment_type}
-                      onChange={handleVisitChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Select Payment Type"
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Payment Note</label>
-                    <textarea
-                      name="payment_note"
-                      value={visitFormData.payment_note}
-                      onChange={handleVisitChange}
-                      rows={2}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Add any payment notes..."
-                    />
-                  </div>
-                </div>
-              )}
-
-              {currentStep === 4 && (
-                <div className="space-y-4 max-h-[50vh] overflow-y-auto">
-                  {/* Treatment Dropdown */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Treatment (Auto-filled)</label>
-                    <input
-                      type="text"
-                      disabled
-                      value={treatmentTypes.find(t => String(t.id) === String(treatmentFormData.type_of_treatment))?.name || ''}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-600"
-                    />
-                  </div>
-
-                  {/* Patient Complaints */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Patient Complaints</label>
-                    <textarea
-                      value={prescriptionFormData.complaints}
-                      onChange={(e) => setPrescriptionFormData(prev => ({...prev, complaints: e.target.value}))}
-                      rows={2}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Enter patient complaints..."
-                    />
-                  </div>
-
-                  {/* Diagnosis */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Diagnosis</label>
-                    <textarea
-                      value={prescriptionFormData.diagnosis}
-                      onChange={(e) => setPrescriptionFormData(prev => ({...prev, diagnosis: e.target.value}))}
-                      rows={2}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Enter diagnosis..."
-                    />
-                    <div className="mt-3">
-                      <button
-                        type="button"
-                        disabled={aiLoading}
-                        onClick={async () => {
-                          const meaningful = Boolean(prescriptionFormData.diagnosis || prescriptionFormData.complaints || prescriptionFormData.instructions || prescriptionFormData.treatment);
-                          if (!meaningful) {
-                            showError('Please provide diagnosis, symptoms, treatment, or clinical notes before using AI Assist.');
-                            return;
-                          }
-                          const computeAge = (dob) => {
-                            if (!dob) return null;
-                            try {
-                              const birth = new Date(dob);
-                              const now = new Date();
-                              let age = now.getFullYear() - birth.getFullYear();
-                              const m = now.getMonth() - birth.getMonth();
-                              if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
-                              return age;
-                            } catch (e) {
-                              return null;
-                            }
-                          };
-
-                          // Ensure prefill is cleared when modal is closed to avoid stale reuse
-                          useEffect(() => {
-                            if (!showAddModal) {
-                              try { sessionStorage.removeItem('assistant_add_patient_prefill'); } catch (e) { /* ignore */ }
-                            }
-                          }, [showAddModal]);
-                          const payload = {
-                            patient_age: computeAge(formData.date_of_birth) || null,
-                            patient_gender: formData.gender || null,
-                            known_allergies: formData.allergies || '',
-                            relevant_medical_history: formData.medical_history || '',
-                            treatment: prescriptionFormData.treatment ? String(prescriptionFormData.treatment) : '',
-                            current_diagnosis: prescriptionFormData.diagnosis || '',
-                            symptoms: prescriptionFormData.complaints || '',
-                            clinical_notes: prescriptionFormData.instructions || '',
-                            medication_history: [],
-                            language: clinicLanguage || 'english',
-                          };
-                          try {
-                            setAiLoading(true);
-                            setAiDraft(null);
-                            const resp = await prescriptionApi.aiAssist(payload);
-                            setAiDraft(resp.data);
-                            setIsAiReviewOpen(true);
-                          } catch (err) {
-                            const status = err?.response?.status;
-                            if (status === 400) showError('Please provide sufficient clinical information.');
-                            else if (status === 401) showError('Authentication required. Please login again.');
-                            else if (status === 403) showError("You don't have permission to use AI assistance.");
-                            else if (status === 422) showError('AI returned an invalid prescription suggestion. Please try again.');
-                            else if (status === 429) showError('AI service is temporarily busy. Please try again shortly.');
-                            else if (status === 503) showError('AI service is currently unavailable. Please try again later.');
-                            else if (status === 504) showError('AI request timed out. Please try again.');
-                            else showError('Unable to connect to AI service. Please check your connection and try again.');
-                          } finally {
-                            setAiLoading(false);
+                    return (
+                      <div
+                        key={stepItem.id}
+                        className={`flex flex-col items-center relative z-10 ${
+                          isCompleted ? 'cursor-pointer' : 'cursor-default'
+                        }`}
+                        onClick={() => {
+                          if (isCompleted) {
+                            setStepError('');
+                            setCurrentStep(stepItem.id);
                           }
                         }}
-                        className={`mt-2 inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold ${aiLoading ? 'bg-slate-100 text-slate-400' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'}`}
                       >
-                        {aiLoading ? '⟳ Generating...' : '✨ AI Assist'}
-                      </button>
+                        <div
+                          className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-200 shadow-sm ${
+                            isCompleted
+                              ? 'bg-blue-600 text-white ring-4 ring-blue-50'
+                              : isActive
+                              ? 'bg-blue-600 text-white ring-4 ring-blue-100 scale-105'
+                              : 'bg-white border-2 border-slate-300 text-slate-400'
+                          }`}
+                        >
+                          {isCompleted ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : stepItem.id}
+                        </div>
+                        <span
+                          className={`text-[10px] sm:text-xs font-medium mt-1 transition-colors ${
+                            isActive
+                              ? 'text-blue-600 font-semibold'
+                              : isCompleted
+                              ? 'text-slate-700 font-medium'
+                              : 'text-slate-400'
+                          }`}
+                        >
+                          {stepItem.name}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* FORM BODY CONTAINER */}
+            <form onSubmit={handleAddPatient} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div ref={modalBodyRef} className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4 sm:space-y-5 scroll-smooth">
+                
+                {/* STEP ERROR BANNER */}
+                {stepError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs sm:text-sm font-medium flex items-start gap-2.5 shadow-sm">
+                    <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                    <div className="flex-grow">
+                      <span>{stepError}</span>
                     </div>
                   </div>
+                )}
 
-                  {/* Advice */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">{clinicLanguage === 'marathi' ? 'सल्ला' : clinicLanguage === 'hindi' ? 'सलाह' : 'Advice'}</label>
-                    <textarea
-                      value={prescriptionFormData.instructions}
-                      onChange={(e) => setPrescriptionFormData(prev => ({...prev, instructions: e.target.value}))}
-                      rows={2}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder={clinicLanguage === 'marathi' ? 'सल्ला प्रविष्ट करा...' : clinicLanguage === 'hindi' ? 'सलाह दर्ज करें...' : 'Enter advice...'}
-                    />
-                  </div>
+                {/* STEP 1: PATIENT INFORMATION */}
+                {currentStep === 1 && (
+                  <div className="space-y-4 sm:space-y-5 animate-in fade-in duration-200">
+                    
+                    {/* Patient Personal Details */}
+                    <div className="space-y-4">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600 flex items-center gap-1.5 border-b border-slate-100 pb-2">
+                        <User className="w-3.5 h-3.5" />
+                        <span>Patient Details</span>
+                      </h4>
 
-                  {/* Next Visit Date */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Next Visit Date</label>
-                    <input
-                      type="date"
-                      value={prescriptionFormData.next_visit_date || visitFormData.next_visit_date}
-                      onChange={(e) => setPrescriptionFormData(prev => ({...prev, next_visit_date: e.target.value}))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                            First Name <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            name="first_name"
+                            value={formData.first_name}
+                            onChange={handleInputChange}
+                            required
+                            aria-invalid={isNameInvalid(formData.first_name)}
+                            placeholder="Enter patient first name"
+                            className={`w-full h-11 sm:h-12 px-3.5 rounded-xl border text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:ring-2 ${
+                              isNameInvalid(formData.first_name)
+                                ? 'border-red-500 bg-red-50/20 focus:ring-red-100'
+                                : 'border-slate-300 focus:border-blue-600 focus:ring-blue-100'
+                            }`}
+                          />
+                          {isNameInvalid(formData.first_name) && (
+                            <p className="mt-1 text-xs text-red-600 font-medium">First name must contain only letters.</p>
+                          )}
+                        </div>
 
-                  {/* Medicines */}
-                  <div className="bg-white rounded-2xl border p-4 space-y-4">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg font-semibold">Medicines</h3>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                            Last Name <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            name="last_name"
+                            value={formData.last_name}
+                            onChange={handleInputChange}
+                            required
+                            aria-invalid={isNameInvalid(formData.last_name)}
+                            placeholder="Enter patient last name"
+                            className={`w-full h-11 sm:h-12 px-3.5 rounded-xl border text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:ring-2 ${
+                              isNameInvalid(formData.last_name)
+                                ? 'border-red-500 bg-red-50/20 focus:ring-red-100'
+                                : 'border-slate-300 focus:border-blue-600 focus:ring-blue-100'
+                            }`}
+                          />
+                          {isNameInvalid(formData.last_name) && (
+                            <p className="mt-1 text-xs text-red-600 font-medium">Last name must contain only letters.</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                          Gender <span className="text-red-500">*</span>
+                        </label>
+                        <ChoiceSelect
+                          which="user/gender"
+                          name="gender"
+                          value={formData.gender}
+                          onChange={handleInputChange}
+                          className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                          required
+                          placeholder="Select Gender"
+                        />
+                      </div>
                     </div>
-                    <PrescriptionAIReviewModal
-                      isOpen={isAiReviewOpen}
-                      aiDraft={aiDraft}
-                      setAiDraft={setAiDraft}
-                      onClose={() => setIsAiReviewOpen(false)}
-                      onApply={applyAiDraftToPrescription}
-                    />
 
-                    <div className="mb-3">
-                      <input
-                        type="text"
-                        placeholder="Filter medicines..."
-                        value={medicineFilter}
-                        onChange={(e) => setMedicineFilter(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-md mb-2"
+                    {/* Contact & Demographics */}
+                    <div className="space-y-4 pt-2">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600 flex items-center gap-1.5 border-b border-slate-100 pb-2">
+                        <Phone className="w-3.5 h-3.5" />
+                        <span>Contact & Demographics</span>
+                      </h4>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1.5">Mobile Number</label>
+                          <input
+                            type="tel"
+                            inputMode="numeric"
+                            pattern="[0-9]{10}"
+                            maxLength={10}
+                            name="mobile"
+                            value={formData.mobile}
+                            onChange={handleInputChange}
+                            placeholder="Enter 10-digit mobile number"
+                            className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1.5">Date of Birth</label>
+                          <input
+                            type="date"
+                            name="date_of_birth"
+                            value={formData.date_of_birth}
+                            onChange={handleInputChange}
+                            max={getTodayISO()}
+                            className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Address & Medical History */}
+                    <div className="space-y-4 pt-2">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600 flex items-center gap-1.5 border-b border-slate-100 pb-2">
+                        <MapPin className="w-3.5 h-3.5" />
+                        <span>Address & Clinical History</span>
+                      </h4>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">Residential Address</label>
+                        <textarea
+                          name="address"
+                          value={formData.address}
+                          onChange={handleInputChange}
+                          rows={2}
+                          placeholder="Enter patient residential address"
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">Medical History</label>
+                        <textarea
+                          name="medical_history"
+                          value={formData.medical_history}
+                          onChange={handleInputChange}
+                          rows={2}
+                          placeholder="Enter systemic conditions (Diabetes, BP, Allergies, etc.)"
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">Dental History</label>
+                        <textarea
+                          name="dental_history"
+                          value={formData.dental_history}
+                          onChange={handleInputChange}
+                          rows={2}
+                          placeholder="Enter past dental procedures, extractions, or complications"
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Assigned Doctor */}
+                    <div className="space-y-4 pt-2">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600 flex items-center gap-1.5 border-b border-slate-100 pb-2">
+                        <UserCheck className="w-3.5 h-3.5" />
+                        <span>Assigned Doctor</span>
+                      </h4>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                          Select Doctor <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                          name="user"
+                          value={formData.user}
+                          onChange={handleInputChange}
+                          required
+                          className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                        >
+                          <option value="">Select Doctor</option>
+                          {doctors.map((doctor) => (
+                            <option key={doctor.id} value={doctor.id}>
+                              Dr. {doctor.first_name} {doctor.last_name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 2: TREATMENT DETAILS */}
+                {currentStep === 2 && (
+                  <div className="space-y-6 animate-in fade-in duration-200">
+                    
+                    {/* Treatment & Procedure */}
+                    <div className="space-y-4">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600 flex items-center gap-1.5 border-b border-slate-100 pb-2">
+                        <Stethoscope className="w-3.5 h-3.5" />
+                        <span>Treatment & Procedure</span>
+                      </h4>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                            Treatment Type <span className="text-red-500">*</span>
+                          </label>
+                          <select
+                            name="type_of_treatment"
+                            value={treatmentFormData.type_of_treatment}
+                            onChange={handleTreatmentChange}
+                            required
+                            className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                          >
+                            <option value="">Select Treatment Type</option>
+                            {treatmentTypes.map((type) => (
+                              <option key={type.id} value={type.id}>
+                                {type.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                            Status <span className="text-red-500">*</span>
+                          </label>
+                          <ChoiceSelect
+                            which="treatment/status"
+                            name="status"
+                            value={treatmentFormData.status}
+                            onChange={handleTreatmentChange}
+                            className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                            required
+                            placeholder="Select Status"
+                          />
+                        </div>
+
+                        {(selectedTreatmentTypeName.toLowerCase().includes('ortho') || selectedTreatmentTypeName.toLowerCase().includes('braces')) && (
+                          <div>
+                            <label className="block text-xs font-semibold text-slate-700 mb-1.5">Braces Type</label>
+                            <ChoiceSelect
+                              which="treatment/braces-type"
+                              name="braces_type"
+                              value={treatmentFormData.braces_type}
+                              onChange={handleTreatmentChange}
+                              className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                              placeholder="Select Type"
+                            />
+                          </div>
+                        )}
+
+                        {selectedTreatmentTypeName.toLowerCase().includes('root canal') && (
+                          <div>
+                            <label className="block text-xs font-semibold text-slate-700 mb-1.5">Cap Type</label>
+                            <ChoiceSelect
+                              which="treatment/cap-type"
+                              name="cap_type"
+                              value={treatmentFormData.cap_type}
+                              onChange={handleTreatmentChange}
+                              className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                              placeholder="Select Type"
+                            />
+                          </div>
+                        )}
+
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                            {selectedTreatmentTypeName.toLowerCase().includes('root canal')
+                              ? 'Estimated Visits'
+                              : 'Estimated Duration (Months)'}
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            max="30"
+                            name="estimated_duration_months"
+                            value={treatmentFormData.estimated_duration_months}
+                            onChange={handleTreatmentChange}
+                            className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                            placeholder={selectedTreatmentTypeName.toLowerCase().includes('root canal') ? 'e.g., 5' : 'e.g., 3'}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1.5">Planned Amount (₹)</label>
+                          <input
+                            type="number"
+                            name="planned_amount"
+                            value={treatmentFormData.planned_amount}
+                            onChange={handleTreatmentChange}
+                            className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                            placeholder="e.g., 5000"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Clinical Evaluation */}
+                    <div className="space-y-4 pt-2">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600 flex items-center gap-1.5 border-b border-slate-100 pb-2">
+                        <FileText className="w-3.5 h-3.5" />
+                        <span>Clinical Evaluation</span>
+                      </h4>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">Initial Findings</label>
+                        <textarea
+                          name="initial_findings"
+                          value={treatmentFormData.initial_findings}
+                          onChange={handleTreatmentChange}
+                          rows={3}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                          placeholder="Describe clinical examination & initial findings..."
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">Treatment Plan</label>
+                        <textarea
+                          name="treatment_plan"
+                          value={treatmentFormData.treatment_plan}
+                          onChange={handleTreatmentChange}
+                          rows={3}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                          placeholder="Outline planned clinical procedures and steps..."
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 3: INITIAL VISIT */}
+                {currentStep === 3 && (
+                  <div className="space-y-6 animate-in fade-in duration-200">
+                    
+                    {/* Appointment Schedule */}
+                    <div className="space-y-4">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600 flex items-center gap-1.5 border-b border-slate-100 pb-2">
+                        <Calendar className="w-3.5 h-3.5" />
+                        <span>Appointment Schedule</span>
+                      </h4>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                          Next Visit Date <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="date"
+                          name="next_visit_date"
+                          value={visitFormData.next_visit_date}
+                          onChange={handleVisitChange}
+                          min={getTodayISO()}
+                          required
+                          className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Clinical & Patient Notes */}
+                    <div className="space-y-4 pt-2">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600 flex items-center gap-1.5 border-b border-slate-100 pb-2">
+                        <FileText className="w-3.5 h-3.5" />
+                        <span>Visit & Clinical Notes</span>
+                      </h4>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">Treatment Notes</label>
+                        <textarea
+                          name="treatment_notes"
+                          value={visitFormData.treatment_notes}
+                          onChange={handleVisitChange}
+                          rows={3}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                          placeholder="Add visit treatment notes or observations..."
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">Patient Complaints</label>
+                        <textarea
+                          name="patient_complaints"
+                          value={visitFormData.patient_complaints}
+                          onChange={handleVisitChange}
+                          rows={3}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                          placeholder="Document chief complaints reported by patient..."
+                        />
+                      </div>
+                    </div>
+
+                    {/* Billing & Payment */}
+                    <div className="space-y-4 pt-2">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600 flex items-center gap-1.5 border-b border-slate-100 pb-2">
+                        <CreditCard className="w-3.5 h-3.5" />
+                        <span>Initial Visit Payment</span>
+                      </h4>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1.5">Payment Amount (₹)</label>
+                          <input
+                            type="number"
+                            name="patient_payment_amount"
+                            value={visitFormData.patient_payment_amount}
+                            onChange={handleVisitChange}
+                            className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                            placeholder="e.g., 1000"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1.5">Payment Type</label>
+                          <ChoiceSelect
+                            which="treatment/payment-type"
+                            name="patient_payment_type"
+                            value={visitFormData.patient_payment_type}
+                            onChange={handleVisitChange}
+                            className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                            placeholder="Select Payment Type"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">Payment Note</label>
+                        <textarea
+                          name="payment_note"
+                          value={visitFormData.payment_note}
+                          onChange={handleVisitChange}
+                          rows={2}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                          placeholder="Add payment transaction references or notes..."
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 4: RX / PRESCRIPTION */}
+                {currentStep === 4 && (
+                  <div className="space-y-6 animate-in fade-in duration-200">
+                    
+                    {/* Summary & Clinical Notes */}
+                    <div className="space-y-4">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600 flex items-center gap-1.5 border-b border-slate-100 pb-2">
+                        <ClipboardList className="w-3.5 h-3.5" />
+                        <span>Summary & Diagnosis</span>
+                      </h4>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">Treatment (Auto-filled)</label>
+                        <input
+                          type="text"
+                          disabled
+                          value={treatmentTypes.find(t => String(t.id) === String(treatmentFormData.type_of_treatment))?.name || ''}
+                          className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 text-base sm:text-sm font-medium"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">Patient Complaints</label>
+                        <textarea
+                          value={prescriptionFormData.complaints}
+                          onChange={(e) => setPrescriptionFormData(prev => ({...prev, complaints: e.target.value}))}
+                          rows={2}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                          placeholder="Enter patient complaints..."
+                        />
+                      </div>
+
+                      <div>
+                        <div className="flex justify-between items-center mb-1.5">
+                          <label className="text-xs font-semibold text-slate-700">Diagnosis</label>
+                          <button
+                            type="button"
+                            disabled={aiLoading}
+                            onClick={async () => {
+                              const meaningful = Boolean(prescriptionFormData.diagnosis || prescriptionFormData.complaints || prescriptionFormData.instructions || prescriptionFormData.treatment);
+                              if (!meaningful) {
+                                showError('Please provide diagnosis, symptoms, treatment, or clinical notes before using AI Assist.');
+                                return;
+                              }
+                              const computeAge = (dob) => {
+                                if (!dob) return null;
+                                try {
+                                  const birth = new Date(dob);
+                                  const now = new Date();
+                                  let age = now.getFullYear() - birth.getFullYear();
+                                  const m = now.getMonth() - birth.getMonth();
+                                  if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
+                                  return age;
+                                } catch (e) {
+                                  return null;
+                                }
+                              };
+
+                              const payload = {
+                                patient_age: computeAge(formData.date_of_birth) || null,
+                                patient_gender: formData.gender || null,
+                                known_allergies: formData.allergies || '',
+                                relevant_medical_history: formData.medical_history || '',
+                                treatment: prescriptionFormData.treatment ? String(prescriptionFormData.treatment) : '',
+                                current_diagnosis: prescriptionFormData.diagnosis || '',
+                                symptoms: prescriptionFormData.complaints || '',
+                                clinical_notes: prescriptionFormData.instructions || '',
+                                medication_history: [],
+                                language: clinicLanguage || 'english',
+                              };
+                              try {
+                                setAiLoading(true);
+                                setAiDraft(null);
+                                const resp = await prescriptionApi.aiAssist(payload);
+                                setAiDraft(resp.data);
+                                setIsAiReviewOpen(true);
+                              } catch (err) {
+                                const status = err?.response?.status;
+                                if (status === 400) showError('Please provide sufficient clinical information.');
+                                else if (status === 401) showError('Authentication required. Please login again.');
+                                else if (status === 403) showError("You don't have permission to use AI assistance.");
+                                else if (status === 422) showError('AI returned an invalid prescription suggestion. Please try again.');
+                                else if (status === 429) showError('AI service is temporarily busy. Please try again shortly.');
+                                else if (status === 503) showError('AI service is currently unavailable. Please try again later.');
+                                else if (status === 504) showError('AI request timed out. Please try again.');
+                                else showError('Unable to connect to AI service. Please check your connection and try again.');
+                              } finally {
+                                setAiLoading(false);
+                              }
+                            }}
+                            className={`inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-xs font-semibold transition-all ${
+                              aiLoading
+                                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                : 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 active:scale-95'
+                            }`}
+                          >
+                            <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                            <span>{aiLoading ? 'Generating...' : 'AI Assist'}</span>
+                          </button>
+                        </div>
+                        <textarea
+                          value={prescriptionFormData.diagnosis}
+                          onChange={(e) => setPrescriptionFormData(prev => ({...prev, diagnosis: e.target.value}))}
+                          rows={2}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                          placeholder="Enter clinical diagnosis..."
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                          {clinicLanguage === 'marathi' ? 'सल्ला' : clinicLanguage === 'hindi' ? 'सलाह' : 'Advice / Instructions'}
+                        </label>
+                        <textarea
+                          value={prescriptionFormData.instructions}
+                          onChange={(e) => setPrescriptionFormData(prev => ({...prev, instructions: e.target.value}))}
+                          rows={2}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                          placeholder={clinicLanguage === 'marathi' ? 'सल्ला प्रविष्ट करा...' : clinicLanguage === 'hindi' ? 'सलाह दर्ज करें...' : 'Enter advice...'}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">Next Visit Date</label>
+                        <input
+                          type="date"
+                          value={prescriptionFormData.next_visit_date || visitFormData.next_visit_date}
+                          onChange={(e) => setPrescriptionFormData(prev => ({...prev, next_visit_date: e.target.value}))}
+                          className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Prescription Medicines */}
+                    <div className="space-y-4 pt-2">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600 flex items-center gap-1.5 border-b border-slate-100 pb-2">
+                        <Pill className="w-3.5 h-3.5" />
+                        <span>Prescription Medicines</span>
+                      </h4>
+
+                      <PrescriptionAIReviewModal
+                        isOpen={isAiReviewOpen}
+                        aiDraft={aiDraft}
+                        setAiDraft={setAiDraft}
+                        onClose={() => setIsAiReviewOpen(false)}
+                        onApply={applyAiDraftToPrescription}
                       />
 
-                      <div className="overflow-x-auto">
-                        <div className="min-w-[760px] space-y-2">
-                          <div className="grid grid-cols-[56px,1.6fr,0.8fr,1fr,1fr,1fr] gap-2 items-center px-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">
-                            <div>Select</div>
-                            <div>Medicine</div>
-                            <div>Qty</div>
-                            <div>Frequency</div>
-                            <div>Duration</div>
-                            <div>{clinicLanguage === 'marathi' ? 'अन्न' : clinicLanguage === 'hindi' ? 'खाना' : 'Food'}</div>
-                          </div>
+                      <div>
+                        <input
+                          type="text"
+                          placeholder="Filter medicines by name, strength, or form..."
+                          value={medicineFilter}
+                          onChange={(e) => setMedicineFilter(e.target.value)}
+                          className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 mb-3"
+                        />
 
+                        <div className="space-y-3">
                           {clinicMedicines
                             .filter((med) => {
                               if (!medicineFilter) return true;
@@ -1788,111 +1976,128 @@ useEffect(() => {
                             })
                             .map((med) => {
                               const selectedItem = getSelectedPrescriptionItem(med.id);
+                              const isChecked = Boolean(selectedItem);
 
                               return (
                                 <div
                                   key={med.id}
-                                  className="grid grid-cols-[56px,1.6fr,0.8fr,1fr,1fr,1fr] gap-2 items-center rounded-xl border border-slate-200 bg-slate-50 px-2 py-2"
+                                  className={`p-3.5 rounded-2xl border transition-all ${
+                                    isChecked
+                                      ? 'border-blue-500 bg-blue-50/30 ring-1 ring-blue-200'
+                                      : 'border-slate-200 bg-white hover:border-slate-300'
+                                  }`}
                                 >
-                                  <label className="flex items-center justify-center">
-                                    <input
-                                      type="checkbox"
-                                      checked={Boolean(selectedItem)}
-                                      onChange={() => handleToggleMedicine(med, 1)}
-                                      className="w-4 h-4"
-                                    />
-                                  </label>
-
-                                  <div className="min-w-0">
-                                    <div className="font-semibold text-sm text-slate-800 truncate">{med.medicine_name}</div>
-                                    <div className="text-xs text-slate-500 truncate">{med.strength || 'Standard'} • {med.form || 'Tablet'}</div>
+                                  {/* Medicine Header Row */}
+                                  <div className="flex items-center justify-between gap-3 mb-2.5">
+                                    <label className="flex items-center gap-3 cursor-pointer min-w-0 flex-1">
+                                      <input
+                                        type="checkbox"
+                                        checked={isChecked}
+                                        onChange={() => handleToggleMedicine(med, 1)}
+                                        className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300"
+                                      />
+                                      <div className="min-w-0 flex-1">
+                                        <div className="font-semibold text-sm text-slate-900 truncate">
+                                          {med.medicine_name}
+                                        </div>
+                                        <div className="text-xs text-slate-500 truncate">
+                                          {med.strength || 'Standard'} • {med.form || 'Tablet'}
+                                        </div>
+                                      </div>
+                                    </label>
                                   </div>
 
-                                  <input
-                                    type="number"
-                                    min="1"
-                                    value={selectedItem?.dosage || 1}
-                                    onChange={(e) => handleMedicineQtyChange(med.id, Number(e.target.value || 1))}
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="input-ui min-w-0"
-                                  />
+                                  {/* Medicine Controls Row */}
+                                  {isChecked && (
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-slate-100 animate-in fade-in duration-150">
+                                      <div>
+                                        <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Qty</label>
+                                        <input
+                                          type="number"
+                                          min="1"
+                                          value={selectedItem?.dosage || 1}
+                                          onChange={(e) => handleMedicineQtyChange(med.id, Number(e.target.value || 1))}
+                                          className="w-full h-10 px-2.5 rounded-lg border border-slate-300 text-xs font-semibold text-slate-900 bg-white focus:outline-none focus:border-blue-600"
+                                        />
+                                      </div>
 
-                                  <select
-                                    className="input-ui min-w-0"
-                                    value={selectedItem?.frequency || '1-0-1'}
-                                    onChange={(e) => {
-                                      const targetItem = getSelectedPrescriptionItem(med.id);
-                                      if (!targetItem) {
-                                        handleToggleMedicine(med, 1);
-                                        return;
-                                      }
-                                      handlePrescriptionItemChange(
-                                        prescriptionItems.findIndex((item) => String(item.medicine?.id) === String(med.id)),
-                                        'frequency',
-                                        e.target.value
-                                      );
-                                    }}
-                                  >
-                                    <option>1-0-1</option>
-                                    <option>0-1-0</option>
-                                    <option>1-0-0</option>
-                                    <option>0-0-1</option>
-                                    <option>1-1-1</option>
-                                    <option>1-1-0</option>
-                                    <option>0-1-1</option>
-                                  </select>
+                                      <div>
+                                        <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Frequency</label>
+                                        <select
+                                          className="w-full h-10 px-2 rounded-lg border border-slate-300 text-xs font-semibold text-slate-900 bg-white focus:outline-none focus:border-blue-600"
+                                          value={selectedItem?.frequency || '1-0-1'}
+                                          onChange={(e) => {
+                                            const targetItem = getSelectedPrescriptionItem(med.id);
+                                            if (!targetItem) {
+                                              handleToggleMedicine(med, 1);
+                                              return;
+                                            }
+                                            handlePrescriptionItemChange(
+                                              prescriptionItems.findIndex((item) => String(item.medicine?.id) === String(med.id)),
+                                              'frequency',
+                                              e.target.value
+                                            );
+                                          }}
+                                        >
+                                          <option>1-0-1</option>
+                                          <option>0-1-0</option>
+                                          <option>1-0-0</option>
+                                          <option>0-0-1</option>
+                                          <option>1-1-1</option>
+                                          <option>1-1-0</option>
+                                          <option>0-1-1</option>
+                                        </select>
+                                      </div>
 
-                                  <select
-                                    className="input-ui min-w-0"
-                                    value={selectedItem?.duration || '3 Days'}
-                                    onChange={(e) => {
-                                      const targetItem = getSelectedPrescriptionItem(med.id);
-                                      if (!targetItem) {
-                                        handleToggleMedicine(med, 1);
-                                        return;
-                                      }
-                                      handlePrescriptionItemChange(
-                                        prescriptionItems.findIndex((item) => String(item.medicine?.id) === String(med.id)),
-                                        'duration',
-                                        e.target.value
-                                      );
-                                    }}
-                                  >
-                                    <option>1 Day</option>
-                                    <option>2 Days</option>
-                                    <option>3 Days</option>
-                                    <option>4 Days</option>
-                                    <option>5 Days</option>
-                                    <option>6 Days</option>
-                                    <option>7 Days</option>
-                                    <option>8 Days</option>
-                                    <option>9 Days</option>
-                                    <option>10 Days</option>
-                                    <option>11 Days</option>
-                                    <option>12 Days</option>
-                                    <option>13 Days</option>
-                                    <option>14 Days</option>
-                                    <option>15 Days</option>
-                                  </select>
+                                      <div>
+                                        <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Duration</label>
+                                        <select
+                                          className="w-full h-10 px-2 rounded-lg border border-slate-300 text-xs font-semibold text-slate-900 bg-white focus:outline-none focus:border-blue-600"
+                                          value={selectedItem?.duration || '3 Days'}
+                                          onChange={(e) => {
+                                            const targetItem = getSelectedPrescriptionItem(med.id);
+                                            if (!targetItem) {
+                                              handleToggleMedicine(med, 1);
+                                              return;
+                                            }
+                                            handlePrescriptionItemChange(
+                                              prescriptionItems.findIndex((item) => String(item.medicine?.id) === String(med.id)),
+                                              'duration',
+                                              e.target.value
+                                            );
+                                          }}
+                                        >
+                                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].map(d => (
+                                            <option key={d}>{d} {d === 1 ? 'Day' : 'Days'}</option>
+                                          ))}
+                                        </select>
+                                      </div>
 
-                                  <ChoiceSelect
-                                    which="prescription/before-after-food"
-                                    language={clinicLanguage}
-                                    className="input-ui min-w-0"
-                                    value={selectedItem?.before_after_food || 'after_food'}
-                                    onChange={(e) => {
-                                      const targetItem = getSelectedPrescriptionItem(med.id);
-                                      if (!targetItem) {
-                                        handleToggleMedicine(med, 1);
-                                        return;
-                                      }
-                                      handlePrescriptionItemChange(
-                                        prescriptionItems.findIndex((item) => String(item.medicine?.id) === String(med.id)),
-                                        'before_after_food',
-                                        e.target.value
-                                      );
-                                    }}
-                                  />
+                                      <div>
+                                        <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">
+                                          {clinicLanguage === 'marathi' ? 'अन्न' : clinicLanguage === 'hindi' ? 'खाना' : 'Food'}
+                                        </label>
+                                        <ChoiceSelect
+                                          which="prescription/before-after-food"
+                                          language={clinicLanguage}
+                                          className="w-full h-10 px-2 rounded-lg border border-slate-300 text-xs font-semibold text-slate-900 bg-white focus:outline-none focus:border-blue-600"
+                                          value={selectedItem?.before_after_food || 'after_food'}
+                                          onChange={(e) => {
+                                            const targetItem = getSelectedPrescriptionItem(med.id);
+                                            if (!targetItem) {
+                                              handleToggleMedicine(med, 1);
+                                              return;
+                                            }
+                                            handlePrescriptionItemChange(
+                                              prescriptionItems.findIndex((item) => String(item.medicine?.id) === String(med.id)),
+                                              'before_after_food',
+                                              e.target.value
+                                            );
+                                          }}
+                                        />
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               );
                             })}
@@ -1900,53 +2105,69 @@ useEffect(() => {
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
-              <div className="flex flex-col sm:flex-row justify-between gap-3 pt-4 border-t">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (currentStep === 1) {
-                      setShowAddModal(false);
-                      resetModal();
-                    } else {
-                      handlePrevious();
-                    }
-                  }}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-                >
-                  {currentStep === 1 ? 'Cancel' : 'Previous'}
-                </button>
-                <div className="flex items-center gap-3 justify-end">
+              {/* STICKY BOTTOM ACTIONS */}
+              <div className="flex-shrink-0 bg-white border-t border-slate-100 px-4 sm:px-6 py-3.5 flex items-center justify-between gap-3 z-20 pb-[calc(0.875rem+env(safe-area-inset-bottom))]">
+                {currentStep === 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => { setShowAddModal(false); resetModal(); }}
+                    className="h-11 sm:h-12 px-4 sm:px-5 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs sm:text-sm hover:bg-slate-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handlePrevious}
+                    className="h-11 sm:h-12 px-4 sm:px-5 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs sm:text-sm hover:bg-slate-50 transition-colors flex items-center gap-1.5"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Back</span>
+                  </button>
+                )}
+
+                <div className="flex items-center gap-2 sm:gap-3">
                   {currentStep === 4 && (
                     <button
                       type="button"
                       onClick={handleSkipPrescription}
                       disabled={isSubmitting}
-                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-slate-300 bg-white text-slate-700 font-semibold text-xs sm:text-sm hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
-                      Skip Prescription
+                      Skip Rx
                     </button>
                   )}
+
                   <button
                     type="submit"
                     disabled={isSubmitting || (currentStep === 1 && (isNameInvalid(formData.first_name) || isNameInvalid(formData.last_name)))}
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="h-11 sm:h-12 px-5 sm:px-6 rounded-xl bg-blue-600 text-white font-semibold text-xs sm:text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm flex items-center gap-1.5"
                   >
-                    {isSubmitting
-                      ? 'Saving...'
-                      : currentStep < 3
-                        ? 'Next'
-                        : currentStep === 3
-                          ? 'Create & Continue for Prescription'
-                          : 'Create Prescription'}
+                    {isSubmitting ? (
+                      <span>Saving...</span>
+                    ) : currentStep < 3 ? (
+                      <>
+                        <span>Continue</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    ) : currentStep === 3 ? (
+                      <>
+                        <span>Create & Continue for Rx</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    ) : (
+                      <span>Create Prescription</span>
+                    )}
                   </button>
                 </div>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Delete Patient Confirmation Modal */}
