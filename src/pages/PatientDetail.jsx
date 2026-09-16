@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import {
    Edit, ArrowRight, Plus, Users, X, UploadCloud, Eye, Printer, Trash2, Check, ChevronDown, FileText, Phone, MapPin, CalendarDays, ClipboardCheck, CircleDollarSign, Wallet, Heart, MoreVertical
@@ -55,30 +56,49 @@ const StatCard = ({ icon: Icon, label, value, tone }) => (
    </div>
 );
 
-const InfoRow = ({ icon: Icon, label, value }) => (
-   <div className="flex items-center gap-3 rounded-xl p-3 hover:bg-slate-50 transition">
-      <div
-         title={label}
-         className="
+const InfoRow = ({ icon: Icon, label, value, href }) => {
+   const content = (
+      <>
+         <div
+            title={label}
+            className={`
         flex
         h-10
         w-10
         items-center
         justify-center
         rounded-xl
-        bg-slate-100
-        text-slate-600
         shrink-0
-      "
-      >
-         <Icon className="h-5 w-5" />
-      </div>
+        ${href ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}
+      `}
+         >
+            <Icon className="h-5 w-5" />
+         </div>
 
-      <span className="text-sm font-semibold text-slate-900 truncate">
-         {value || "N/A"}
-      </span>
-   </div>
-);
+         <span className={`text-sm font-semibold truncate ${href ? 'text-blue-600 group-hover:underline' : 'text-slate-900'}`}>
+            {value || "N/A"}
+         </span>
+      </>
+   );
+
+   if (href) {
+      return (
+         <a
+            href={href}
+            onClick={(e) => e.stopPropagation()}
+            className="group flex items-center gap-3 rounded-xl p-3 hover:bg-slate-100 transition active:scale-[0.98]"
+         >
+            {content}
+         </a>
+      );
+   }
+
+   return (
+      <div className="flex items-center gap-3 rounded-xl p-3 hover:bg-slate-50 transition">
+         {content}
+      </div>
+   );
+};
 
 const HistoryCard = ({ title, value, tone, icon: Icon, iconTone }) => (
    <div className={`rounded-[24px] border border-slate-200 p-4 shadow-sm ${tone}`}>
@@ -379,8 +399,18 @@ const PatientDetail = () => {
       patient_complaints: '',
       patient_payment_amount: '',
       patient_payment_type: 'cash',
-      payment_note: ''
+      payment_note: '',
+      treatment_status: ''
    });
+
+   useEffect(() => {
+      if (isAddingVisit && selectedTreatment) {
+         setVisitFormData(prev => ({
+            ...prev,
+            treatment_status: selectedTreatment.status || ''
+         }));
+      }
+   }, [isAddingVisit, selectedTreatment]);
    const [doctors, setDoctors] = useState([]);
    const [isEditingPatient, setIsEditingPatient] = useState(false);
    const [patientFormData, setPatientFormData] = useState({
@@ -473,6 +503,11 @@ const PatientDetail = () => {
             successMessage: 'Visit added successfully!',
             showSuccessNotification: true
          });
+         if (visitFormData.treatment_status && visitFormData.treatment_status !== selectedTreatment?.status) {
+            await handleApiCall(() => treatmentApi.update(selectedTreatment.id, { status: visitFormData.treatment_status }), {
+               showSuccessNotification: false
+            });
+         }
          setIsAddingVisit(false);
          setVisitFormData({
             next_visit_date: '',
@@ -480,7 +515,8 @@ const PatientDetail = () => {
             patient_complaints: '',
             patient_payment_amount: '',
             patient_payment_type: 'cash',
-            payment_note: ''
+            payment_note: '',
+            treatment_status: ''
          });
          await loadData();
       } catch (error) {
@@ -857,6 +893,40 @@ const PatientDetail = () => {
       window.addEventListener('keydown', handleEscape);
       return () => window.removeEventListener('keydown', handleEscape);
    }, [isPrescriptionModalOpen]);
+   const applyAiDraftToPrescription = (draft) => {
+      if (!draft) return;
+      // Map diagnosis
+      setPrescriptionFormData((prev) => ({ ...prev, diagnosis: draft.diagnosis || prev.diagnosis }));
+      // Map treatment_summary into instructions field if appropriate (do not overwrite treatment relationship)
+      if (draft.treatment_summary) {
+         setPrescriptionFormData((prev) => ({ ...prev, instructions: (prev.instructions ? prev.instructions + '\n' : '') + draft.treatment_summary }));
+      }
+      // Map instructions array
+      if (draft.instructions && draft.instructions.length > 0) {
+         const instText = draft.instructions.join('\n');
+         setPrescriptionFormData((prev) => ({ ...prev, instructions: (prev.instructions ? prev.instructions + '\n' : '') + instText }));
+      }
+      // Map medicines into prescriptionItems
+      if (Array.isArray(draft.medications)) {
+         const mappedItems = draft.medications.map((m, idx) => {
+            const found = m.medicine_id ? clinicMedicines.find((cm) => String(cm.id) === String(m.medicine_id)) : null;
+            return {
+               localId: Math.random().toString(36).substr(2, 9),
+               medicine: found || null,
+               custom_medicine_name: found ? '' : (m.name || ''),
+               search: found ? (found.medicine_name || '') : (m.name || ''),
+               dosage: m.dosage || '',
+               frequency: m.frequency || '1-0-1',
+               duration: m.duration || '',
+               before_after_food: m.timing || 'AFTER_FOOD',
+               notes: m.notes || '',
+               sequence: idx + 1,
+            };
+         });
+         setPrescriptionItems(mappedItems.length > 0 ? mappedItems : [createPrescriptionItem(1)]);
+      }
+      setIsAiReviewOpen(false);
+   };
    const handleSavePrescription = async (e, printAfterSave = false) => {
       if (e) {
          e.preventDefault();
@@ -876,41 +946,6 @@ const PatientDetail = () => {
             .filter((item) => item.medicine?.id || (item.custom_medicine_name || '').trim())
             .map(preparePrescriptionItemPayload),
       };
-
-        const applyAiDraftToPrescription = (draft) => {
-           if (!draft) return;
-           // Map diagnosis
-           setPrescriptionFormData((prev) => ({ ...prev, diagnosis: draft.diagnosis || prev.diagnosis }));
-           // Map treatment_summary into instructions field if appropriate (do not overwrite treatment relationship)
-           if (draft.treatment_summary) {
-              setPrescriptionFormData((prev) => ({ ...prev, instructions: (prev.instructions ? prev.instructions + '\n' : '') + draft.treatment_summary }));
-           }
-           // Map instructions array
-           if (draft.instructions && draft.instructions.length > 0) {
-              const instText = draft.instructions.join('\n');
-              setPrescriptionFormData((prev) => ({ ...prev, instructions: (prev.instructions ? prev.instructions + '\n' : '') + instText }));
-           }
-           // Map medicines into prescriptionItems
-           if (Array.isArray(draft.medications)) {
-              const mappedItems = draft.medications.map((m, idx) => {
-                 const found = m.medicine_id ? clinicMedicines.find((cm) => String(cm.id) === String(m.medicine_id)) : null;
-                 return {
-                    localId: Math.random().toString(36).substr(2, 9),
-                    medicine: found || null,
-                    custom_medicine_name: found ? '' : (m.name || ''),
-                    search: found ? (found.medicine_name || '') : (m.name || ''),
-                    dosage: m.dosage || '',
-                    frequency: m.frequency || '1-0-1',
-                    duration: m.duration || '',
-                    before_after_food: m.timing || 'AFTER_FOOD',
-                    notes: m.notes || '',
-                    sequence: idx + 1,
-                 };
-              });
-              setPrescriptionItems(mappedItems.length > 0 ? mappedItems : [createPrescriptionItem(1)]);
-           }
-           setIsAiReviewOpen(false);
-        };
       try {
          let savedPrescription = activePrescription;
          if (prescriptionModalMode === 'edit' && activePrescription) {
@@ -1263,7 +1298,7 @@ const PatientDetail = () => {
                      <div className="grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
                         <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
                            <div className="grid grid-cols-2 gap-3">
-                              <InfoRow icon={Phone} label="Phone" value={patient.mobile || 'N/A'} />
+                              <InfoRow icon={Phone} label="Phone" value={patient.mobile || 'N/A'} href={patient.mobile ? `tel:${patient.mobile}` : undefined} />
                               <InfoRow icon={Users} label="Gender" value={patient.gender || 'N/A'} />
                               <InfoRow icon={Users} label="Doctor" value={patient.assigned_doctor || (patient.user && `${patient.user.first_name || ''} ${patient.user.last_name || ''}`.trim()) || 'N/A'} />
                               <InfoRow icon={CalendarDays} label="DOB" value={formatDate(patient.date_of_birth) || 'N/A'} />
@@ -1446,15 +1481,15 @@ const PatientDetail = () => {
                </div>
             </main>
          </div>
-         {isPrescriptionModalOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 backdrop-blur-sm sm:p-4">
-               <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-2xl">
-                  <div className="flex items-center justify-between border-b border-slate-200 bg-gradient-to-r from-blue-600 via-blue-700 to-sky-600 px-5 py-5 text-white sm:px-8">
+         {isPrescriptionModalOpen && createPortal(
+            <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex flex-col sm:items-center sm:justify-center sm:p-4 overflow-hidden animate-in fade-in duration-200">
+               <div className="w-screen h-[100dvh] min-h-[100dvh] max-h-[100dvh] sm:w-full sm:h-auto sm:min-h-0 sm:max-h-[90dvh] sm:max-w-5xl md:max-w-6xl bg-white sm:rounded-2xl sm:shadow-2xl flex flex-col overflow-hidden relative border-0 sm:border sm:border-slate-200">
+                  <div className="flex-shrink-0 flex items-center justify-between border-b border-slate-200 bg-gradient-to-r from-blue-600 via-blue-700 to-sky-600 px-4 sm:px-8 py-4 text-white z-20">
                      <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-slate-200">
+                        <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.32em] text-slate-200">
                            {prescriptionModalMode === 'edit' ? 'Edit Prescription' : 'Create Prescription'}
                         </p>
-                        <h2 className="mt-1 text-xl font-semibold sm:text-2xl">
+                        <h2 className="mt-0.5 text-lg sm:text-2xl font-semibold">
                            {patient.first_name} {patient.last_name}
                         </h2>
                      </div>
@@ -1465,7 +1500,8 @@ const PatientDetail = () => {
                         <X className="h-5 w-5" />
                      </button>
                   </div>
-                  <form onSubmit={(e) => handleSavePrescription(e, false)} className="overflow-y-auto bg-slate-50 px-4 py-5 sm:px-6 lg:px-8 lg:py-6">
+                  <form onSubmit={(e) => handleSavePrescription(e, false)} className="flex-1 flex flex-col min-h-0 overflow-hidden bg-slate-50">
+                     <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-8 lg:py-6 space-y-5 scroll-smooth">
                      <div className="space-y-5">
                         <div className="grid gap-5 md:grid-cols-2">
                            <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
@@ -1701,6 +1737,7 @@ const PatientDetail = () => {
                            </button>
                         </div>
                      </div>
+                     </div>
                   </form>
                   <PrescriptionAIReviewModal
                      isOpen={isAiReviewOpen}
@@ -1710,82 +1747,80 @@ const PatientDetail = () => {
                      onApply={applyAiDraftToPrescription}
                   />
 
-                  <div className="flex flex-col gap-3 border-t border-slate-200 bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-8">
-                     <button onClick={closePrescriptionModal} className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+                  <div className="flex-shrink-0 flex flex-col gap-3 border-t border-slate-200 bg-white px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-8 z-20">
+                     <button onClick={closePrescriptionModal} className="h-11 sm:h-12 px-5 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs sm:text-sm hover:bg-slate-50 transition-colors">
                         Cancel
                      </button>
                      <div className="flex flex-col gap-2 sm:flex-row">
-                        <button type="button" className="rounded-2xl bg-slate-100 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-200" onClick={(e) => handleSavePrescription(e, false)}>
+                        <button type="button" className="h-11 sm:h-12 px-5 rounded-xl bg-slate-100 font-semibold text-xs sm:text-sm text-slate-700 transition-colors hover:bg-slate-200" onClick={(e) => handleSavePrescription(e, false)}>
                            Save Draft
                         </button>
-                        <button type="button" className="rounded-2xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-blue-700" onClick={(e) => handleSavePrescription(e, true)}>
+                        <button type="button" className="h-11 sm:h-12 px-6 rounded-xl bg-blue-600 font-semibold text-xs sm:text-sm text-white transition-colors hover:bg-blue-700 shadow-sm" onClick={(e) => handleSavePrescription(e, true)}>
                            Save & Print
                         </button>
                      </div>
                   </div>
                </div>
-            </div>
+            </div>,
+            document.body
          )}
-         {isEditingPatient && (
-            <div className="fixed inset-0 z-50 flex items-start justify-center px-4 py-8 sm:px-6 lg:px-8">
-               <div className="fixed inset-0 bg-black/40" onClick={() =>
-                  setIsEditingPatient(false)} />
-               <div className="relative w-full max-w-2xl max-h-[calc(100vh-6rem)] overflow-y-auto rounded-[28px] bg-white shadow-2xl ring-1 ring-black/5">
-                  <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-6 py-4">
-                     <div className="flex items-start justify-between gap-3">
-                        <div>
-                           <h3 className="text-xl font-semibold text-gray-900">Edit Patient</h3>
-                           <p className="text-sm text-gray-500">Update patient details and assigned doctor</p>
-                        </div>
-                        <button
-                           type="button"
-                           onClick={() =>
-                              setIsEditingPatient(false)}
-                           className="rounded-full p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-                        >
-                           <X className="w-5 h-5" />
-                        </button>
+         {isEditingPatient && createPortal(
+            <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex flex-col sm:items-center sm:justify-center sm:p-4 overflow-hidden animate-in fade-in duration-200">
+               <div className="w-screen h-[100dvh] min-h-[100dvh] max-h-[100dvh] sm:w-full sm:h-auto sm:min-h-0 sm:max-h-[85dvh] sm:max-w-xl md:max-w-2xl bg-white sm:rounded-2xl sm:shadow-2xl flex flex-col overflow-hidden relative border-0 sm:border sm:border-slate-200">
+                  <header className="flex-shrink-0 bg-white border-b border-slate-100 px-4 sm:px-6 py-3.5 flex items-center justify-between z-20">
+                     <div>
+                        <h3 className="text-lg sm:text-xl font-bold text-slate-900 leading-tight">Edit Patient</h3>
+                        <p className="text-xs text-slate-500 font-medium">Update patient details and assigned doctor</p>
                      </div>
-                  </div>
-                  <div className="p-6">
-                     <form onSubmit={handleEditPatient} className="space-y-5">
+                     <button
+                        type="button"
+                        onClick={() =>
+                           setIsEditingPatient(false)}
+                        className="w-10 h-10 flex items-center justify-center -mr-2 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100 transition-colors"
+                        aria-label="Close modal"
+                     >
+                        <X className="w-5 h-5" />
+                     </button>
+                  </header>
+                  <form onSubmit={handleEditPatient} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                     <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4 sm:space-y-5 scroll-smooth">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                            <div>
-                              <label className="block text-sm font-semibold text-gray-700">First Name</label>
+                              <label className="block text-xs font-semibold text-slate-700 mb-1.5">First Name</label>
                               <input
                                  required
                                  value={patientFormData.first_name}
                                  onChange={(e) => setPatientFormData({ ...patientFormData, first_name: e.target.value })}
-                                 className="mt-1 block w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                 className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                               />
                            </div>
                            <div>
-                              <label className="block text-sm font-semibold text-gray-700">Last Name</label>
+                              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Last Name</label>
                               <input
                                  required
                                  value={patientFormData.last_name}
                                  onChange={(e) => setPatientFormData({ ...patientFormData, last_name: e.target.value })}
-                                 className="mt-1 block w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                 className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                               />
                            </div>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                            <div>
-                              <label className="block text-sm font-semibold text-gray-700">Mobile</label>
+                              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Mobile</label>
                               <input
                                  value={patientFormData.mobile}
                                  onChange={(e) => setPatientFormData({ ...patientFormData, mobile: e.target.value })}
-                                 className="mt-1 block w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                 className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                               />
                            </div>
                            <div>
-                              <label className="block text-sm font-semibold text-gray-700">Gender</label>
+                              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Gender</label>
                               <ChoiceSelect
                                  which="user/gender"
                                  value={patientFormData.gender}
                                  onChange={(e) =>
                                     setPatientFormData({ ...patientFormData, gender: e.target.value })}
-                                 className="mt-1 block w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                 className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                                  required
                                  placeholder="Select gender"
                               />
@@ -1793,22 +1828,22 @@ const PatientDetail = () => {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                            <div>
-                              <label className="block text-sm font-semibold text-gray-700">Date of Birth</label>
+                              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Date of Birth</label>
                               <input
                                  type="date"
                                  value={patientFormData.date_of_birth}
                                  onChange={(e) => setPatientFormData({ ...patientFormData, date_of_birth: e.target.value })}
-                                 className="mt-1 block w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                 className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                               />
                            </div>
                            <div>
-                              <label className="block text-sm font-semibold text-gray-700">Doctor</label>
+                              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Doctor</label>
                               <select
                                  required
                                  value={patientFormData.user}
                                  onChange={(e) =>
                                     setPatientFormData({ ...patientFormData, user: e.target.value })}
-                                 className="mt-1 block w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                 className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                               >
                                  <option value="">Select doctor</option>
                                  {doctors.length > 0 ? (
@@ -1824,54 +1859,56 @@ const PatientDetail = () => {
                            </div>
                         </div>
                         <div>
-                           <label className="block text-sm font-semibold text-gray-700">Address</label>
+                           <label className="block text-xs font-semibold text-slate-700 mb-1.5">Address</label>
                            <textarea
                               value={patientFormData.address}
                               onChange={(e) => setPatientFormData({ ...patientFormData, address: e.target.value })}
                               rows={2}
-                              className="mt-1 block w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                            />
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                            <div>
-                              <label className="block text-sm font-semibold text-gray-700">Medical History</label>
+                              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Medical History</label>
                               <textarea
                                  value={patientFormData.medical_history}
                                  onChange={(e) => setPatientFormData({ ...patientFormData, medical_history: e.target.value })}
                                  rows={3}
-                                 className="mt-1 block w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                               />
                            </div>
                            <div>
-                              <label className="block text-sm font-semibold text-gray-700">Dental History</label>
+                              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Dental History</label>
                               <textarea
                                  value={patientFormData.dental_history}
                                  onChange={(e) => setPatientFormData({ ...patientFormData, dental_history: e.target.value })}
                                  rows={3}
-                                 className="mt-1 block w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                               />
                            </div>
                         </div>
-                        <div className="flex flex-col gap-3 pt-4 border-t border-gray-200 sm:flex-row sm:justify-end">
-                           <button
-                              type="button"
-                              onClick={() => setIsEditingPatient(false)}
-                              className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                           >
-                              Cancel
-                           </button>
-                           <button
-                              type="submit"
-                              disabled={submittingPatient}
-                              className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
-                           >
-                              {submittingPatient ? 'Saving...' : 'Save Changes'}
-                           </button>
-                        </div>
-                     </form>
-                  </div>
+                     </div>
+
+                     <div className="flex-shrink-0 bg-white border-t border-slate-100 px-4 sm:px-6 py-3.5 flex items-center justify-end gap-3 z-20">
+                        <button
+                           type="button"
+                           onClick={() => setIsEditingPatient(false)}
+                           className="h-11 sm:h-12 px-4 sm:px-5 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs sm:text-sm hover:bg-gray-50 transition-colors"
+                        >
+                           Cancel
+                        </button>
+                        <button
+                           type="submit"
+                           disabled={submittingPatient}
+                           className="h-11 sm:h-12 px-5 sm:px-6 rounded-xl bg-blue-600 text-white font-semibold text-xs sm:text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm flex items-center gap-1.5"
+                        >
+                           {submittingPatient ? 'Saving...' : 'Save Changes'}
+                        </button>
+                     </div>
+                  </form>
                </div>
-            </div>
+            </div>,
+            document.body
          )}
          {treatmentDrawerOpen && selectedTreatment && (
             <div className="fixed inset-0 z-50 flex">
@@ -1894,7 +1931,13 @@ const PatientDetail = () => {
                      </div>
                      <div className="rounded-lg border border-gray-100 p-4">
                         <p className="text-sm font-semibold text-gray-700">Patient Info</p>
-                        <p className="text-sm text-gray-600">{patient.first_name} {patient.last_name} • {patient.mobile || 'N/A'}</p>
+                        <p className="text-sm text-gray-600">
+                           {patient.first_name} {patient.last_name} • {patient.mobile ? (
+                              <a href={`tel:${patient.mobile}`} className="hover:underline text-blue-600 font-medium" onClick={(e) => e.stopPropagation()}>
+                                 {patient.mobile}
+                              </a>
+                           ) : 'N/A'}
+                        </p>
                      </div>
                      <div className="rounded-lg border border-gray-100 p-4 bg-gray-50">
                         <p className="text-sm font-semibold text-gray-700">Treatment Plan</p>
@@ -1966,266 +2009,314 @@ const PatientDetail = () => {
                </div>
             </div>
          )}
-         {(isAddingTreatment || isEditingTreatment) && (
-            <div className="fixed inset-0 z-50 flex items-start justify-center bg-gray-600/50 p-3 sm:p-4 overflow-y-auto">
-               <div className="relative my-4 w-full max-w-[95vw] sm:max-w-lg md:max-w-xl lg:max-w-2xl rounded-2xl border border-gray-200 bg-white p-4 shadow-xl max-h-[90vh] overflow-y-auto">
-                  <div className="flex justify-between items-center mb-4">
-                     <h3 className="text-lg font-medium text-gray-900">{isEditingTreatment ? 'Edit Treatment' : 'Add New Treatment'}</h3>
-                     <button
-                        onClick={closeTreatmentModal}
-                        className="text-gray-400 hover:text-gray-600"
-                     >
-                        <X className="w-6 h-6" />
-                     </button>
-                  </div>
-                  <form onSubmit={handleSaveTreatment} className="space-y-4">
-                     <div>
-                        <label className="block text-sm font-semibold text-gray-700">Treatment Type * <span className="text-xs text-red-600">{!treatmentFormData.type_of_treatment ? '(Required)' : ''}</span></label>
-                        {isEditingTreatment ? (
-                           <div className="mt-1 block w-full rounded-md border border-gray-300 bg-gray-100 py-2 px-3 text-gray-700">
-                              {treatmentTypes.find(type => String(type.id) === String(treatmentFormData.type_of_treatment))?.name || 'Unknown'}
-                           </div>
-                        ) : (
-                           <select
-                              required
-                              value={treatmentFormData.type_of_treatment}
-                              onChange={(e) =>
-                                 setTreatmentFormData({ ...treatmentFormData, type_of_treatment: e.target.value })}
-                              className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${!treatmentFormData.type_of_treatment ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                                 }`}
-                           >
-                              <option value="">Select Treatment Type</option>
-                              {treatmentTypes.map(type => (
-                                 <option key={type.id} value={type.id}>
-                                    {type.name}
-                                 </option>
-                              ))}
-                           </select>
-                        )}
-                        {/* conditional options based on selected type */}
-                        {/* conditional options based on selected type */}
-                        {(treatmentTypes.find(type => String(type.id) === String(treatmentFormData.type_of_treatment))?.name?.toLowerCase().includes('ortho') ||
-                           treatmentTypes.find(type => String(type.id) === String(treatmentFormData.type_of_treatment))?.name?.toLowerCase().includes('braces')) && (
-                              <div className="mt-3">
-                                 <label className="block text-sm font-semibold text-gray-700">Braces Type</label>
-                                 <ChoiceSelect
-                                    which="treatment/braces-type"
-                                    value={treatmentFormData.braces_type}
-                                    onChange={(e) =>
-                                       setTreatmentFormData({ ...treatmentFormData, braces_type: e.target.value })}
-                                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                    placeholder="Select Type"
-                                 />
-                              </div>
-                           )}
-                        {treatmentTypes.find(type => String(type.id) === String(treatmentFormData.type_of_treatment))?.name?.toLowerCase().includes('root canal') && (
-                           <div className="mt-3">
-                              <label className="block text-sm font-semibold text-gray-700">Cap Type</label>
-                              <ChoiceSelect
-                                 which="treatment/cap-type"
-                                 value={treatmentFormData.cap_type}
-                                 onChange={(e) =>
-                                    setTreatmentFormData({ ...treatmentFormData, cap_type: e.target.value })}
-                                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                 placeholder="Select Type"
-                              />
-                           </div>
-                        )}
-                     </div>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                           <label className="block text-sm font-semibold text-gray-700">Status *</label>
-                           <ChoiceSelect
-                              which="treatment/status"
-                              value={treatmentFormData.status}
-                              onChange={(e) =>
-                                 setTreatmentFormData({ ...treatmentFormData, status: e.target.value })}
-                              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                              required
-                              placeholder="Select Status"
-                           />
-                        </div>
-                        <div>
-                           <label className="block text-sm font-semibold text-gray-700">
-                              {treatmentTypes.find(type => String(type.id) === String(treatmentFormData.type_of_treatment))?.name?.toLowerCase().includes('root canal')
-                                 ? 'Estimated Visits'
-                                 : 'Estimated Duration (Months)'}
-                           </label>
-                           <input
-                              type="number"
-                              value={treatmentFormData.estimated_duration_months}
-                              onChange={(e) => setTreatmentFormData({ ...treatmentFormData, estimated_duration_months: e.target.value })}
-                              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                              placeholder={
-                                 treatmentTypes.find(type => String(type.id) === String(treatmentFormData.type_of_treatment))?.name?.toLowerCase().includes('root canal')
-                                    ? 'e.g., 5'
-                                    : 'e.g., 3'
-                              }
-                           />
-                        </div>
-                     </div>
-                     <div>
-                        <label className="block text-sm font-semibold text-gray-700">Planned Amount (₹)</label>
-                        <input
-                           type="number"
-                           step="0.01"
-                           value={treatmentFormData.planned_amount}
-                           onChange={(e) => setTreatmentFormData({ ...treatmentFormData, planned_amount: e.target.value })}
-                           className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                           placeholder="e.g., 5000"
-                        />
-                     </div>
-                     <div>
-                        <label className="block text-sm font-semibold text-gray-700">Initial Findings</label>
-                        <textarea
-                           value={treatmentFormData.initial_findings}
-                           onChange={(e) => setTreatmentFormData({ ...treatmentFormData, initial_findings: e.target.value })}
-                           className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                           placeholder="Describe initial findings..."
-                           rows="3"
-                        />
-                     </div>
-                     <div>
-                        <label className="block text-sm font-semibold text-gray-700">Treatment Plan</label>
-                        <textarea
-                           value={treatmentFormData.treatment_plan}
-                           onChange={(e) => setTreatmentFormData({ ...treatmentFormData, treatment_plan: e.target.value })}
-                           className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                           placeholder="Describe treatment plan..."
-                           rows="3"
-                        />
-                     </div>
-                     <div>
-                        <label className="block text-sm font-semibold text-gray-700">Treatment Notes</label>
-                        <textarea
-                           value={treatmentFormData.treatment_notes}
-                           onChange={(e) => setTreatmentFormData({ ...treatmentFormData, treatment_notes: e.target.value })}
-                           className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                           placeholder="Add any additional notes..."
-                           rows="3"
-                        />
-                     </div>
-                     <div className="flex justify-end space-x-3 pt-4">
-                        <button
-                           type="button"
-                           onClick={closeTreatmentModal}
-                           className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                        >
-                           Cancel
-                        </button>
-                        <button
-                           type="submit"
-                           disabled={submittingTreatment || !treatmentFormData.type_of_treatment}
-                           className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-                        >
-                           {submittingTreatment ? (isEditingTreatment ? 'Saving...' : 'Adding...') : (isEditingTreatment ? 'Update Treatment' : 'Add Treatment')}
-                        </button>
-                     </div>
-                  </form>
-               </div>
-            </div>
-         )}
-         {isAddingVisit && selectedTreatment && (
-            <div className="fixed inset-0 z-60 flex items-start justify-center bg-gray-600/50 p-3 sm:p-4 overflow-y-auto">
-               <div className="relative my-4 w-full max-w-[95vw] sm:max-w-lg md:max-w-xl lg:max-w-2xl rounded-2xl border border-gray-200 bg-white p-4 shadow-xl max-h-[90vh] overflow-y-auto">
-                  <div className="flex justify-between items-center mb-4">
-                     <h3 className="text-lg font-medium text-gray-900">Add New Visit</h3>
-                     <button
-                        onClick={() =>
-                           setIsAddingVisit(false)}
-                        className="text-gray-400 hover:text-gray-600"
-                     >
-                        <X className="w-6 h-6" />
-                     </button>
-                  </div>
-                  <form onSubmit={handleAddVisit} className="space-y-4">
-                     <div>
-                        <label className="block text-sm font-semibold text-gray-700">Next Visit Date * <span className="text-xs text-red-600">{!visitFormData.next_visit_date ? '(Required)' : ''}</span></label>
-                        <input
-                           type="date"
-                           required
-                           value={toISODate(visitFormData.next_visit_date)}
-                           onChange={(e) => setVisitFormData({
-                              ...visitFormData,
-                              next_visit_date: e.target.value ? toDDMMYYYY(e.target.value) : ''
-                           })}
-                           className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${!visitFormData.next_visit_date ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                              }`}
-                        />
-                     </div>
-                     <div>
-                        <label className="block text-sm font-semibold text-gray-700">Treatment Notes</label>
-                        <textarea
-                           value={visitFormData.treatment_notes}
-                           onChange={(e) => setVisitFormData({ ...visitFormData, treatment_notes: e.target.value })}
-                           className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                           placeholder="Add treatment notes..."
-                           rows="3"
-                        />
-                     </div>
-                     <div>
-                        <label className="block text-sm font-semibold text-gray-700">Patient Complaints</label>
-                        <textarea
-                           value={visitFormData.patient_complaints}
-                           onChange={(e) => setVisitFormData({ ...visitFormData, patient_complaints: e.target.value })}
-                           className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                           placeholder="Document patient complaints..."
-                           rows="3"
-                        />
-                     </div>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                           <label className="block text-sm font-semibold text-gray-700">Payment Amount (₹)</label>
-                           <input
-                              type="number"
-                              value={visitFormData.patient_payment_amount}
-                              onChange={(e) => setVisitFormData({ ...visitFormData, patient_payment_amount: e.target.value })}
-                              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                              placeholder="e.g., 1000"
-                           />
-                        </div>
-                        <div>
-                           <label className="block text-sm font-semibold text-gray-700">Payment Type</label>
-                           <ChoiceSelect
-                              which="treatment/payment-type"
-                              value={visitFormData.patient_payment_type}
-                              onChange={(e) =>
-                                 setVisitFormData({ ...visitFormData, patient_payment_type: e.target.value })}
-                              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                              placeholder="Select Payment Type"
-                           />
-                        </div>
-                     </div>
-                     <div>
-                        <label className="block text-sm font-semibold text-gray-700">Payment Note</label>
-                        <textarea
-                           value={visitFormData.payment_note}
-                           onChange={(e) => setVisitFormData({ ...visitFormData, payment_note: e.target.value })}
-                           className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                           placeholder="Add any payment notes..."
-                           rows="2"
-                        />
-                     </div>
-                     <div className="flex justify-end space-x-3 pt-4">
-                        <button
-                           type="button"
-                           onClick={() => setIsAddingVisit(false)}
-                           className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                        >
-                           Cancel
-                        </button>
-                        <button
-                           type="submit"
-                           disabled={submittingVisit || !visitFormData.next_visit_date}
-                           className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-                        >
-                           {submittingVisit ? 'Adding...' : 'Add Visit'}
-                        </button>
-                     </div>
-                  </form>
-               </div>
-            </div>
-         )}
+         {(isAddingTreatment || isEditingTreatment) && createPortal(
+             <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex flex-col sm:items-center sm:justify-center sm:p-4 overflow-hidden animate-in fade-in duration-200">
+                <div className="w-screen h-[100dvh] min-h-[100dvh] max-h-[100dvh] sm:w-full sm:h-auto sm:min-h-0 sm:max-h-[85dvh] sm:max-w-xl md:max-w-2xl bg-white sm:rounded-2xl sm:shadow-2xl flex flex-col overflow-hidden relative border-0 sm:border sm:border-slate-200">
+                   <header className="flex-shrink-0 bg-white border-b border-slate-100 px-4 sm:px-6 py-3.5 flex items-center justify-between z-20">
+                      <div>
+                         <h3 className="text-lg sm:text-xl font-bold text-slate-900 leading-tight">
+                            {isEditingTreatment ? 'Edit Treatment' : 'Add New Treatment'}
+                         </h3>
+                         <p className="text-xs text-slate-500 font-medium">
+                            {isEditingTreatment ? 'Update treatment details and plan' : 'Enter treatment details for this patient'}
+                         </p>
+                      </div>
+                      <button
+                         type="button"
+                         onClick={closeTreatmentModal}
+                         className="w-10 h-10 flex items-center justify-center -mr-2 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100 transition-colors"
+                         aria-label="Close modal"
+                      >
+                         <X className="w-5 h-5" />
+                      </button>
+                   </header>
+
+                   <form onSubmit={handleSaveTreatment} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4 sm:space-y-5 scroll-smooth">
+                         <div>
+                            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                               Treatment Type <span className="text-red-500">*</span> {!treatmentFormData.type_of_treatment && <span className="text-xs text-red-600 font-normal">(Required)</span>}
+                            </label>
+                            {isEditingTreatment ? (
+                               <div className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-200 bg-slate-50 flex items-center text-slate-700 text-sm font-medium">
+                                  {treatmentTypes.find(type => String(type.id) === String(treatmentFormData.type_of_treatment))?.name || 'Unknown'}
+                               </div>
+                            ) : (
+                               <select
+                                  required
+                                  value={treatmentFormData.type_of_treatment}
+                                  onChange={(e) =>
+                                     setTreatmentFormData({ ...treatmentFormData, type_of_treatment: e.target.value })}
+                                  className={`w-full h-11 sm:h-12 px-3.5 rounded-xl border text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:ring-2 ${!treatmentFormData.type_of_treatment ? 'border-red-500 bg-red-50/20 focus:ring-red-100' : 'border-slate-300 focus:border-blue-600 focus:ring-blue-100'
+                                     }`}
+                               >
+                                  <option value="">Select Treatment Type</option>
+                                  {treatmentTypes.map(type => (
+                                     <option key={type.id} value={type.id}>
+                                        {type.name}
+                                     </option>
+                                  ))}
+                               </select>
+                            )}
+
+                            {(treatmentTypes.find(type => String(type.id) === String(treatmentFormData.type_of_treatment))?.name?.toLowerCase().includes('ortho') ||
+                               treatmentTypes.find(type => String(type.id) === String(treatmentFormData.type_of_treatment))?.name?.toLowerCase().includes('braces')) && (
+                                  <div className="mt-3">
+                                     <label className="block text-xs font-semibold text-slate-700 mb-1.5">Braces Type</label>
+                                     <ChoiceSelect
+                                        which="treatment/braces-type"
+                                        value={treatmentFormData.braces_type}
+                                        onChange={(e) =>
+                                           setTreatmentFormData({ ...treatmentFormData, braces_type: e.target.value })}
+                                        className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                                        placeholder="Select Type"
+                                     />
+                                  </div>
+                               )}
+                            {treatmentTypes.find(type => String(type.id) === String(treatmentFormData.type_of_treatment))?.name?.toLowerCase().includes('root canal') && (
+                               <div className="mt-3">
+                                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Cap Type</label>
+                                  <ChoiceSelect
+                                     which="treatment/cap-type"
+                                     value={treatmentFormData.cap_type}
+                                     onChange={(e) =>
+                                        setTreatmentFormData({ ...treatmentFormData, cap_type: e.target.value })}
+                                     className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                                     placeholder="Select Type"
+                                  />
+                               </div>
+                            )}
+                         </div>
+
+                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                               <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                                  Status <span className="text-red-500">*</span>
+                               </label>
+                               <ChoiceSelect
+                                  which="treatment/status"
+                                  value={treatmentFormData.status}
+                                  onChange={(e) =>
+                                     setTreatmentFormData({ ...treatmentFormData, status: e.target.value })}
+                                  className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                                  required
+                                  placeholder="Select Status"
+                               />
+                            </div>
+                            <div>
+                               <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                                  {treatmentTypes.find(type => String(type.id) === String(treatmentFormData.type_of_treatment))?.name?.toLowerCase().includes('root canal')
+                                     ? 'Estimated Visits'
+                                     : 'Estimated Duration (Months)'}
+                               </label>
+                               <input
+                                  type="number"
+                                  value={treatmentFormData.estimated_duration_months}
+                                  onChange={(e) => setTreatmentFormData({ ...treatmentFormData, estimated_duration_months: e.target.value })}
+                                  className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                                  placeholder={
+                                     treatmentTypes.find(type => String(type.id) === String(treatmentFormData.type_of_treatment))?.name?.toLowerCase().includes('root canal')
+                                        ? 'e.g., 5'
+                                        : 'e.g., 3'
+                                  }
+                               />
+                            </div>
+                         </div>
+
+                         <div>
+                            <label className="block text-xs font-semibold text-slate-700 mb-1.5">Planned Amount (₹)</label>
+                            <input
+                               type="number"
+                               step="0.01"
+                               value={treatmentFormData.planned_amount}
+                               onChange={(e) => setTreatmentFormData({ ...treatmentFormData, planned_amount: e.target.value })}
+                               className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                               placeholder="e.g., 5000"
+                            />
+                         </div>
+
+                         <div>
+                            <label className="block text-xs font-semibold text-slate-700 mb-1.5">Initial Findings</label>
+                            <textarea
+                               value={treatmentFormData.initial_findings}
+                               onChange={(e) => setTreatmentFormData({ ...treatmentFormData, initial_findings: e.target.value })}
+                               className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                               placeholder="Describe initial findings..."
+                               rows={3}
+                            />
+                         </div>
+
+                         <div>
+                            <label className="block text-xs font-semibold text-slate-700 mb-1.5">Treatment Plan</label>
+                            <textarea
+                               value={treatmentFormData.treatment_plan}
+                               onChange={(e) => setTreatmentFormData({ ...treatmentFormData, treatment_plan: e.target.value })}
+                               className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                               placeholder="Describe treatment plan..."
+                               rows={3}
+                            />
+                         </div>
+
+                         <div>
+                            <label className="block text-xs font-semibold text-slate-700 mb-1.5">Treatment Notes</label>
+                            <textarea
+                               value={treatmentFormData.treatment_notes}
+                               onChange={(e) => setTreatmentFormData({ ...treatmentFormData, treatment_notes: e.target.value })}
+                               className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                               placeholder="Add any additional notes..."
+                               rows={3}
+                            />
+                         </div>
+                      </div>
+
+                      <div className="flex-shrink-0 bg-white border-t border-slate-100 px-4 sm:px-6 py-3.5 flex items-center justify-end gap-3 z-20">
+                         <button
+                            type="button"
+                            onClick={closeTreatmentModal}
+                            className="h-11 sm:h-12 px-4 sm:px-5 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs sm:text-sm hover:bg-slate-50 transition-colors"
+                         >
+                            Cancel
+                         </button>
+                         <button
+                            type="submit"
+                            disabled={submittingTreatment || !treatmentFormData.type_of_treatment}
+                            className="h-11 sm:h-12 px-5 sm:px-6 rounded-xl bg-blue-600 text-white font-semibold text-xs sm:text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm flex items-center gap-1.5"
+                         >
+                            {submittingTreatment ? (isEditingTreatment ? 'Saving...' : 'Adding...') : (isEditingTreatment ? 'Update Treatment' : 'Add Treatment')}
+                         </button>
+                      </div>
+                   </form>
+                </div>
+             </div>,
+             document.body
+          )}
+          {isAddingVisit && selectedTreatment && createPortal(
+             <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex flex-col sm:items-center sm:justify-center sm:p-4 overflow-hidden animate-in fade-in duration-200">
+                <div className="w-screen h-[100dvh] min-h-[100dvh] max-h-[100dvh] sm:w-full sm:h-auto sm:min-h-0 sm:max-h-[85dvh] sm:max-w-xl md:max-w-2xl bg-white sm:rounded-2xl sm:shadow-2xl flex flex-col overflow-hidden relative border-0 sm:border sm:border-slate-200">
+                   <header className="flex-shrink-0 bg-white border-b border-slate-100 px-4 sm:px-6 py-3.5 flex items-center justify-between z-20">
+                      <div>
+                         <h3 className="text-lg sm:text-xl font-bold text-slate-900 leading-tight">
+                            Add New Visit
+                         </h3>
+                         <p className="text-xs text-slate-500 font-medium">
+                            Record next visit schedule and treatment notes
+                         </p>
+                      </div>
+                      <button
+                         type="button"
+                         onClick={() => setIsAddingVisit(false)}
+                         className="w-10 h-10 flex items-center justify-center -mr-2 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100 transition-colors"
+                         aria-label="Close modal"
+                      >
+                         <X className="w-5 h-5" />
+                      </button>
+                   </header>
+
+                   <form onSubmit={handleAddVisit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4 sm:space-y-5 scroll-smooth">
+                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                               <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                                  Next Visit Date <span className="text-red-500">*</span> {!visitFormData.next_visit_date && <span className="text-xs text-red-600 font-normal">(Required)</span>}
+                               </label>
+                               <input
+                                  type="date"
+                                  required
+                                  value={toISODate(visitFormData.next_visit_date)}
+                                  onChange={(e) => setVisitFormData({
+                                     ...visitFormData,
+                                     next_visit_date: e.target.value ? toDDMMYYYY(e.target.value) : ''
+                                  })}
+                                  className={`w-full h-11 sm:h-12 px-3.5 rounded-xl border text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:ring-2 ${!visitFormData.next_visit_date ? 'border-red-500 bg-red-50/20 focus:ring-red-100' : 'border-slate-300 focus:border-blue-600 focus:ring-blue-100'
+                                     }`}
+                               />
+                            </div>
+                            <div>
+                               <label className="block text-xs font-semibold text-slate-700 mb-1.5">Treatment Status</label>
+                               <ChoiceSelect
+                                  which="treatment/status"
+                                  value={visitFormData.treatment_status}
+                                  onChange={(e) => setVisitFormData({ ...visitFormData, treatment_status: e.target.value })}
+                                  className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                                  placeholder="Select Treatment Status"
+                               />
+                            </div>
+                         </div>
+                         <div>
+                            <label className="block text-xs font-semibold text-slate-700 mb-1.5">Treatment Notes</label>
+                            <textarea
+                               value={visitFormData.treatment_notes}
+                               onChange={(e) => setVisitFormData({ ...visitFormData, treatment_notes: e.target.value })}
+                               className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                               placeholder="Add treatment notes..."
+                               rows={3}
+                            />
+                         </div>
+                         <div>
+                            <label className="block text-xs font-semibold text-slate-700 mb-1.5">Patient Complaints</label>
+                            <textarea
+                               value={visitFormData.patient_complaints}
+                               onChange={(e) => setVisitFormData({ ...visitFormData, patient_complaints: e.target.value })}
+                               className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                               placeholder="Document patient complaints..."
+                               rows={3}
+                            />
+                         </div>
+                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                               <label className="block text-xs font-semibold text-slate-700 mb-1.5">Payment Amount (₹)</label>
+                               <input
+                                  type="number"
+                                  value={visitFormData.patient_payment_amount}
+                                  onChange={(e) => setVisitFormData({ ...visitFormData, patient_payment_amount: e.target.value })}
+                                  className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                                  placeholder="e.g., 1000"
+                               />
+                            </div>
+                            <div>
+                               <label className="block text-xs font-semibold text-slate-700 mb-1.5">Payment Type</label>
+                               <ChoiceSelect
+                                  which="treatment/payment-type"
+                                  value={visitFormData.patient_payment_type}
+                                  onChange={(e) =>
+                                     setVisitFormData({ ...visitFormData, patient_payment_type: e.target.value })}
+                                  className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                                  placeholder="Select Payment Type"
+                               />
+                            </div>
+                         </div>
+                         <div>
+                            <label className="block text-xs font-semibold text-slate-700 mb-1.5">Payment Note</label>
+                            <textarea
+                               value={visitFormData.payment_note}
+                               onChange={(e) => setVisitFormData({ ...visitFormData, payment_note: e.target.value })}
+                               className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                               placeholder="Add any payment notes..."
+                               rows={2}
+                            />
+                         </div>
+                      </div>
+                      <div className="flex-shrink-0 bg-white border-t border-slate-100 px-4 sm:px-6 py-3.5 flex items-center justify-end gap-3 z-20">
+                         <button
+                            type="button"
+                            onClick={() => setIsAddingVisit(false)}
+                            className="h-11 sm:h-12 px-4 sm:px-5 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs sm:text-sm hover:bg-gray-50 transition-colors"
+                         >
+                            Cancel
+                         </button>
+                         <button
+                            type="submit"
+                            disabled={submittingVisit || !visitFormData.next_visit_date}
+                            className="h-11 sm:h-12 px-5 sm:px-6 rounded-xl bg-blue-600 text-white font-semibold text-xs sm:text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm flex items-center gap-1.5"
+                         >
+                            {submittingVisit ? 'Adding...' : 'Add Visit'}
+                         </button>
+                      </div>
+                   </form>
+                </div>
+             </div>,
+             document.body
+          )}
 
          {/* Delete Treatment Confirmation Modal */}
          {showDeleteModal && treatmentToDelete && (

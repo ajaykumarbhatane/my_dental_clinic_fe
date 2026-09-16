@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Search, Filter, Eye, Edit3, Plus, X, Trash2, Phone, User, Stethoscope } from 'lucide-react';
 import { treatmentApi } from '../api/treatmentApi';
@@ -46,8 +47,18 @@ const Treatments = () => {
     patient_complaints: '',
     patient_payment_amount: '',
     patient_payment_type: 'cash',
-    payment_note: ''
+    payment_note: '',
+    treatment_status: ''
   });
+
+  useEffect(() => {
+    if (showAddVisitModal && selectedTreatment) {
+      setVisitFormData(prev => ({
+        ...prev,
+        treatment_status: selectedTreatment.status || ''
+      }));
+    }
+  }, [showAddVisitModal, selectedTreatment]);
   const [formData, setFormData] = useState({
     patient: '',
     type_of_treatment: '',
@@ -310,6 +321,10 @@ const Treatments = () => {
       };
 
       await visitsApi.create(payload);
+      if (visitFormData.treatment_status && visitFormData.treatment_status !== selectedTreatment?.status) {
+        await treatmentApi.update(selectedTreatment.id, { status: visitFormData.treatment_status });
+        fetchTreatments();
+      }
       setShowAddVisitModal(false);
       setVisitFormData({
         next_visit_date: '',
@@ -317,7 +332,8 @@ const Treatments = () => {
         patient_complaints: '',
         patient_payment_amount: '',
         patient_payment_type: 'cash',
-        payment_note: ''
+        payment_note: '',
+        treatment_status: ''
       });
       await fetchVisitsForTreatment(selectedTreatment.id);
       alert('Visit added successfully!');
@@ -567,10 +583,7 @@ whitespace-nowrap
                   </div>
 
                   <div className="mt-4 space-y-3 text-sm text-slate-600">
-                    <div className="flex items-center gap-3 rounded-2xl bg-slate-50 p-3">
-                      <Stethoscope className="h-4 w-4 text-blue-600" />
-                      <span className="truncate">{treatment.type_of_treatment_name || 'No treatment type'}</span>
-                    </div>
+                    
 
                     <a
                       href={`tel:${treatment.patient_mobile || treatment.patient?.mobile || ''}`}
@@ -580,6 +593,11 @@ whitespace-nowrap
                       <Phone className="h-4 w-4 text-green-600" />
                       <span>{treatment.patient_mobile || treatment.patient?.mobile || 'N/A'}</span>
                     </a>
+
+                    <div className="flex items-center gap-3 rounded-2xl bg-slate-50 p-3">
+                      <Stethoscope className="h-4 w-4 text-blue-600" />
+                      <span className="truncate">{treatment.type_of_treatment_name || 'No treatment type'}</span>
+                    </div>
                   </div>
                 </div>
               );
@@ -782,383 +800,431 @@ whitespace-nowrap
     
 
       {/* Add Treatment Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-gray-600/50 p-3 sm:p-4 overflow-y-auto">
-          <div className="relative my-4 w-full max-w-[95vw] sm:max-w-lg md:max-w-xl lg:max-w-2xl rounded-2xl border border-gray-200 bg-white p-4 shadow-xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900">Add New Treatment</h3>
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <form onSubmit={handleAddTreatment} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700">Patient * <span className="text-xs text-red-600">{!formData.patient ? '(Required)' : ''}</span></label>
-                  <select
-                    required
-                    value={formData.patient}
-                    onChange={(e) => setFormData({...formData, patient: e.target.value})}
-                    className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-                      !formData.patient ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                    }`}
-                  >
-                    <option value="">Select Patient</option>
-                    {patients.map(patient => (
-                      <option key={patient.id} value={patient.id}>
-                        {patient.first_name} {patient.last_name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700">Treatment Type * <span className="text-xs text-red-600">{!formData.type_of_treatment ? '(Required)' : ''}</span></label>
-                  <select
-                    required
-                    value={formData.type_of_treatment}
-                    onChange={(e) => setFormData({...formData, type_of_treatment: e.target.value})}
-                    className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-                      !formData.type_of_treatment ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                    }`}
-                  >
-                    <option value="">Select Treatment Type</option>
-                    {treatmentTypes.map(type => (
-                      <option key={type.id} value={type.id}>
-                        {type.name}
-                      </option>
-                    ))}
-              </select>
-
-              {/* conditional options based on selected type */}
-              {(selectedTypeName.toLowerCase().includes('ortho') || selectedTypeName.toLowerCase().includes('braces')) && (
-                <div className="mt-3">
-                  <label className="block text-sm font-semibold text-gray-700">Braces Type</label>
-                  <ChoiceSelect
-                    which="treatment/braces-type"
-                    value={formData.braces_type}
-                    onChange={(e) => setFormData({...formData, braces_type: e.target.value})}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Select Type"
-                  />
-                </div>
-              )}
-              {selectedTypeName.toLowerCase().includes('root canal') && (
-                <div className="mt-3">
-                  <label className="block text-sm font-semibold text-gray-700">Cap Type</label>
-                  <ChoiceSelect
-                    which="treatment/cap-type"
-                    value={formData.cap_type}
-                    onChange={(e) => setFormData({...formData, cap_type: e.target.value})}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Select Type"
-                  />
-                </div>
-              )}
-                </div>
+      {showAddModal && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex flex-col sm:items-center sm:justify-center sm:p-4 overflow-hidden animate-in fade-in duration-200">
+          <div className="w-screen h-[100dvh] min-h-[100dvh] max-h-[100dvh] sm:w-full sm:h-auto sm:min-h-0 sm:max-h-[85dvh] sm:max-w-xl md:max-w-2xl bg-white sm:rounded-2xl sm:shadow-2xl flex flex-col overflow-hidden relative border-0 sm:border sm:border-slate-200">
+            <header className="flex-shrink-0 bg-white border-b border-slate-100 px-4 sm:px-6 py-3.5 flex items-center justify-between z-20">
+              <div>
+                <h3 className="text-lg sm:text-xl font-bold text-slate-900 leading-tight">Add New Treatment</h3>
+                <p className="text-xs text-slate-500 font-medium">Enter treatment details for selected patient</p>
               </div>
+              <button
+                type="button"
+                onClick={() => setShowAddModal(false)}
+                className="w-10 h-10 flex items-center justify-center -mr-2 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100 transition-colors"
+                aria-label="Close modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </header>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700">Status *</label>
-                  <ChoiceSelect
-                    which="treatment/status"
-                    required
-                    value={formData.status}
-                    onChange={(e) => setFormData({...formData, status: e.target.value})}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Select Status"
-                  />
+            <form onSubmit={handleAddTreatment} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4 sm:space-y-5 scroll-smooth">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Patient <span className="text-red-500">*</span> {!formData.patient && <span className="text-xs text-red-600 font-normal">(Required)</span>}
+                    </label>
+                    <select
+                      required
+                      value={formData.patient}
+                      onChange={(e) => setFormData({...formData, patient: e.target.value})}
+                      className={`w-full h-11 sm:h-12 px-3.5 rounded-xl border text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:ring-2 ${
+                        !formData.patient ? 'border-red-500 bg-red-50/20 focus:ring-red-100' : 'border-slate-300 focus:border-blue-600 focus:ring-blue-100'
+                      }`}
+                    >
+                      <option value="">Select Patient</option>
+                      {patients.map(patient => (
+                        <option key={patient.id} value={patient.id}>
+                          {patient.first_name} {patient.last_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Treatment Type <span className="text-red-500">*</span> {!formData.type_of_treatment && <span className="text-xs text-red-600 font-normal">(Required)</span>}
+                    </label>
+                    <select
+                      required
+                      value={formData.type_of_treatment}
+                      onChange={(e) => setFormData({...formData, type_of_treatment: e.target.value})}
+                      className={`w-full h-11 sm:h-12 px-3.5 rounded-xl border text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:ring-2 ${
+                        !formData.type_of_treatment ? 'border-red-500 bg-red-50/20 focus:ring-red-100' : 'border-slate-300 focus:border-blue-600 focus:ring-blue-100'
+                      }`}
+                    >
+                      <option value="">Select Treatment Type</option>
+                      {treatmentTypes.map(type => (
+                        <option key={type.id} value={type.id}>
+                          {type.name}
+                        </option>
+                      ))}
+                    </select>
+
+                    {(selectedTypeName.toLowerCase().includes('ortho') || selectedTypeName.toLowerCase().includes('braces')) && (
+                      <div className="mt-3">
+                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">Braces Type</label>
+                        <ChoiceSelect
+                          which="treatment/braces-type"
+                          value={formData.braces_type}
+                          onChange={(e) => setFormData({...formData, braces_type: e.target.value})}
+                          className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                          placeholder="Select Type"
+                        />
+                      </div>
+                    )}
+                    {selectedTypeName.toLowerCase().includes('root canal') && (
+                      <div className="mt-3">
+                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">Cap Type</label>
+                        <ChoiceSelect
+                          which="treatment/cap-type"
+                          value={formData.cap_type}
+                          onChange={(e) => setFormData({...formData, cap_type: e.target.value})}
+                          className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                          placeholder="Select Type"
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Status <span className="text-red-500">*</span>
+                    </label>
+                    <ChoiceSelect
+                      which="treatment/status"
+                      required
+                      value={formData.status}
+                      onChange={(e) => setFormData({...formData, status: e.target.value})}
+                      className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                      placeholder="Select Status"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      {selectedTypeName.toLowerCase().includes('root canal')
+                        ? 'Estimated Visits'
+                        : 'Estimated Duration (Months)'}
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.estimated_duration_months}
+                      onChange={(e) => setFormData({...formData, estimated_duration_months: e.target.value})}
+                      className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                      placeholder={
+                        selectedTypeName.toLowerCase().includes('root canal')
+                          ? 'e.g., 5'
+                          : 'e.g., 3'
+                      }
+                    />
+                  </div>
+                </div>
+
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700">
-                    {selectedTypeName.toLowerCase().includes('root canal')
-                      ? 'Estimated Visits'
-                      : 'Estimated Duration (Months)'}
-                  </label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Planned Amount (₹)</label>
                   <input
                     type="number"
-                    value={formData.estimated_duration_months}
-                    onChange={(e) => setFormData({...formData, estimated_duration_months: e.target.value})}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder={
-                      selectedTypeName.toLowerCase().includes('root canal')
-                        ? 'e.g., 5'
-                        : 'e.g., 3'
-                    }
+                    step="0.01"
+                    value={formData.planned_amount}
+                    onChange={(e) => setFormData({...formData, planned_amount: e.target.value})}
+                    className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                    placeholder="e.g., 5000"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Initial Findings</label>
+                  <textarea
+                    value={formData.initial_findings}
+                    onChange={(e) => setFormData({...formData, initial_findings: e.target.value})}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                    placeholder="Describe initial findings..."
+                    rows={3}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Treatment Plan</label>
+                  <textarea
+                    value={formData.treatment_plan}
+                    onChange={(e) => setFormData({...formData, treatment_plan: e.target.value})}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                    placeholder="Describe treatment plan..."
+                    rows={3}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Treatment Notes</label>
+                  <textarea
+                    value={formData.treatment_notes}
+                    onChange={(e) => setFormData({...formData, treatment_notes: e.target.value})}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                    placeholder="Add any additional notes..."
+                    rows={3}
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700">Planned Amount (₹)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={formData.planned_amount}
-                  onChange={(e) => setFormData({...formData, planned_amount: e.target.value})}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="e.g., 5000"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700">Initial Findings</label>
-                <textarea
-                  value={formData.initial_findings}
-                  onChange={(e) => setFormData({...formData, initial_findings: e.target.value})}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Describe initial findings..."
-                  rows="3"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700">Treatment Plan</label>
-                <textarea
-                  value={formData.treatment_plan}
-                  onChange={(e) => setFormData({...formData, treatment_plan: e.target.value})}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Describe treatment plan..."
-                  rows="3"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700">Treatment Notes</label>
-                <textarea
-                  value={formData.treatment_notes}
-                  onChange={(e) => setFormData({...formData, treatment_notes: e.target.value})}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Add any additional notes..."
-                  rows="3"
-                />
-              </div>
-
-              <div className="flex justify-end space-x-3 pt-4">
+              <div className="flex-shrink-0 bg-white border-t border-slate-100 px-4 sm:px-6 py-3.5 flex items-center justify-end gap-3 z-20">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="h-11 sm:h-12 px-4 sm:px-5 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs sm:text-sm hover:bg-slate-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting || !formData.patient || !formData.type_of_treatment}
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                  className="h-11 sm:h-12 px-5 sm:px-6 rounded-xl bg-blue-600 text-white font-semibold text-xs sm:text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm flex items-center gap-1.5"
                 >
                   {submitting ? 'Adding...' : 'Add Treatment'}
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Visits Modal */}
-      {showVisitsModal && selectedTreatment && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-gray-600/50 p-3 sm:p-4 overflow-y-auto">
-          <div className="relative my-4 w-full max-w-[95vw] sm:max-w-lg md:max-w-2xl lg:max-w-3xl rounded-2xl border border-gray-200 bg-white p-4 shadow-xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900">
-                Visits for {selectedTreatment.patient_name} - {selectedTreatment.type_of_treatment_name}
-              </h3>
+      {showVisitsModal && selectedTreatment && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex flex-col sm:items-center sm:justify-center sm:p-4 overflow-hidden animate-in fade-in duration-200">
+          <div className="w-screen h-[100dvh] min-h-[100dvh] max-h-[100dvh] sm:w-full sm:h-auto sm:min-h-0 sm:max-h-[85dvh] sm:max-w-2xl lg:max-w-3xl bg-white sm:rounded-2xl sm:shadow-2xl flex flex-col overflow-hidden relative border-0 sm:border sm:border-slate-200">
+            <header className="flex-shrink-0 bg-white border-b border-slate-100 px-4 sm:px-6 py-3.5 flex items-center justify-between z-20">
+              <div>
+                <h3 className="text-lg sm:text-xl font-bold text-slate-900 leading-tight">
+                  Visits for {selectedTreatment.patient_name} - {selectedTreatment.type_of_treatment_name}
+                </h3>
+                <p className="text-xs text-slate-500 font-medium">Scheduled visits and payment history</p>
+              </div>
               <button
+                type="button"
                 onClick={() => setShowVisitsModal(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="w-10 h-10 flex items-center justify-center -mr-2 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100 transition-colors"
+                aria-label="Close modal"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5" />
               </button>
-            </div>
+            </header>
 
-            <div className="mb-4">
-              <button
-                onClick={() => {
-                  setVisitFormData({
-                    next_visit_date: '',
-                    treatment_notes: '',
-                    patient_complaints: '',
-                    patient_payment_amount: '',
-                    patient_payment_type: 'cash',
-                    payment_note: ''
-                  });
-                  setShowAddVisitModal(true);
-                }}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
-              >
-                <Plus className="w-5 h-5" />
-                <span>Add New Visit</span>
-              </button>
-            </div>
-
-            <div className="overflow-x-auto">
-              {selectedVisits.length > 0 ? (
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Next Visit Date</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Treatment Notes</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Complaints</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Payment Amount</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Payment Type</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {selectedVisits.map((visit) => (
-                      <tr key={visit.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {formatDate(visit.next_visit_date)}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-500">{visit.treatment_notes || 'N/A'}</td>
-                        <td className="px-6 py-4 text-sm text-gray-500">{visit.patient_complaints || 'N/A'}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {formatAmount(visit.patient_payment_amount)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {visit.patient_payment_type || 'N/A'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
-                          <button
-                            onClick={() => handleDeleteVisit(visit)}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            Delete
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">No visits scheduled yet for this treatment.</p>
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4 scroll-smooth">
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVisitFormData({
+                        next_visit_date: '',
+                        treatment_notes: '',
+                        patient_complaints: '',
+                        patient_payment_amount: '',
+                        patient_payment_type: 'cash',
+                        payment_note: ''
+                      });
+                      setShowAddVisitModal(true);
+                    }}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1.5 shadow-sm transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add New Visit</span>
+                  </button>
                 </div>
-              )}
-            </div>
 
-            <div className="flex justify-end mt-6">
-              <button
-                onClick={() => setShowVisitsModal(false)}
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                Close
-              </button>
+                <div className="overflow-x-auto rounded-xl border border-slate-200">
+                  {selectedVisits.length > 0 ? (
+                    <table className="min-w-full divide-y divide-slate-200">
+                      <thead className="bg-slate-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Next Visit Date</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Treatment Notes</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Complaints</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Payment Amount</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Payment Type</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-slate-200">
+                        {selectedVisits.map((visit) => (
+                          <tr key={visit.id} className="hover:bg-slate-50 transition-colors">
+                            <td className="px-4 py-3.5 whitespace-nowrap text-xs sm:text-sm font-medium text-slate-900">
+                              {formatDate(visit.next_visit_date)}
+                            </td>
+                            <td className="px-4 py-3.5 text-xs sm:text-sm text-slate-600 max-w-xs truncate">{visit.treatment_notes || 'N/A'}</td>
+                            <td className="px-4 py-3.5 text-xs sm:text-sm text-slate-600 max-w-xs truncate">{visit.patient_complaints || 'N/A'}</td>
+                            <td className="px-4 py-3.5 whitespace-nowrap text-xs sm:text-sm font-medium text-slate-900">
+                              {formatAmount(visit.patient_payment_amount)}
+                            </td>
+                            <td className="px-4 py-3.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 capitalize">
+                              {visit.patient_payment_type || 'N/A'}
+                            </td>
+                            <td className="px-4 py-3.5 whitespace-nowrap text-xs sm:text-sm">
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteVisit(visit)}
+                                className="text-red-600 hover:text-red-800 font-medium transition-colors"
+                              >
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-sm text-slate-500">No visits scheduled yet for this treatment.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex-shrink-0 bg-white border-t border-slate-100 px-4 sm:px-6 py-3.5 flex items-center justify-end z-20">
+                <button
+                  type="button"
+                  onClick={() => setShowVisitsModal(false)}
+                  className="h-11 sm:h-12 px-4 sm:px-5 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs sm:text-sm hover:bg-slate-50 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Add Visit Modal */}
-      {showAddVisitModal && selectedTreatment && (
-        <div className="fixed inset-0 z-[60] flex items-start justify-center bg-gray-600/50 p-3 sm:p-4 overflow-y-auto">
-          <div className="relative my-4 w-full max-w-[95vw] sm:max-w-lg md:max-w-xl lg:max-w-2xl rounded-2xl border border-gray-200 bg-white p-4 shadow-xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900">Add New Visit</h3>
+      {showAddVisitModal && selectedTreatment && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex flex-col sm:items-center sm:justify-center sm:p-4 overflow-hidden animate-in fade-in duration-200">
+          <div className="w-screen h-[100dvh] min-h-[100dvh] max-h-[100dvh] sm:w-full sm:h-auto sm:min-h-0 sm:max-h-[85dvh] sm:max-w-xl md:max-w-2xl bg-white sm:rounded-2xl sm:shadow-2xl flex flex-col overflow-hidden relative border-0 sm:border sm:border-slate-200">
+            <header className="flex-shrink-0 bg-white border-b border-slate-100 px-4 sm:px-6 py-3.5 flex items-center justify-between z-20">
+              <div>
+                <h3 className="text-lg sm:text-xl font-bold text-slate-900 leading-tight">Add New Visit</h3>
+                <p className="text-xs text-slate-500 font-medium">Record next visit schedule and treatment notes</p>
+              </div>
               <button
+                type="button"
                 onClick={() => setShowAddVisitModal(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="w-10 h-10 flex items-center justify-center -mr-2 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100 transition-colors"
+                aria-label="Close modal"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5" />
               </button>
-            </div>
+            </header>
 
-            <form onSubmit={handleAddVisit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700">Next Visit Date * <span className="text-xs text-red-600">{!visitFormData.next_visit_date ? '(Required)' : ''}</span></label>
-                <input
-                  type="date"
-                  required
-                  value={toISODate(visitFormData.next_visit_date)}
-                  onChange={(e) => setVisitFormData({
-                    ...visitFormData,
-                    next_visit_date: e.target.value ? toDDMMYYYY(e.target.value) : ''
-                  })}
-                  className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-                    !visitFormData.next_visit_date ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                  }`}
-                />
-              </div>
+            <form onSubmit={handleAddVisit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4 sm:space-y-5 scroll-smooth">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Next Visit Date <span className="text-red-500">*</span> {!visitFormData.next_visit_date && <span className="text-xs text-red-600 font-normal">(Required)</span>}
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={toISODate(visitFormData.next_visit_date)}
+                      onChange={(e) => setVisitFormData({
+                        ...visitFormData,
+                        next_visit_date: e.target.value ? toDDMMYYYY(e.target.value) : ''
+                      })}
+                      className={`w-full h-11 sm:h-12 px-3.5 rounded-xl border text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:ring-2 ${
+                        !visitFormData.next_visit_date ? 'border-red-500 bg-red-50/20 focus:ring-red-100' : 'border-slate-300 focus:border-blue-600 focus:ring-blue-100'
+                      }`}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">Treatment Status</label>
+                    <ChoiceSelect
+                      which="treatment/status"
+                      value={visitFormData.treatment_status}
+                      onChange={(e) => setVisitFormData({ ...visitFormData, treatment_status: e.target.value })}
+                      className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                      placeholder="Select Treatment Status"
+                    />
+                  </div>
+                </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700">Treatment Notes</label>
-                <textarea
-                  value={visitFormData.treatment_notes}
-                  onChange={(e) => setVisitFormData({...visitFormData, treatment_notes: e.target.value})}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Add treatment notes..."
-                  rows="3"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700">Patient Complaints</label>
-                <textarea
-                  value={visitFormData.patient_complaints}
-                  onChange={(e) => setVisitFormData({...visitFormData, patient_complaints: e.target.value})}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Document patient complaints..."
-                  rows="3"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700">Payment Amount (₹)</label>
-                  <input
-                    type="number"
-                    value={visitFormData.patient_payment_amount}
-                    onChange={(e) => setVisitFormData({...visitFormData, patient_payment_amount: e.target.value})}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="e.g., 1000"
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Treatment Notes</label>
+                  <textarea
+                    value={visitFormData.treatment_notes}
+                    onChange={(e) => setVisitFormData({...visitFormData, treatment_notes: e.target.value})}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                    placeholder="Add treatment notes..."
+                    rows={3}
                   />
                 </div>
+
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700">Payment Type</label>
-                  <ChoiceSelect
-                    which="treatment/payment-type"
-                    value={visitFormData.patient_payment_type}
-                    onChange={(e) => setVisitFormData({...visitFormData, patient_payment_type: e.target.value})}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Select Payment Type"
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Patient Complaints</label>
+                  <textarea
+                    value={visitFormData.patient_complaints}
+                    onChange={(e) => setVisitFormData({...visitFormData, patient_complaints: e.target.value})}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                    placeholder="Document patient complaints..."
+                    rows={3}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">Payment Amount (₹)</label>
+                    <input
+                      type="number"
+                      value={visitFormData.patient_payment_amount}
+                      onChange={(e) => setVisitFormData({...visitFormData, patient_payment_amount: e.target.value})}
+                      className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                      placeholder="e.g., 1000"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">Payment Type</label>
+                    <ChoiceSelect
+                      which="treatment/payment-type"
+                      value={visitFormData.patient_payment_type}
+                      onChange={(e) => setVisitFormData({...visitFormData, patient_payment_type: e.target.value})}
+                      className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                      placeholder="Select Payment Type"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Payment Note</label>
+                  <textarea
+                    value={visitFormData.payment_note}
+                    onChange={(e) => setVisitFormData({...visitFormData, payment_note: e.target.value})}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                    placeholder="Add any payment notes..."
+                    rows={2}
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700">Payment Note</label>
-                <textarea
-                  value={visitFormData.payment_note}
-                  onChange={(e) => setVisitFormData({...visitFormData, payment_note: e.target.value})}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Add any payment notes..."
-                  rows="2"
-                />
-              </div>
-
-              <div className="flex justify-end space-x-3 pt-4">
+              <div className="flex-shrink-0 bg-white border-t border-slate-100 px-4 sm:px-6 py-3.5 flex items-center justify-end gap-3 z-20">
                 <button
                   type="button"
                   onClick={() => setShowAddVisitModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="h-11 sm:h-12 px-4 sm:px-5 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs sm:text-sm hover:bg-slate-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submittingVisit || !visitFormData.next_visit_date}
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                  className="h-11 sm:h-12 px-5 sm:px-6 rounded-xl bg-blue-600 text-white font-semibold text-xs sm:text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm flex items-center gap-1.5"
                 >
                   {submittingVisit ? 'Adding...' : 'Add Visit'}
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Delete Treatment Confirmation Modal */}

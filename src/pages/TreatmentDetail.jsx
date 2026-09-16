@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
 Download,
@@ -136,8 +137,18 @@ const TreatmentDetail = () => {
     patient_complaints: '',
     patient_payment_amount: '',
     patient_payment_type: 'cash',
-    payment_note: ''
+    payment_note: '',
+    treatment_status: ''
   });
+
+  useEffect(() => {
+    if (showAddVisitModal && treatment) {
+      setVisitFormData(prev => ({
+        ...prev,
+        treatment_status: treatment.status || ''
+      }));
+    }
+  }, [showAddVisitModal, treatment]);
   const [showEditVisitModal, setShowEditVisitModal] = useState(false);
   const [visitToEdit, setVisitToEdit] = useState(null);
   const [showMobileFabMenu, setShowMobileFabMenu] = useState(false);
@@ -567,6 +578,10 @@ const TreatmentDetail = () => {
       };
 
       await visitsApi.create(payload);
+      if (visitFormData.treatment_status && visitFormData.treatment_status !== treatment?.status) {
+        await treatmentApi.update(treatment.id, { status: visitFormData.treatment_status });
+        await fetchTreatmentDetail();
+      }
       setShowAddVisitModal(false);
       setVisitFormData({
         next_visit_date: '',
@@ -574,7 +589,8 @@ const TreatmentDetail = () => {
         patient_complaints: '',
         patient_payment_amount: '',
         patient_payment_type: 'cash',
-        payment_note: ''
+        payment_note: '',
+        treatment_status: ''
       });
       await fetchVisits();
       alert('Visit added successfully!');
@@ -1112,200 +1128,232 @@ hover:bg-blue-700
       </div>
 
       {/* Add Visit Modal */}
-      {showAddVisitModal && treatment && (
-        <div className="fixed inset-0 z-[60] flex items-start justify-center bg-gray-600/50 p-3 sm:p-4 overflow-y-auto">
-          <div className="relative my-4 w-full max-w-[95vw] sm:max-w-lg md:max-w-xl lg:max-w-2xl rounded-2xl border border-gray-200 bg-white p-4 shadow-xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900">Add New Visit</h3>
+      {showAddVisitModal && treatment && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex flex-col sm:items-center sm:justify-center sm:p-4 overflow-hidden animate-in fade-in duration-200">
+          <div className="w-screen h-[100dvh] min-h-[100dvh] max-h-[100dvh] sm:w-full sm:h-auto sm:min-h-0 sm:max-h-[85dvh] sm:max-w-xl md:max-w-2xl bg-white sm:rounded-2xl sm:shadow-2xl flex flex-col overflow-hidden relative border-0 sm:border sm:border-slate-200">
+            <header className="flex-shrink-0 bg-white border-b border-slate-100 px-4 sm:px-6 py-3.5 flex items-center justify-between z-20">
+              <div>
+                <h3 className="text-lg sm:text-xl font-bold text-slate-900 leading-tight">Add New Visit</h3>
+                <p className="text-xs text-slate-500 font-medium">Record next visit schedule and treatment notes</p>
+              </div>
               <button
+                type="button"
                 onClick={() => setShowAddVisitModal(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="w-10 h-10 flex items-center justify-center -mr-2 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100 transition-colors"
+                aria-label="Close modal"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5" />
               </button>
-            </div>
+            </header>
 
-            <form onSubmit={handleAddVisit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700">Next Visit Date * <span className="text-xs text-red-600">{!visitFormData.next_visit_date ? '(Required)' : ''}</span></label>
-                <input
-                  type="date"
-                  required
-                  value={visitFormData.next_visit_date}
-                  onChange={(e) => setVisitFormData({...visitFormData, next_visit_date: e.target.value})}
-                  className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-                    !visitFormData.next_visit_date ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                  }`}
-                />
-              </div>
+            <form onSubmit={handleAddVisit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4 sm:space-y-5 scroll-smooth">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Next Visit Date <span className="text-red-500">*</span> {!visitFormData.next_visit_date && <span className="text-xs text-red-600 font-normal">(Required)</span>}
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={visitFormData.next_visit_date}
+                      onChange={(e) => setVisitFormData({...visitFormData, next_visit_date: e.target.value})}
+                      className={`w-full h-11 sm:h-12 px-3.5 rounded-xl border text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:ring-2 ${
+                        !visitFormData.next_visit_date ? 'border-red-500 bg-red-50/20 focus:ring-red-100' : 'border-slate-300 focus:border-blue-600 focus:ring-blue-100'
+                      }`}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">Treatment Status</label>
+                    <ChoiceSelect
+                      which="treatment/status"
+                      value={visitFormData.treatment_status}
+                      onChange={(e) => setVisitFormData({ ...visitFormData, treatment_status: e.target.value })}
+                      className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                      placeholder="Select Treatment Status"
+                    />
+                  </div>
+                </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700">Treatment Notes</label>
-                <textarea
-                  value={visitFormData.treatment_notes}
-                  onChange={(e) => setVisitFormData({...visitFormData, treatment_notes: e.target.value})}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Add treatment notes..."
-                  rows="3"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700">Patient Complaints</label>
-                <textarea
-                  value={visitFormData.patient_complaints}
-                  onChange={(e) => setVisitFormData({...visitFormData, patient_complaints: e.target.value})}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Document patient complaints..."
-                  rows="3"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700">Payment Amount (₹)</label>
-                  <input
-                    type="number"
-                    value={visitFormData.patient_payment_amount}
-                    onChange={(e) => setVisitFormData({...visitFormData, patient_payment_amount: e.target.value})}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="e.g., 1000"
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Treatment Notes</label>
+                  <textarea
+                    value={visitFormData.treatment_notes}
+                    onChange={(e) => setVisitFormData({...visitFormData, treatment_notes: e.target.value})}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                    placeholder="Add treatment notes..."
+                    rows={3}
                   />
                 </div>
+
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700">Payment Type</label>
-                  <select
-                    value={visitFormData.patient_payment_type}
-                    onChange={(e) => setVisitFormData({...visitFormData, patient_payment_type: e.target.value})}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="cash">Cash</option>
-                    <option value="online">Online</option>
-                  </select>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Patient Complaints</label>
+                  <textarea
+                    value={visitFormData.patient_complaints}
+                    onChange={(e) => setVisitFormData({...visitFormData, patient_complaints: e.target.value})}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                    placeholder="Document patient complaints..."
+                    rows={3}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">Payment Amount (₹)</label>
+                    <input
+                      type="number"
+                      value={visitFormData.patient_payment_amount}
+                      onChange={(e) => setVisitFormData({...visitFormData, patient_payment_amount: e.target.value})}
+                      className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                      placeholder="e.g., 1000"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">Payment Type</label>
+                    <select
+                      value={visitFormData.patient_payment_type}
+                      onChange={(e) => setVisitFormData({...visitFormData, patient_payment_type: e.target.value})}
+                      className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                    >
+                      <option value="cash">Cash</option>
+                      <option value="online">Online</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Payment Note</label>
+                  <textarea
+                    value={visitFormData.payment_note}
+                    onChange={(e) => setVisitFormData({...visitFormData, payment_note: e.target.value})}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                    placeholder="Add any payment notes..."
+                    rows={2}
+                  />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700">Payment Note</label>
-                <textarea
-                  value={visitFormData.payment_note}
-                  onChange={(e) => setVisitFormData({...visitFormData, payment_note: e.target.value})}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Add any payment notes..."
-                  rows="2"
-                />
-              </div>
-
-              <div className="flex justify-end space-x-3 pt-4">
+              <div className="flex-shrink-0 bg-white border-t border-slate-100 px-4 sm:px-6 py-3.5 flex items-center justify-end gap-3 z-20">
                 <button
                   type="button"
                   onClick={() => setShowAddVisitModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="h-11 sm:h-12 px-4 sm:px-5 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs sm:text-sm hover:bg-slate-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submittingVisit || !visitFormData.next_visit_date}
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                  className="h-11 sm:h-12 px-5 sm:px-6 rounded-xl bg-blue-600 text-white font-semibold text-xs sm:text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm flex items-center gap-1.5"
                 >
                   {submittingVisit ? 'Adding...' : 'Add Visit'}
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {showEditVisitModal && treatment && visitToEdit && (
-        <div className="fixed inset-0 z-[60] flex items-start justify-center bg-gray-600/50 p-3 sm:p-4 overflow-y-auto">
-          <div className="relative my-4 w-full max-w-[95vw] sm:max-w-lg md:max-w-xl lg:max-w-2xl rounded-2xl border border-gray-200 bg-white p-4 shadow-xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900">Edit Visit</h3>
+      {/* Edit Visit Modal */}
+      {showEditVisitModal && treatment && visitToEdit && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex flex-col sm:items-center sm:justify-center sm:p-4 overflow-hidden animate-in fade-in duration-200">
+          <div className="w-screen h-[100dvh] min-h-[100dvh] max-h-[100dvh] sm:w-full sm:h-auto sm:min-h-0 sm:max-h-[85dvh] sm:max-w-xl md:max-w-2xl bg-white sm:rounded-2xl sm:shadow-2xl flex flex-col overflow-hidden relative border-0 sm:border sm:border-slate-200">
+            <header className="flex-shrink-0 bg-white border-b border-slate-100 px-4 sm:px-6 py-3.5 flex items-center justify-between z-20">
+              <div>
+                <h3 className="text-lg sm:text-xl font-bold text-slate-900 leading-tight">Edit Visit</h3>
+                <p className="text-xs text-slate-500 font-medium">Update visit schedule and details</p>
+              </div>
               <button
+                type="button"
                 onClick={() => {
                   setShowEditVisitModal(false);
                   setVisitToEdit(null);
                   resetVisitFormData();
                 }}
-                className="text-gray-400 hover:text-gray-600"
+                className="w-10 h-10 flex items-center justify-center -mr-2 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100 transition-colors"
+                aria-label="Close modal"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5" />
               </button>
-            </div>
+            </header>
 
-            <form onSubmit={handleEditVisit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700">Next Visit Date * <span className="text-xs text-red-600">{!visitFormData.next_visit_date ? '(Required)' : ''}</span></label>
-                <input
-                  type="date"
-                  required
-                  value={visitFormData.next_visit_date}
-                  onChange={(e) => setVisitFormData({...visitFormData, next_visit_date: e.target.value})}
-                  className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-                    !visitFormData.next_visit_date ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                  }`}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700">Treatment Notes</label>
-                <textarea
-                  value={visitFormData.treatment_notes}
-                  onChange={(e) => setVisitFormData({...visitFormData, treatment_notes: e.target.value})}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Add treatment notes..."
-                  rows="3"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700">Patient Complaints</label>
-                <textarea
-                  value={visitFormData.patient_complaints}
-                  onChange={(e) => setVisitFormData({...visitFormData, patient_complaints: e.target.value})}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Document patient complaints..."
-                  rows="3"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form onSubmit={handleEditVisit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4 sm:space-y-5 scroll-smooth">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700">Payment Amount (₹)</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Next Visit Date <span className="text-red-500">*</span> {!visitFormData.next_visit_date && <span className="text-xs text-red-600 font-normal">(Required)</span>}
+                  </label>
                   <input
-                    type="number"
-                    value={visitFormData.patient_payment_amount}
-                    onChange={(e) => setVisitFormData({...visitFormData, patient_payment_amount: e.target.value})}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="e.g., 1000"
+                    type="date"
+                    required
+                    value={visitFormData.next_visit_date}
+                    onChange={(e) => setVisitFormData({...visitFormData, next_visit_date: e.target.value})}
+                    className={`w-full h-11 sm:h-12 px-3.5 rounded-xl border text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:ring-2 ${
+                      !visitFormData.next_visit_date ? 'border-red-500 bg-red-50/20 focus:ring-red-100' : 'border-slate-300 focus:border-blue-600 focus:ring-blue-100'
+                    }`}
                   />
                 </div>
+
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700">Payment Type</label>
-                  <select
-                    value={visitFormData.patient_payment_type}
-                    onChange={(e) => setVisitFormData({...visitFormData, patient_payment_type: e.target.value})}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="cash">Cash</option>
-                    <option value="online">Online</option>
-                  </select>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Treatment Notes</label>
+                  <textarea
+                    value={visitFormData.treatment_notes}
+                    onChange={(e) => setVisitFormData({...visitFormData, treatment_notes: e.target.value})}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                    placeholder="Add treatment notes..."
+                    rows={3}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Patient Complaints</label>
+                  <textarea
+                    value={visitFormData.patient_complaints}
+                    onChange={(e) => setVisitFormData({...visitFormData, patient_complaints: e.target.value})}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                    placeholder="Document patient complaints..."
+                    rows={3}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">Payment Amount (₹)</label>
+                    <input
+                      type="number"
+                      value={visitFormData.patient_payment_amount}
+                      onChange={(e) => setVisitFormData({...visitFormData, patient_payment_amount: e.target.value})}
+                      className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                      placeholder="e.g., 1000"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">Payment Type</label>
+                    <select
+                      value={visitFormData.patient_payment_type}
+                      onChange={(e) => setVisitFormData({...visitFormData, patient_payment_type: e.target.value})}
+                      className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                    >
+                      <option value="cash">Cash</option>
+                      <option value="online">Online</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Payment Note</label>
+                  <textarea
+                    value={visitFormData.payment_note}
+                    onChange={(e) => setVisitFormData({...visitFormData, payment_note: e.target.value})}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                    placeholder="Add any payment notes..."
+                    rows={2}
+                  />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700">Payment Note</label>
-                <textarea
-                  value={visitFormData.payment_note}
-                  onChange={(e) => setVisitFormData({...visitFormData, payment_note: e.target.value})}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Add any payment notes..."
-                  rows="2"
-                />
-              </div>
-
-              <div className="flex justify-end space-x-3 pt-4">
+              <div className="flex-shrink-0 bg-white border-t border-slate-100 px-4 sm:px-6 py-3.5 flex items-center justify-end gap-3 z-20">
                 <button
                   type="button"
                   onClick={() => {
@@ -1313,21 +1361,22 @@ hover:bg-blue-700
                     setVisitToEdit(null);
                     resetVisitFormData();
                   }}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="h-11 sm:h-12 px-4 sm:px-5 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs sm:text-sm hover:bg-slate-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submittingVisit || !visitFormData.next_visit_date}
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 disabled:opacity-50"
+                  className="h-11 sm:h-12 px-5 sm:px-6 rounded-xl bg-blue-600 text-white font-semibold text-xs sm:text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm flex items-center gap-1.5"
                 >
                   {submittingVisit ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Full-screen preview modal */}
@@ -1395,100 +1444,107 @@ hover:bg-blue-700
       )}
 
       {/* Upload Image Modal */}
-      {showUploadImageModal && selectedVisitForUpload && (
-        <div className="fixed inset-0 z-[60] flex items-start justify-center bg-gray-600/50 p-3 sm:p-4 overflow-y-auto">
-          <div className="relative my-4 w-full max-w-[95vw] sm:max-w-lg md:max-w-xl lg:max-w-2xl rounded-2xl border border-gray-200 bg-white p-4 shadow-xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900">Upload Image</h3>
+      {showUploadImageModal && selectedVisitForUpload && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex flex-col sm:items-center sm:justify-center sm:p-4 overflow-hidden animate-in fade-in duration-200">
+          <div className="w-screen h-[100dvh] min-h-[100dvh] max-h-[100dvh] sm:w-full sm:h-auto sm:min-h-0 sm:max-h-[85dvh] sm:max-w-xl md:max-w-2xl bg-white sm:rounded-2xl sm:shadow-2xl flex flex-col overflow-hidden relative border-0 sm:border sm:border-slate-200">
+            <header className="flex-shrink-0 bg-white border-b border-slate-100 px-4 sm:px-6 py-3.5 flex items-center justify-between z-20">
+              <div>
+                <h3 className="text-lg sm:text-xl font-bold text-slate-900 leading-tight">Upload Image</h3>
+                <p className="text-xs text-slate-500 font-medium">Attach photo or X-ray to this visit</p>
+              </div>
               <button
+                type="button"
                 onClick={() => {
                   setShowUploadImageModal(false);
                   setImageUploadData({ image: null, caption: '' });
                   setSelectedVisitForUpload(null);
                   setUploadWarning('');
                 }}
-                className="text-gray-400 hover:text-gray-600"
+                className="w-10 h-10 flex items-center justify-center -mr-2 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100 transition-colors"
+                aria-label="Close modal"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5" />
               </button>
-            </div>
+            </header>
 
-            <form onSubmit={handleUploadImage} className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700">
-                  Select Image * <span className="text-xs text-red-600">{!imageUploadData.image ? '(Required)' : ''}</span>
-                </label>
-                <div className="mt-2 flex gap-2 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={() => galleryInputRef.current?.click()}
-                    className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-                  >
-                    Choose from gallery
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => cameraInputRef.current?.click()}
-                    className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-                  >
-                    Use camera
-                  </button>
+            <form onSubmit={handleUploadImage} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4 sm:space-y-5 scroll-smooth">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Select Image <span className="text-red-500">*</span> {!imageUploadData.image && <span className="text-xs text-red-600 font-normal">(Required)</span>}
+                  </label>
+                  <div className="mt-2 flex gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => galleryInputRef.current?.click()}
+                      className="px-4 py-2 border border-slate-300 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                    >
+                      Choose from gallery
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => cameraInputRef.current?.click()}
+                      className="px-4 py-2 border border-slate-300 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                    >
+                      Use camera
+                    </button>
+                  </div>
+
+                  <input
+                    ref={galleryInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageFileSelect}
+                    className="hidden"
+                  />
+                  <input
+                    ref={cameraInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleImageFileSelect}
+                    className="hidden"
+                  />
+
+                  <p className="text-xs text-slate-500 mt-2">
+                    Supported formats: JPEG, PNG, GIF, WebP
+                  </p>
+                  {imageUploadData.image && (
+                    <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-xl">
+                      <p className="text-sm font-medium text-green-800">
+                        ✓ Selected: {imageUploadData.image.name}
+                      </p>
+                      <p className="text-xs text-green-600 font-medium mt-0.5">
+                        Size: {(imageUploadData.image.size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                    </div>
+                  )}
+
+                  {uploadWarning && (
+                    <p className="text-xs mt-2 text-yellow-800 bg-yellow-50 border border-yellow-200 p-2.5 rounded-xl font-medium">
+                      {uploadWarning}
+                    </p>
+                  )}
+                  {compressionInfo && (
+                    <p className="text-xs mt-2 text-blue-800 bg-blue-50 border border-blue-200 p-2.5 rounded-xl font-medium">
+                      {compressionInfo}
+                    </p>
+                  )}
                 </div>
 
-                <input
-                  ref={galleryInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageFileSelect}
-                  className="hidden"
-                />
-                <input
-                  ref={cameraInputRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={handleImageFileSelect}
-                  className="hidden"
-                />
-
-                <p className="text-xs text-gray-500 mt-2">
-                  Supported formats: JPEG, PNG, GIF, WebP (no enforced client-side max file size)
-                </p>
-                {imageUploadData.image && (
-                  <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded">
-                    <p className="text-sm text-green-700">
-                      ✓ Selected: {imageUploadData.image.name}
-                    </p>
-                    <p className="text-xs text-green-600">
-                      Size: {(imageUploadData.image.size / 1024 / 1024).toFixed(2)} MB
-                    </p>
-                  </div>
-                )}
-
-                {uploadWarning && (
-                  <p className="text-xs mt-1 text-yellow-700 bg-yellow-100 border border-yellow-200 p-2 rounded">
-                    {uploadWarning}
-                  </p>
-                )}
-                {compressionInfo && (
-                  <p className="text-xs mt-1 text-blue-700 bg-blue-50 border border-blue-200 p-2 rounded">
-                    {compressionInfo}
-                  </p>
-                )}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Image Caption (Optional)</label>
+                  <textarea
+                    value={imageUploadData.caption}
+                    onChange={(e) => setImageUploadData({...imageUploadData, caption: e.target.value})}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                    placeholder="Add a caption for this image..."
+                    rows={3}
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700">Image Caption (Optional)</label>
-                <textarea
-                  value={imageUploadData.caption}
-                  onChange={(e) => setImageUploadData({...imageUploadData, caption: e.target.value})}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Add a caption for this image..."
-                  rows="3"
-                />
-              </div>
-
-              <div className="flex justify-end space-x-3 pt-4">
+              <div className="flex-shrink-0 bg-white border-t border-slate-100 px-4 sm:px-6 py-3.5 flex items-center justify-end gap-3 z-20">
                 <button
                   type="button"
                   onClick={() => {
@@ -1497,170 +1553,174 @@ hover:bg-blue-700
                     setSelectedVisitForUpload(null);
                     setUploadWarning('');
                   }}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="h-11 sm:h-12 px-4 sm:px-5 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs sm:text-sm hover:bg-slate-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={uploadingImage || !imageUploadData.image}
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                  className="h-11 sm:h-12 px-5 sm:px-6 rounded-xl bg-blue-600 text-white font-semibold text-xs sm:text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm flex items-center gap-1.5"
                 >
                   {uploadingImage ? 'Uploading...' : 'Upload Image'}
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* Delete Treatment Confirmation Modal */}
-      {showEditTreatmentModal && editingTreatment && (
-        <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/50 p-3 sm:p-4 overflow-y-auto">
-          <div className="relative my-4 w-full max-w-[95vw] sm:max-w-lg md:max-w-xl lg:max-w-2xl rounded-2xl border border-gray-200 bg-white p-4 shadow-xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900">Edit Treatment</h3>
+      {/* Edit Treatment Modal */}
+      {showEditTreatmentModal && editingTreatment && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex flex-col sm:items-center sm:justify-center sm:p-4 overflow-hidden animate-in fade-in duration-200">
+          <div className="w-screen h-[100dvh] min-h-[100dvh] max-h-[100dvh] sm:w-full sm:h-auto sm:min-h-0 sm:max-h-[85dvh] sm:max-w-xl md:max-w-2xl bg-white sm:rounded-2xl sm:shadow-2xl flex flex-col overflow-hidden relative border-0 sm:border sm:border-slate-200">
+            <header className="flex-shrink-0 bg-white border-b border-slate-100 px-4 sm:px-6 py-3.5 flex items-center justify-between z-20">
+              <div>
+                <h3 className="text-lg sm:text-xl font-bold text-slate-900 leading-tight">Edit Treatment</h3>
+                <p className="text-xs text-slate-500 font-medium">Update treatment plan and details</p>
+              </div>
               <button
+                type="button"
                 onClick={() => {
                   setShowEditTreatmentModal(false);
                   setEditingTreatment(null);
                 }}
-                className="text-gray-400 hover:text-gray-600"
+                className="w-10 h-10 flex items-center justify-center -mr-2 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100 transition-colors"
+                aria-label="Close modal"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5" />
               </button>
-            </div>
+            </header>
 
-            <form onSubmit={handleSaveTreatment} className="space-y-4">
-              <div className="grid grid-cols-1 gap-4">
+            <form onSubmit={handleSaveTreatment} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4 sm:space-y-5 scroll-smooth">
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">Treatment Type</label>
+                    <div className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-200 bg-slate-50 flex items-center text-slate-700 text-sm font-medium">
+                      {(treatmentTypes.find((tt) => String(tt.id) === String(treatmentFormData.type_of_treatment))?.name) ||
+                        editingTreatment?.treatment_name ||
+                        editingTreatment?.type_of_treatment_name ||
+                        ''}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/ortho|braces/i.test((treatmentTypes.find((tt) => String(tt.id) === String(treatmentFormData.type_of_treatment))?.name) || editingTreatment?.treatment_name || editingTreatment?.type_of_treatment_name || treatment?.type_of_treatment?.name || treatment?.treatment_name || '') ? (
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">Braces Type</label>
+                        <ChoiceSelect
+                          which="treatment/braces-type"
+                          value={treatmentFormData.braces_type}
+                          onChange={(e) => setTreatmentFormData({ ...treatmentFormData, braces_type: e.target.value, cap_type: '' })}
+                          className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                          placeholder="Select braces type"
+                        />
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">Cap Type</label>
+                        <ChoiceSelect
+                          which="treatment/cap-type"
+                          value={treatmentFormData.cap_type}
+                          onChange={(e) => setTreatmentFormData({ ...treatmentFormData, cap_type: e.target.value, braces_type: '' })}
+                          className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                          placeholder="Select cap type"
+                        />
+                      </div>
+                    )}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">Status</label>
+                      <ChoiceSelect
+                        which="treatment/status"
+                        value={treatmentFormData.status}
+                        onChange={(e) => setTreatmentFormData({ ...treatmentFormData, status: e.target.value })}
+                        className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                        placeholder="Select status"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">Estimated Visits</label>
+                      <input
+                        type="number"
+                        value={treatmentFormData.estimated_duration_months}
+                        onChange={(e) => setTreatmentFormData({ ...treatmentFormData, estimated_duration_months: e.target.value })}
+                        className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">Planned Amount (₹)</label>
+                      <input
+                        type="number"
+                        value={treatmentFormData.planned_amount}
+                        onChange={(e) => setTreatmentFormData({ ...treatmentFormData, planned_amount: e.target.value })}
+                        className="w-full h-11 sm:h-12 px-3.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700">Treatment Type</label>
-                  <input
-                    type="text"
-                    disabled
-                    value={
-                      (treatmentTypes.find((tt) => String(tt.id) === String(treatmentFormData.type_of_treatment))?.name) ||
-                      editingTreatment?.treatment_name ||
-                      editingTreatment?.type_of_treatment_name ||
-                      ''
-                    }
-                    className="mt-1 block w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700"
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Initial Findings</label>
+                  <textarea
+                    rows={3}
+                    value={treatmentFormData.initial_findings}
+                    onChange={(e) => setTreatmentFormData({ ...treatmentFormData, initial_findings: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                    placeholder="Initial findings"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  {/ortho|braces/i.test((treatmentTypes.find((tt) => String(tt.id) === String(treatmentFormData.type_of_treatment))?.name) || editingTreatment?.treatment_name || editingTreatment?.type_of_treatment_name || treatment?.type_of_treatment?.name || treatment?.treatment_name || '') ? (
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700">Braces Type</label>
-                      <ChoiceSelect
-                        which="treatment/braces-type"
-                        value={treatmentFormData.braces_type}
-                        onChange={(e) => setTreatmentFormData({ ...treatmentFormData, braces_type: e.target.value, cap_type: '' })}
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Select braces type"
-                      />
-                    </div>
-                  ) : (
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700">Cap Type</label>
-                      <ChoiceSelect
-                        which="treatment/cap-type"
-                        value={treatmentFormData.cap_type}
-                        onChange={(e) => setTreatmentFormData({ ...treatmentFormData, cap_type: e.target.value, braces_type: '' })}
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Select cap type"
-                      />
-                    </div>
-                  )}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700">Status</label>
-                    <ChoiceSelect
-                      which="treatment/status"
-                      value={treatmentFormData.status}
-                      onChange={(e) => setTreatmentFormData({ ...treatmentFormData, status: e.target.value })}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Select status"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Treatment Plan</label>
+                  <textarea
+                    rows={4}
+                    value={treatmentFormData.treatment_plan}
+                    onChange={(e) => setTreatmentFormData({ ...treatmentFormData, treatment_plan: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                    placeholder="Treatment plan"
+                  />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700">Estimated Visits</label>
-                    <input
-                      type="number"
-                      value={treatmentFormData.estimated_duration_months}
-                      onChange={(e) => setTreatmentFormData({ ...treatmentFormData, estimated_duration_months: e.target.value })}
-                      className="mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700">Planned Amount (₹)</label>
-                    <input
-                      type="number"
-                      value={treatmentFormData.planned_amount}
-                      onChange={(e) => setTreatmentFormData({ ...treatmentFormData, planned_amount: e.target.value })}
-                      className="mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Treatment Notes</label>
+                  <textarea
+                    rows={3}
+                    value={treatmentFormData.treatment_notes}
+                    onChange={(e) => setTreatmentFormData({ ...treatmentFormData, treatment_notes: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                    placeholder="Add any additional notes..."
+                  />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700">Initial Findings</label>
-                <textarea
-                  rows={3}
-                  value={treatmentFormData.initial_findings}
-                  onChange={(e) => setTreatmentFormData({ ...treatmentFormData, initial_findings: e.target.value })}
-                  className="mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Initial findings"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700">Treatment Plan</label>
-                <textarea
-                  rows={4}
-                  value={treatmentFormData.treatment_plan}
-                  onChange={(e) => setTreatmentFormData({ ...treatmentFormData, treatment_plan: e.target.value })}
-                  className="mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Treatment plan"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700">Treatment Notes</label>
-                <textarea
-                  rows={3}
-                  value={treatmentFormData.treatment_notes}
-                  onChange={(e) => setTreatmentFormData({ ...treatmentFormData, treatment_notes: e.target.value })}
-                  className="mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Add any additional notes..."
-                />
-              </div>
-
-              <div className="flex justify-end space-x-3 pt-4">
+              <div className="flex-shrink-0 bg-white border-t border-slate-100 px-4 sm:px-6 py-3.5 flex items-center justify-end gap-3 z-20">
                 <button
                   type="button"
                   onClick={() => {
                     setShowEditTreatmentModal(false);
                     setEditingTreatment(null);
                   }}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className="h-11 sm:h-12 px-4 sm:px-5 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs sm:text-sm hover:bg-slate-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submittingTreatment}
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+                  className="h-11 sm:h-12 px-5 sm:px-6 rounded-xl bg-blue-600 text-white font-semibold text-xs sm:text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm flex items-center gap-1.5"
                 >
                   {submittingTreatment ? 'Saving...' : 'Update Treatment'}
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {showDeleteTreatmentModal && (
