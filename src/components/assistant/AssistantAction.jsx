@@ -1,7 +1,9 @@
 import React from 'react';
 import { formatCurrencyINR } from '../../utils/currencyUtils';
+import { useTreatmentStatusChoices, getTreatmentStatusLabel } from '../../utils/treatmentStatusUtils';
 
 export default function AssistantAction({ action, pendingSelection, onOpenPatient, onOpenTreatment, onConfirmAddPatient, onCancelAddPatient }) {
+  const { choices: treatmentStatusChoices } = useTreatmentStatusChoices();
   const hasPreview = pendingSelection && (pendingSelection.prefill || pendingSelection.confirmation);
 
   const type = action && action.type;
@@ -49,7 +51,7 @@ export default function AssistantAction({ action, pendingSelection, onOpenPatien
             <div className="font-medium text-slate-500 uppercase tracking-wider">Step 2: Treatment Details</div>
             <div className="text-slate-700">
               <span className="font-semibold">{treatment.type_of_treatment_name || treatment.type || 'Treatment'}</span>
-              {treatment.status ? ` (${treatment.status})` : ''}
+              {treatment.status ? ` (${getTreatmentStatusLabel(treatment.status, treatmentStatusChoices)})` : ''}
               {treatment.planned_amount ? ` · Planned: ${formatCurrencyINR(treatment.planned_amount)}` : ''}
             </div>
             {(treatment.initial_findings || treatment.treatment_plan) && (

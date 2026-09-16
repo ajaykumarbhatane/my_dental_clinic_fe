@@ -15,6 +15,7 @@ import { useApiWithErrorHandling } from '../utils/apiUtils';
 import { useNotification } from '../context/NotificationContext';
 import ChoiceSelect from '../components/ChoiceSelect';
 import { formatDate, parseDateString, toISODate, toDDMMYYYY } from '../utils/dateUtils';
+import { useTreatmentStatusChoices, getTreatmentStatusLabel, getTreatmentStatusStyle } from '../utils/treatmentStatusUtils';
 
 const HeroCard = ({ patient, patientInitials, patientAge, doctorLabel, actionLabel, actionIcon: ActionIcon, onAction }) => (
    <section className="relative overflow-hidden rounded-[32px] bg-gradient-to-r from-blue-800 to-cyan-500 p-5 text-white sm:p-7 lg:p-8">
@@ -126,6 +127,7 @@ const TreatmentCard = ({
    remainingAmount,
    visitsLength,
    statusClass,
+   statusLabel,
    actionMenuOpen,
    setActionMenuOpen
 }) => (
@@ -158,7 +160,7 @@ hover:shadow-blue-100
                </h3>
 
                <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusClass}`}>
-                  {treatment.status}
+                  {statusLabel || treatment.status}
                </span>
             </div>
          </div>
@@ -360,6 +362,7 @@ const PatientDetail = () => {
    const { id } = useParams();
    const navigate = useNavigate();
    const location = useLocation();
+   const { choices: treatmentStatusChoices } = useTreatmentStatusChoices();
 
 
    const queryParams = new URLSearchParams(location.search);
@@ -1365,14 +1368,8 @@ const PatientDetail = () => {
                                  const visits = getVisitsForTreatment(treatment.id);
                                  const progress = treatmentProgress(treatment);
                                  const { totalAmount, paidAmount, remainingAmount } = getTreatmentPaymentTotals(treatment);
-                                 const statusClass =
-                                    treatment.status === 'completed'
-                                       ? 'bg-emerald-100 text-emerald-700'
-                                       : treatment.status === 'ongoing'
-                                          ? 'bg-blue-100 text-blue-700'
-                                          : treatment.status === 'scheduled'
-                                             ? 'bg-amber-100 text-amber-700'
-                                             : 'bg-slate-100 text-slate-700';
+                                 const statusClass = getTreatmentStatusStyle(treatment.status);
+                                 const statusLabel = getTreatmentStatusLabel(treatment.status, treatmentStatusChoices);
                                  return (
                                     <TreatmentCard
                                        key={treatment.id}
@@ -1395,6 +1392,7 @@ const PatientDetail = () => {
                                        remainingAmount={formatAmount(remainingAmount)}
                                        visitsLength={visits.length}
                                        statusClass={statusClass}
+                                       statusLabel={statusLabel}
                                        actionMenuOpen={actionMenuOpen}
                                        setActionMenuOpen={setActionMenuOpen}
                                     />
@@ -1917,7 +1915,7 @@ const PatientDetail = () => {
                   <div className="sticky top-0 z-10 bg-white border-b border-gray-200 p-4 flex justify-between items-center">
                      <div>
                         <h3 className="text-xl font-bold text-gray-900">{selectedTreatment.type_of_treatment_name || 'Treatment Detail'}</h3>
-                        <p className="text-sm text-gray-500">Status: {selectedTreatment.status || 'N/A'}</p>
+                        <p className="text-sm text-gray-500">Status: {getTreatmentStatusLabel(selectedTreatment.status, treatmentStatusChoices) || 'N/A'}</p>
                      </div>
                      <button onClick={closeDrawer} className="p-2 rounded-md hover:bg-gray-100">
                         <X className="w-5 h-5" />

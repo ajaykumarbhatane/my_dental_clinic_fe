@@ -31,6 +31,7 @@ import { visitsApi } from '../api/visitsApi';
 import { prescriptionApi } from '../api/prescriptionApi';
 import { useNotification } from '../context/NotificationContext';
 import { formatDate, toISODate, parseDateString } from '../utils/dateUtils';
+import { useTreatmentStatusChoices, getTreatmentStatusLabel } from '../utils/treatmentStatusUtils';
 import LockedFeatureCard from '../components/common/LockedFeatureCard';
 
 // chart.js imports
@@ -139,6 +140,7 @@ const Dashboard = () => {
   const [pickerYear, setPickerYear] = useState(today.getFullYear());
   const chartKey = `${selectedTreatment}-${group}-${startDate}-${endDate}`;
 
+  const { choices: treatmentStatusChoices } = useTreatmentStatusChoices();
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
   // ==========================================
@@ -569,7 +571,7 @@ const Dashboard = () => {
           ).trim();
           const typeName = tr.type_of_treatment_name || tr.type_name || 'Dental Procedure';
           const pId = String(tr.patient_id || tr.patient || tr.patient_details?.id || '');
-          const statusText = tr.status ? tr.status : 'Ongoing';
+          const statusText = getTreatmentStatusLabel(tr.status, treatmentStatusChoices) || 'Ongoing';
 
           const item = {
             id: `tr_${tr.id}`,

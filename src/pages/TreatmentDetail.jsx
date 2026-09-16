@@ -22,10 +22,12 @@ import { compressImage } from '../utils/imageOptimizer';
 import { formatDate, toISODate } from '../utils/dateUtils';
 import { formatCurrencyINR } from '../utils/currencyUtils';
 import ChoiceSelect from '../components/ChoiceSelect';
+import { useTreatmentStatusChoices, getTreatmentStatusLabel } from '../utils/treatmentStatusUtils';
 
 const treatmentDetailRequestCache = new Map();
 
 const TreatmentDetail = () => {
+  const { choices: treatmentStatusChoices } = useTreatmentStatusChoices();
   const galleryInputRef = useRef(null);
   const cameraInputRef = useRef(null);
   const { id } = useParams();
@@ -623,7 +625,7 @@ const TreatmentDetail = () => {
       ? `${patientDisplayName.substring(0, MAX_PATIENT_NAME)}...`
       : patientDisplayName;
 
-  const statusText = treatment?.status || 'Ongoing';
+  const statusText = getTreatmentStatusLabel(treatment?.status, treatmentStatusChoices) || 'Ongoing';
   const isOrthodonticTreatment = /ortho|braces/i.test(treatment?.treatment_name || treatment?.type_of_treatment_name || treatment?.type_of_treatment?.name || '');
   const bracesOrCapValue = isOrthodonticTreatment ? (treatment?.braces_type || treatment?.cap_type || null) : (treatment?.cap_type || treatment?.braces_type || null);
 

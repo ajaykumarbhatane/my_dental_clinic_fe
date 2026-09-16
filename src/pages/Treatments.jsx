@@ -9,6 +9,7 @@ import ChoiceSelect from '../components/ChoiceSelect';
 import Pagination from '../components/Pagination';
 import { formatDate, toISODate, toDDMMYYYY } from '../utils/dateUtils';
 import FilterSelect from "../components/FilterSelect";
+import { useTreatmentStatusChoices, getTreatmentStatusLabel, getTreatmentStatusStyle } from '../utils/treatmentStatusUtils';
 
 const Treatments = () => {
   const navigate = useNavigate();
@@ -32,6 +33,11 @@ const Treatments = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [treatmentFilter, setTreatmentFilter] = useState(initialType);
   const [statusFilter, setStatusFilter] = useState(initialStatus);
+  const { choices: treatmentStatusChoices } = useTreatmentStatusChoices();
+  const statusFilterOptions = [
+    { value: "", label: "All Statuses" },
+    ...(treatmentStatusChoices || []),
+  ];
   const [isFirstLoad, setIsFirstLoad] = useState(true);
   const [hasSyncedQueryParams, setHasSyncedQueryParams] = useState(false);
   const [treatmentTypes, setTreatmentTypes] = useState([]);
@@ -472,14 +478,7 @@ const Treatments = () => {
             <FilterSelect
               value={statusFilter}
               placeholder="Status"
-              options={[
-                { value: "", label: "All Statuses" },
-                { value: "scheduled", label: "Scheduled" },
-                { value: "ongoing", label: "Ongoing" },
-                { value: "completed", label: "Completed" },
-                { value: "cancelled", label: "Cancelled" },
-                { value: "on_hold", label: "On Hold" },
-              ]}
+              options={statusFilterOptions}
               onChange={(value) => handleFilterChange("status", value)}
             />
           </div>
@@ -684,14 +683,8 @@ whitespace-nowrap
                       {treatment.type_of_treatment_name}
                     </td>
                     <td className="px-5 py-3">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        treatment.status === 'completed' ? 'bg-green-100 text-green-800' :
-                        treatment.status === 'ongoing' ? 'bg-blue-100 text-blue-800' :
-                        treatment.status === 'scheduled' ? 'bg-yellow-100 text-yellow-800' :
-                        treatment.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {treatment.status}
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getTreatmentStatusStyle(treatment.status)}`}>
+                        {getTreatmentStatusLabel(treatment.status, treatmentStatusChoices)}
                       </span>
                     </td>
                     {/* <td className="px-5 py-3 text-gray-600">
